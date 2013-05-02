@@ -15,8 +15,8 @@ MSGSRC= $(SRCBASEDIR)/mgrid-messaging
 
 PGHOST= localhost
 PGPORT= 5432
-PGUSER= mgrid
-TESTDB= testhdw
+PGUSER= ${USER}
+TESTDB= dwh
 
 # create database
 dropdb:
