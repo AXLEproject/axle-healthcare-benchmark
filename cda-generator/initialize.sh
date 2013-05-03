@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Copyright (c) 2013, Portavita BV Netherlands
+#
 
 usage() {
 cat << EOF

@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2013, Portavita BV Netherlands
+ */
 package eu.portavita.axle.bayesiannetwork
 import scala.collection.mutable
 import eu.portavita.axle.generatable.DiscreteObservation

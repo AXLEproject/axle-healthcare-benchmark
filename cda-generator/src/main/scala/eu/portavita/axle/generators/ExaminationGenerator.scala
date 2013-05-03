@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2013, Portavita BV Netherlands
+ */
 package eu.portavita.axle.generators
 
 import java.io.File

@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2013, Portavita BV Netherlands
+ */
 package eu.portavita.axle.actors
 
 import org.hl7.v3.POCDMT000040ClinicalDocument
