@@ -79,13 +79,14 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 	 */
 	def getObservationActs: mutable.Map[String, Act] = {
 		val acts = mutable.HashMap[String, Act]()
-		for ((code, observation) <- observations) {
-			val act = observation.toHl7Act
-			if (act.isDefined) {
-				act.get.id = nextId
-				act.get.effectiveFromTime = new Date // TODO
-				acts.put(code, act.get)
-			}
+		for {
+			(code, observation) <- observations
+			val optionalAct = observation.toHl7Act if (optionalAct.isDefined)
+			val act = optionalAct.get
+		} yield {
+			act.id = nextId
+			act.effectiveFromTime = date.getOrElse(new Date)
+			acts.put(code, act)
 		}
 		acts
 	}
@@ -113,25 +114,18 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 		 * @return
 		 */
 		def getOrCreateAct(code: String): Act = {
-
-			// Get existing act.
-			val act = resultActs.get(code)
-			if (act.isDefined) {
-				return act.get
-			}
-
-			// No act found, create new organizer.
-			val organizer = new Act
-			organizer.id = nextId
-			organizer.moodCode = "EVN"
-			organizer.classCode = "ORGANIZER"
-			organizer.code = code
-			organizer.codeSystem = CodeSystem.guess(organizer.code)
-			organizer.effectiveFromTime = new Date // TODO
-
-			resultActs.put(code, organizer)
-
-			organizer
+			resultActs.getOrElseUpdate(code, {
+					// No act found, create new organizer.
+					val organizer = new Act
+					organizer.id = nextId
+					organizer.moodCode = "EVN"
+					organizer.classCode = "ORGANIZER"
+					organizer.code = code
+					organizer.codeSystem = CodeSystem.guess(code)
+					organizer.effectiveFromTime = date.getOrElse(new Date)
+					organizer
+				}
+			)
 		}
 
 		/**

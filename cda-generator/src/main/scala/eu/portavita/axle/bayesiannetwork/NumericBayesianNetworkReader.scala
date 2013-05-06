@@ -4,8 +4,9 @@
 package eu.portavita.axle.bayesiannetwork
 
 import scala.collection.mutable
-import eu.portavita.axle.json.AsMap
+
 import eu.portavita.axle.json.AsDouble
+import eu.portavita.axle.json.AsMap
 
 /**
  * Contains functions to read Bayesian network of only numeric variables from JSON map.
@@ -22,8 +23,9 @@ object NumericBayesianNetworkReader {
 		val variables = for (
 			AsMap(variables) <- List(variableMap);
 			(jsonVariableName, variableProperties) <- variables;
-			AsMap(propertyMap) = variableProperties
-		) yield BayesianNetwork.clean(jsonVariableName) -> readVariable(jsonVariableName, propertyMap)
+			AsMap(propertyMap) = variableProperties;
+			val cleanName = BayesianNetwork.clean(jsonVariableName)
+		) yield cleanName -> readVariable(jsonVariableName, propertyMap)
 
 		new BayesianNetwork(examinationName, variables.toMap)
 	}
