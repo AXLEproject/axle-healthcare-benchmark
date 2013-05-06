@@ -39,14 +39,13 @@ class BayesianNetwork(
 		 */
 		def resolveVariable(variableName: String): Observation = {
 			val variable = variables.get(variableName).get
-			val observedValues: Set[Observation] = {
 
-				// Ensure all parents have an observation value.
-				variable.parents.foreach(parent => getVariable(parent))
+			// Ensure all parents have an observation value.
+			variable.parents.foreach(parent => getVariable(parent))
 
-				// Get the values of the parents
+			// Get the values of the parents
+			val observedValues: Set[Observation] =
 				for (p <- variable.parents) yield result.get(p).get
-			}
 
 			// Sample a value for this variable.
 			variable.sample(observedValues)
@@ -55,7 +54,6 @@ class BayesianNetwork(
 		/**
 		 * Returns the observation value of the variable with the given name.
 		 * @param code Act code of the observation.
-		 * @return
 		 */
 		def getVariable(variableName: String): Unit = {
 			result.getOrElseUpdate(variableName, resolveVariable(variableName))
