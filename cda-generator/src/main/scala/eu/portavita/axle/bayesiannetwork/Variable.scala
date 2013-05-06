@@ -111,26 +111,16 @@ class NumericVariable(
 	def sample(observedValues: Set[Observation]): Observation = {
 
 		@tailrec
-		def goBananas(accum: Double, obs: List[Observation]): Double = {
+		def meanHelper(accum: Double, obs: Set[Observation]): Double = {
 			if (obs.isEmpty) accum
 			else {
 				val numericObservation = obs.head.asInstanceOf[NumericObservation]
-				val observedValue = numericObservation.value
 				val coefficient = coefficients.get(numericObservation.getCode).get
-				goBananas(coefficient * observedValue + accum, obs.tail)
+				meanHelper(coefficient * numericObservation.value + accum, obs.tail)
 			}
 		}
 
-		var mean: Double = intercept
-
-		for (observation <- observedValues) {
-			val numericObservation = observation.asInstanceOf[NumericObservation]
-
-			val observedValue = numericObservation.value
-			val coefficient = coefficients.get(observation.getCode).get
-
-			mean += coefficient * observedValue
-		}
+		def mean = meanHelper(intercept, observedValues)
 
 		val value = standardDeviation * Random.nextGaussian() + mean
 		new NumericObservation(code, value)
