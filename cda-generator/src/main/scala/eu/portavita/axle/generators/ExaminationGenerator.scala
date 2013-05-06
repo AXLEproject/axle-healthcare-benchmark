@@ -54,7 +54,7 @@ class ExaminationGenerator(
 			val examination = sampleNonEmptyExamination
 
 			// Examination must have values
-			require(examination.hasValues)
+			assert(examination.hasValues)
 
 			val hl7Examination = examination.buildHierarchy(hierarchy)
 			val document = documentBuilder.create(patient, hl7Examination)

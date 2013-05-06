@@ -65,7 +65,7 @@ object OrganizationModel {
 		val AsListOfDoubles(sigma)   = jsonMixtureModel.get("sigma").get
 		val AsListOfDoubles(weights) = jsonMixtureModel.get("weight").get
 
-		require(mean.size == sigma.size && sigma.size == weights.size)
+		assert(mean.size == sigma.size && sigma.size == weights.size)
 
 		val components =
 			for (index <- 0 until mean.size)

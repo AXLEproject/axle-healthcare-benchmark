@@ -59,7 +59,7 @@ object DiscreteBayesianNetworkReader {
 		val AsListOfStrings(nodeValues) = properties.get(jsonName).get
 		val currentNode = nodeValues.map(v => DiscreteObservation(cleanName, v))
 
-		require(probabilities.length == currentNode.length)
+		assert(probabilities.length == currentNode.length)
 
 		// Get properties of all parents
 		val parents = properties - "Freq" - jsonName
@@ -110,7 +110,7 @@ object DiscreteBayesianNetworkReader {
 		val AsListOfDoubles(probabilities) = properties.get("Freq").get
 
 		// Every node values must have a probability
-		require(nodeValues.length == probabilities.length)
+		assert(nodeValues.length == probabilities.length)
 
 		// Extract all possible values
 		val observations = nodeValues.map(v => DiscreteObservation(cleanName, v))
