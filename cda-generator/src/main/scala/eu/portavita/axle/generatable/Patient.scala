@@ -6,6 +6,8 @@ package eu.portavita.axle.generatable
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.util.Random
+import eu.portavita.axle.model.PatientProfile
+import eu.portavita.axle.helper.DateTimes
 
 /**
  * Represents a patient.
@@ -17,10 +19,10 @@ import scala.util.Random
  * @param careProvisionStart Date of start of care provision.
  */
 class Patient(
-	organization: Organization,
-	entityId: Int,
-	name: PersonName,
-	birthDate: Date,
+	val organization: Organization,
+	override val entityId: Int,
+	override val name: PersonName,
+	override val birthDate: Date,
 	val careProvisionStart: Date) extends Person(entityId, name, birthDate) {
 
 	/**
@@ -47,11 +49,15 @@ object Patient {
 	 *
 	 * @param organization Organization where the person is a patient.
 	 */
-	def sample(organization: Organization): Patient = {
+	def sample(patientProfile: PatientProfile, organization: Organization): Patient = {
+		val ageAndPcpr = patientProfile.sampleAgeAndPcpr
+		val daysOld = ageAndPcpr.get("DAYS_OLD_NOW").get.asInstanceOf[NumericObservation].value
+		val daysOldAtStartPcpr = ageAndPcpr.get("DAYS_OLD_AT_START").get.asInstanceOf[NumericObservation].value
+
 		val entityId = Random.nextInt
 		val name: PersonName = PersonName.generate;
-		val birthDate = new Date;
-		val pcprStart = new Date;
+		val birthDate = DateTimes.getRelativeDate((-1 * daysOld).toInt)
+		val pcprStart = DateTimes.getRelativeDate(daysOldAtStartPcpr.toInt, birthDate)
 		new Patient(organization, entityId, name, birthDate, pcprStart)
 	}
 }

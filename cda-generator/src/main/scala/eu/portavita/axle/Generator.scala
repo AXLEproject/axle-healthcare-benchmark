@@ -4,7 +4,6 @@
 package eu.portavita.axle
 
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.actorRef2Scala
@@ -14,6 +13,7 @@ import eu.portavita.axle.generators.PatientGenerator
 import eu.portavita.axle.messages.OrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.terminology.LocalTerminologyCache
+import eu.portavita.axle.model.PatientProfile
 
 /**
  * Application that generates CDA documents.
@@ -36,9 +36,12 @@ object Generator extends App {
 	val examinationGenerators = ExaminationGenerator.getGeneratorActors(modelsDirectory, system)
 	system.log.info("Created %d examination generators.".format(examinationGenerators.size))
 
+	val patientProfile = PatientProfile.read(modelsDirectory)
+	system.log.info("Loaded patient profile")
+
 	// Create patient generator actor.
 	val patientGenerator = system.actorOf(
-		Props(new PatientGenerator(examinationGenerators)),
+		Props(new PatientGenerator(examinationGenerators, patientProfile)),
 		name = "patientGenerator")
 	system.log.info("Created patient generator.")
 

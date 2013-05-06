@@ -12,10 +12,16 @@ import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.messages.PatientRequest
+import eu.portavita.axle.model.PatientProfile
+import scala.util.Random
+import eu.portavita.axle.helper.DateTimes
 
 class PatientGenerator (
-	examinationGenerators: List[ActorRef]
+	examinationGenerators: Map[String, ActorRef],
+	patientProfile: PatientProfile
 ) extends Actor with ActorLogging {
+
+	private val milisecondsPerDay = 1000 * 60 * 60 * 24
 
 	def receive = {
 		case PatientRequest(organization) =>
@@ -29,26 +35,27 @@ class PatientGenerator (
 	 * Generates a random patient, sends the patient to the output actor,
 	 * and then generates examinations for that patient, which are also
 	 * sent to the output actor.
+	 *
+	 * @param organization
 	 */
 	private def generate (organization: Organization) = {
-		val patient = Patient.sample(organization)
+		val patient = Patient.sample(patientProfile, organization)
 
-		val nrOfExaminations = Generator.config.getInt("nrOfExaminations")
+		val examinationsPerAge = patientProfile.sampleExaminations(patient)
 
-		// Generate observations for patient
-		generateObservations(patient, nrOfExaminations)
-	}
+		for {(age, examinations) <- examinationsPerAge
+			(examinationCode, numberOfExaminations) <- examinations
+			if examinationGenerators.contains(examinationCode)
+			val Some(generator) = examinationGenerators.get(examinationCode)
+		} {
+			val randomDayInYear = Random.nextInt(365)
+			val performedOn = DateTimes.getRelativeDate(randomDayInYear + age * 365, patient.birthDate)
 
-	/**
-	 * Generates the given number of examinations for the given patient
-	 * and sends them to the output actor.
-	 */
-	private def generateObservations (patient: Patient, nrOfExaminations: Int): Unit = {
-		for (i <- 1 to nrOfExaminations;
-			examinationGeneratorActor <- examinationGenerators
-		) {
-			examinationGeneratorActor ! ExaminationRequest(patient)
+			val timeCorrection = (Random.nextGaussian * milisecondsPerDay).toInt
+			performedOn.setTime(performedOn.getTime() + timeCorrection)
+
+			generator ! ExaminationRequest(patient, performedOn)
 		}
-	}
 
+	}
 }

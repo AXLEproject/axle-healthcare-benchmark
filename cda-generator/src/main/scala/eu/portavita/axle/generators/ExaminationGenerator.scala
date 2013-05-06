@@ -50,8 +50,9 @@ class ExaminationGenerator(
 	 * Receives and processes a message from another actor.
 	 */
 	def receive = {
-		case ExaminationRequest(patient) =>
+		case ExaminationRequest(patient, performedOn) =>
 			val examination = sampleNonEmptyExamination
+			examination.date = Some(performedOn)
 
 			// Examination must have values
 			assert(examination.hasValues)
@@ -105,7 +106,7 @@ object ExaminationGenerator {
 	 * Namely, for each model in the given directory, an examination generator actor
 	 * is created and returned.
 	 */
-	def getGeneratorActors(modelsDirectory: String, system: ActorSystem): List[ActorRef] = {
+	def getGeneratorActors(modelsDirectory: String, system: ActorSystem): Map[String, ActorRef] = {
 		val actorRefs =
 			for (
 				(examinationName, file) <- getModelFiles(modelsDirectory);
@@ -113,10 +114,10 @@ object ExaminationGenerator {
 				generator <- fromJson(system, examinationName, content);
 				if generator.isDefined
 			) yield {
-				generator.get
+				(examinationName, generator.get)
 			}
 
-		actorRefs.toList
+		actorRefs.toMap
 	}
 
 	/**

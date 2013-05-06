@@ -6,11 +6,13 @@ package eu.portavita.axle.messages
 import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Patient
 import akka.actor.ActorRef
+import java.util.Date
 
 sealed trait BayesianNetworkMessage
 
 case class ExaminationRequest (
-		val patient: Patient
+		val patient: Patient,
+		val performedOn: Date
 ) extends BayesianNetworkMessage
 
 case class ExaminationResult (
