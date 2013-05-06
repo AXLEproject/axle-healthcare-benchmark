@@ -26,14 +26,10 @@ class BayesianNetwork(
 	val name: String,
 	val variables: Map[String, Variable]) {
 
-	/**
-	 * Samples a number of observations from this network.
-	 * @return Map of act codes onto observations.
-	 */
-	def sample: Map[String, Observation] = {
+	def sample (evidence: Map[String, Observation]): Map[String, Observation] = {
 
 		// Result map of observation values.
-		val result = mutable.HashMap[String, Observation]()
+		val result = mutable.HashMap[String, Observation](evidence.toSeq: _*)
 
 		/**
 		 * Chooses an observation value for the variable with the given name. If that variable is dependent
@@ -70,6 +66,12 @@ class BayesianNetwork(
 
 		result.toMap
 	}
+
+	/**
+	 * Samples a number of observations from this network.
+	 * @return Map of act codes onto observations.
+	 */
+	def sample: Map[String, Observation] = sample(Map())
 
 	override def toString() = {
 		val s = StringBuilder.newBuilder
