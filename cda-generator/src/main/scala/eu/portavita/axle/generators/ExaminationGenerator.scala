@@ -50,8 +50,9 @@ class ExaminationGenerator(
 	 * Receives and processes a message from another actor.
 	 */
 	def receive = {
-		case ExaminationRequest(patient) =>
+		case ExaminationRequest(patient, date) =>
 			val examination = sampleNonEmptyExamination
+			examination.date = Some(date)
 
 			// Examination must have values
 			assert(examination.hasValues)
@@ -75,6 +76,7 @@ class ExaminationGenerator(
 
 	/**
 	 * Returns a new random examination.
+	 * @return
 	 */
 	private def sample: Examination = {
 
@@ -101,26 +103,33 @@ class ExaminationGenerator(
 
 object ExaminationGenerator {
 	/**
-	 * Returns a list of actor refs that refer to actors that generate examinations.
+	 * Returns a map of examination codes onto references to actors that generate examinations of that type.
 	 * Namely, for each model in the given directory, an examination generator actor
 	 * is created and returned.
+	 *
+	 * @param modelsDirectory
+	 * @param system
+	 * @return
 	 */
-	def getGeneratorActors(modelsDirectory: String, system: ActorSystem): List[ActorRef] = {
+	def getGeneratorActors(modelsDirectory: String, system: ActorSystem): Map[String, ActorRef] = {
 		val actorRefs =
 			for (
-				(examinationName, file) <- getModelFiles(modelsDirectory);
+				(examinationCode, file) <- getModelFiles(modelsDirectory);
 				content = scala.io.Source.fromFile(file).mkString.replaceAll("\"NaN\"", "0");
-				generator <- fromJson(system, examinationName, content);
+				generator <- fromJson(system, examinationCode, content);
 				if generator.isDefined
 			) yield {
-				generator.get
+				(examinationCode, generator.get)
 			}
 
-		actorRefs.toList
+		actorRefs.toMap
 	}
 
 	/**
 	 * Returns a set of tuples with the examination act code and the json file.
+	 *
+	 * @param directory
+	 * @return
 	 */
 	def getModelFiles(directory: String) = {
 		val examinationDirectory = new java.io.File(directory + File.separator + "examinations")
@@ -135,10 +144,18 @@ object ExaminationGenerator {
 	}
 
 
-	def fromJson(system: ActorSystem, examinationName: String, jsonString: String): List[Option[ActorRef]] = {
+	/**
+	 * Returns actor references within the given actor system from the given json string
+	 * for the examination with the given code.
+	 *
+	 * @param system
+	 * @param examinationCode
+	 * @return
+	 */
+	def fromJson(system: ActorSystem, examinationCode: String, jsonString: String): List[Option[ActorRef]] = {
 
 		val parsedJson = JSON.parseFull(jsonString)
-		if (parsedJson.isEmpty) throw new IllegalArgumentException("Unable to parse JSON for examination " + examinationName)
+		if (parsedJson.isEmpty) throw new IllegalArgumentException("Unable to parse JSON for examination " + examinationCode)
 
 		for (Some(AsMap(main)) <- List(parsedJson)) yield {
 
@@ -146,7 +163,7 @@ object ExaminationGenerator {
 			val discreteNetwork =
 				try {
 					val AsMap(discrete) = main.get("discrete").get
-					Some(DiscreteBayesianNetworkReader.read(examinationName, discrete))
+					Some(DiscreteBayesianNetworkReader.read(examinationCode, discrete))
 				} catch {
 					case _: Throwable => None
 				}
@@ -158,7 +175,7 @@ object ExaminationGenerator {
 				try {
 					val AsMap(numeric) = numericJson.get
 					val AsMap(network) = numeric.get("network").get
-					Some(NumericBayesianNetworkReader.read(examinationName, network))
+					Some(NumericBayesianNetworkReader.read(examinationCode, network))
 				} catch {
 					case _: Throwable => None
 				}
@@ -168,7 +185,7 @@ object ExaminationGenerator {
 				try {
 					val AsMap(numeric) = numericJson.get
 					val AsMap(missingValues) = numeric.get("missingValues").get
-					Some(DiscreteBayesianNetworkReader.read(examinationName, missingValues))
+					Some(DiscreteBayesianNetworkReader.read(examinationCode, missingValues))
 				} catch {
 					case _: Throwable => None
 				}
@@ -179,12 +196,12 @@ object ExaminationGenerator {
 				Some(system.actorOf(
 					Props(
 						new ExaminationGenerator(
-							examinationName,
+							examinationCode,
 							discreteBayesianNetwork = discreteNetwork,
 							numericBayesianNetwork = numericNetwork,
 							missingValuesBayesianNetwork = missingValuesNetwork))
 						.withDispatcher("my-dispatcher"),
-					name = examinationName)
+					name = examinationCode)
 				)
 			} else {
 				None

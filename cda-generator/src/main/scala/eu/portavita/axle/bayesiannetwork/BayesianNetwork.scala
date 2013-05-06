@@ -79,6 +79,9 @@ class BayesianNetwork(
 }
 
 object BayesianNetwork {
+	private val PqPattern = "^pq_(.+)$".r
+	private val CdPattern = "^cd_(.+)$".r
+	private val NrExaminationsPattern = "^nr_of_(.+)$".r
 
 	/**
 	 * Cleans the given name.
@@ -86,12 +89,14 @@ object BayesianNetwork {
 	 * @return Clean name
 	 */
 	def clean(dirtyName: String): String = {
-		val pattern = "^\\w{2}_(.+)$".r
-		try {
-			val pattern(code) = dirtyName
-			code.replaceAll("\\.", "-")
-		} catch {
-			case ex: Exception => dirtyName
+		dirtyName match {
+			case PqPattern(code) => restoreName(code)
+			case CdPattern(code) => restoreName(code)
+			case NrExaminationsPattern(code) => restoreName(code)
+
+			case _ => dirtyName
 		}
 	}
+
+	private def restoreName (name: String): String = name.replaceAll("\\.", "-")
 }
