@@ -10,12 +10,10 @@ import java.util.Date
 
 sealed trait BayesianNetworkMessage
 
+/**
+ * Message to request an examination for the given patient on the given date.
+ */
 case class ExaminationRequest (
 		val patient: Patient,
-		val performedOn: Date
-) extends BayesianNetworkMessage
-
-case class ExaminationResult (
-		val patient: Patient,
-		val examination: Examination
+		val date: Date
 ) extends BayesianNetworkMessage
