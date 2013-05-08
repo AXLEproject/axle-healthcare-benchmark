@@ -4,6 +4,7 @@
 package eu.portavita.axle.generatable
 
 import scala.util.Random
+import eu.portavita.axle.helper.RandomHelper
 
 object PersonName {
 
@@ -13,12 +14,11 @@ object PersonName {
 	 * @return
 	 */
 	def generate: PersonName = {
-		val lengthFirst = 4 + Random.nextInt(4)
-		val lengthLast = 6 + Random.nextInt(4)
-		val first: String = Random.nextString(lengthFirst)
-		val last: String = Random.nextString(lengthLast)
-		val prefix: String = if (Random.nextBoolean) Random.nextString(3) else ""
-		new PersonName(first, last, prefix)
+		new PersonName(
+			firstName = RandomHelper.string(4, 8),
+			lastName = RandomHelper.string(6, 14),
+			prefix = if (Random.nextBoolean) RandomHelper.string(2, 4) else ""
+		)
 	}
 }
 
