@@ -11,18 +11,19 @@ This script downloads the dependencies of the CDA generator.
 
 OPTIONS:
    -h      Show this message
-   -u      URL of the path which contains the terminology and model files
+   -p      Path of password file
 EOF
 }
 
-while getopts "hu:" opt; do
+passwordPath="password.txt"
+while getopts "hp" opt; do
 	case $opt in
 	h)
 		usage
 		exit 1
 	;;
-	u)
-		url="$OPTARG"
+	p)
+		passwordPath="$OPTARG"
 	;;
 	\?)
 		echo "Invalid option: -$OPTARG" >&2
@@ -31,15 +32,15 @@ while getopts "hu:" opt; do
 done
 
 
-# Download and decompress terminology
-curl "$url/terminology.tar.gz" | tar xvz -C .
+# Decrypt and decompress terminology
+openssl enc -d -aes-256-cbc -salt -in encrypted/terminology.tar.gz.enc -pass file:"$passwordPath" | tar xvz -C .
 
-# Download and decompress models
-curl "$url/models.tar.gz" | tar xvz -C .
+# Decrypt and decompress models
+openssl enc -d -aes-256-cbc -salt -in encrypted/models.tar.gz.enc -pass file:"$passwordPath" | tar xvz -C .
 
-# Download libraries
+# Decrypt libraries
 mkdir "lib/"
-wget -O "lib/cda-builder-1.0-SNAPSHOT.jar" "$url/lib/cda-builder-1.0-SNAPSHOT.jar"
-wget -O "lib/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar" "$url/lib/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar"
-wget -O "lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar" "$url/lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar"
+openssl enc -d -aes-256-cbc -salt -in encrypted/cda-builder-1.0-SNAPSHOT.jar.enc -out lib/cda-builder-1.0-SNAPSHOT.jar -pass file:"$passwordPath"
+openssl enc -d -aes-256-cbc -salt -in encrypted/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -out lib/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
+openssl enc -d -aes-256-cbc -salt -in encrypted/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -out lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
 
