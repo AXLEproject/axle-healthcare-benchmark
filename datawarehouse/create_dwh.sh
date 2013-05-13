@@ -64,8 +64,8 @@ case "${ACTION}" in
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
-        pgcommandfromfile $DBNAME "/home/mgrid/mgrid-hdm/hl7v3/contextconduction.sql"
-        pgcommandfromfile $DBNAME "/home/mgrid/mgrid-hdm/hl7v3/rim_dropforeignkeys.sql"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3contextconduction_edition2011"
+        pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
         # Dimension tables and level 1 transactional fact tables reside in 'rdw'
         pgcommand $DBNAME "CREATE SCHEMA rdw"
