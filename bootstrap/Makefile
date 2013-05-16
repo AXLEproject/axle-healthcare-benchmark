@@ -52,7 +52,7 @@ $(MGRIDHDLFILE):
 
 # Install HDL and some Healthcare Data Models
 installhdl: $(MGRIDHDLFILE) $(PGSERVER)
-	$(MGRIDHDLFILE) --pg_config_path $(PGSERVER)/bin/pg_config --mode unattended --enable-components hl7v3models_edition2011,snomedctvocab_20110731,loinc_234
+	$(MGRIDHDLFILE) --pg_config_path $(PGSERVER)/bin/pg_config --mode unattended --enable-components hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
 # Create datawarehouse
 createdb: start installhdl
