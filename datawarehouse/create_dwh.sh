@@ -58,7 +58,7 @@ case "${ACTION}" in
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
         pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20110731"
-        pgcommand $DBNAME "CREATE EXTENSION loinc_2_34"
+        pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
         # We want the RIM to be in schema 'staging_rimxxx' instead of 'public'."
         pgcommand $DBNAME "CREATE SCHEMA staging_rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
