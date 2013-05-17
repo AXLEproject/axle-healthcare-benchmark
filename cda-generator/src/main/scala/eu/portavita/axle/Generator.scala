@@ -32,6 +32,9 @@ object Generator extends App {
 	// Create actor system.
 	implicit val system = ActorSystem("CdaGenerator", config)
 
+	// Get how many CDAs to generate
+	val cdasToGenerate = config.getLong("numberOfCdas")
+
 	// Create examination generator actors for all models in directory.
 	val examinationGenerators = ExaminationGenerator.getGeneratorActors(modelsDirectory, system)
 	system.log.info("Created %d examination generators.".format(examinationGenerators.size))
