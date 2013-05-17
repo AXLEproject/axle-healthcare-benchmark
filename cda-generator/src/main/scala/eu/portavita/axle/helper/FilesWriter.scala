@@ -1,15 +1,11 @@
 /**
  * Copyright (c) 2013, Portavita BV Netherlands
  */
-package eu.portavita.axle.actors
+package eu.portavita.axle.helper
 
 import java.io.FileWriter
 
-import akka.actor.Actor
-import akka.actor.ActorLogging
 import eu.portavita.axle.Generator
-import eu.portavita.axle.helper.OutputHelper
-import eu.portavita.axle.messages.MarshalledDocument
 
 /**
  * Utility class for writing marshalled clinical documents to file.

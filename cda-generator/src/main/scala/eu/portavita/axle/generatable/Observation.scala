@@ -16,21 +16,21 @@ abstract class Observation {
 	/**
 	 * Returns the act code of this observation.
 	 *
-	 * @return
+	 * @return act code of observation
 	 */
 	def getCode: String
 
 	/**
 	 * Returns whether the observation has a value.
 	 *
-	 * @return
+	 * @return whether the observation has a value
 	 */
 	def hasValue: Boolean
 
 	/**
 	 * Returns a Java object for this observation.
 	 *
-	 * @return
+	 * @return Java object version of this observation
 	 */
 	def toHl7Act: Option[eu.portavita.concept.Act]
 }
@@ -70,7 +70,7 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 	override def getCode = code
 
 	/**
-	 * @returns True if the value is not an empty strong nor "TRUE"
+	 * @return if the value is not an empty string nor "TRUE"
 	 */
 	override def hasValue = value.nonEmpty && !value.equals("TRUE")
 

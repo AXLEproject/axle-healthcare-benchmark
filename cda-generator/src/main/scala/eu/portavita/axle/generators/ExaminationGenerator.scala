@@ -15,9 +15,9 @@ import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import eu.portavita.axle.Generator
-import eu.portavita.axle.actors.ExaminationDocumentBuilder
-import eu.portavita.axle.actors.FilesWriter
-import eu.portavita.axle.actors.Marshal
+import eu.portavita.axle.helper.ExaminationDocumentBuilder
+import eu.portavita.axle.helper.FilesWriter
+import eu.portavita.axle.helper.Marshal
 import eu.portavita.axle.bayesiannetwork.BayesianNetwork
 import eu.portavita.axle.bayesiannetwork.DiscreteBayesianNetworkReader
 import eu.portavita.axle.bayesiannetwork.NumericBayesianNetworkReader

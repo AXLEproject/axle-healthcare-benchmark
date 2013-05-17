@@ -19,6 +19,7 @@ import java.util.HashMap
 
 /**
  * Represents a Bayesian network.
+ *
  * @param name Name of the examination encoded in the network.
  * @param variables Map of act codes onto variables.
  */
@@ -26,6 +27,13 @@ class BayesianNetwork(
 	val name: String,
 	val variables: Map[String, Variable]) {
 
+	/**
+	 * Returns a map from act code onto sampled observation for all observations
+	 * in this network.
+	 *
+	 * @param given evidence in map from act code onto observation
+	 * @return map from act code to sampled observation
+	 */
 	def sample (evidence: Map[String, Observation]): Map[String, Observation] = {
 
 		// Result map of observation values.
@@ -35,7 +43,7 @@ class BayesianNetwork(
 		 * Chooses an observation value for the variable with the given name. If that variable is dependent
 		 * on other variables, resolves the parent variables first.
 		 * @param code Act code of the observation to resolve.
-		 * @return
+		 * @return observation of the given variable
 		 */
 		def resolveVariable(variableName: String): Observation = {
 			val variable = variables.get(variableName).get
@@ -66,7 +74,9 @@ class BayesianNetwork(
 	}
 
 	/**
-	 * Samples a number of observations from this network.
+	 * Returns a map from act code onto sampled observation for all observations
+	 * in this network.
+	 *
 	 * @return Map of act codes onto observations.
 	 */
 	def sample: Map[String, Observation] = sample(Map())

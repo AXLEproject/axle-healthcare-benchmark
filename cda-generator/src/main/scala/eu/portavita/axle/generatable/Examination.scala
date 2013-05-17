@@ -28,20 +28,22 @@ import eu.portavita.terminology.HierarchyNode
 class Examination(val code: String, val observations: Map[String, Observation]) {
 
 	// Guess the code system of the act code of this examination.
+	/** Code system of act code. */
 	lazy val codeSystem = CodeSystem.guess(code)
 
 	// Start w/o a date for the prom (awww).
+	/** Performance date of examination. */
 	var date: Option[Date] = None
 
 	// Start with random id for observations.
-	var lastId: Int = Random.nextInt
+	private var lastId: Int = Random.nextInt
 
 	/**
 	 * Returns the next id for observations.
 	 *
 	 * @return
 	 */
-	def nextId: Int = {
+	private def nextId: Int = {
 		lastId += 1
 		lastId
 	}
@@ -58,14 +60,14 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 	/**
 	 * Returns whether any observation in this examination has a value.
 	 *
-	 * @return
+	 * @return whether any observation in this examination has a value
 	 */
 	lazy val hasValues: Boolean = observations.exists(elem => elem._2.hasValue)
 
 	/**
 	 * Returns the list of observations in this examination that have a non-empty value.
 	 *
-	 * @return.
+	 * @return non-empty observations
 	 */
 	lazy val nonEmptyObservations = {
 		observations.filter(elem => elem._2.hasValue).toList
@@ -75,7 +77,7 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 	 * Returns the map of the act codes onto Act objects for all non-empty observations
 	 * in this examination.
 	 *
-	 * @return
+	 * @return map of the act codes onto Act objects
 	 */
 	def getObservationActs: mutable.Map[String, Act] = {
 		val acts = mutable.HashMap[String, Act]()
@@ -96,7 +98,7 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 	 *
 	 * @param root Root node of the defined hierarchy.
 	 *
-	 * @return
+	 * @return examination containing structure between components
 	 */
 	def buildHierarchy(root: HierarchyNode): eu.portavita.concept.Examination = {
 		val resultActs = getObservationActs

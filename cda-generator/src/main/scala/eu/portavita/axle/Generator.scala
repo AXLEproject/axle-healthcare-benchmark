@@ -25,38 +25,42 @@ import eu.portavita.axle.model.PatientProfile
 object Generator extends App {
 
 	// Load configuration.
+	/** Configuration of the program. */
 	val config = ConfigFactory.load()
+	/** Directory where the models can be found that . */
 	val modelsDirectory = config.getString("modelsDirectory")
+	/** Configuration of the program. */
 	val outputDirectory = config.getString("outputDirectory")
 
 	// Get local terminology provider.
-	val terminologyDirectory = config.getString("terminologyDirectory")
+	private val terminologyDirectory = config.getString("terminologyDirectory")
+	/** The terminology cache. */
 	val terminology = new LocalTerminologyCache(terminologyDirectory)
 
-	// Create actor system.
+	/** Create actor system. */
 	implicit val system = ActorSystem("CdaGenerator", config)
 
-	// Get how many CDAs to generate
+	/** The number of CDAs that must be generated. */
 	val cdasToGenerate = config.getLong("numberOfCdas")
 
 	// Create examination generator actors for all models in directory.
-	val examinationGenerators = ExaminationGenerator.getGeneratorActors(modelsDirectory, system)
+	private val examinationGenerators = ExaminationGenerator.getGeneratorActors(modelsDirectory, system)
 	system.log.info("Created %d examination generators.".format(examinationGenerators.size))
 
-	val patientProfile = PatientProfile.read(modelsDirectory)
+	private val patientProfile = PatientProfile.read(modelsDirectory)
 	system.log.info("Loaded patient profile")
 
 	// Create patient generator actor.
-	val patientGenerator = system.actorOf(
+	private val patientGenerator = system.actorOf(
 		Props(new PatientGenerator(examinationGenerators, patientProfile)),
 		name = "patientGenerator")
 	system.log.info("Created patient generator.")
 
 	// Create organization generator.
-	val organizationModel = OrganizationModel.read(modelsDirectory)
+	private val organizationModel = OrganizationModel.read(modelsDirectory)
 	system.log.info("Loaded organization mode.")
 
-	val organizationGenerator = system.actorOf(
+	private val organizationGenerator = system.actorOf(
 		Props(new OrganizationGenerator(organizationModel)),
 		name = "organizationGenerator")
 	system.log.info("Created organization generator.")

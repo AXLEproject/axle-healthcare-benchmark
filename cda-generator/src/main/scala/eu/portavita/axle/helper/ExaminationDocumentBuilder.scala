@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013, Portavita BV Netherlands
  */
-package eu.portavita.axle.actors
+package eu.portavita.axle.helper
 
 import org.hl7.v3.POCDMT000040ClinicalDocument
 import eu.portavita.axle.generatable.Patient

@@ -1,18 +1,12 @@
 /**
  * Copyright (c) 2013, Portavita BV Netherlands
  */
-package eu.portavita.axle.actors
-
-import akka.actor.ActorLogging
-import akka.actor.Actor
+package eu.portavita.axle.helper
 import javax.xml.bind.JAXBContext
 import org.hl7.v3.POCDMT000040ClinicalDocument
 import javax.xml.bind.Marshaller
-import eu.portavita.axle.messages.MarshalDocumentRequest
-import akka.actor.ActorRef
 import java.io.StringWriter
-import eu.portavita.axle.messages.MarshalledDocument
-import eu.portavita.axle.Generator
+import org.hl7.v3.POCDMT000040ClinicalDocument
 
 /**
  * This actor receives clinical documents as POJO, marshals them, and sends the marshalled documents
@@ -21,13 +15,17 @@ import eu.portavita.axle.Generator
 class Marshal {
 
 	// Create JAXB context of clinical documents.
-	val jaxbContext = JAXBContext.newInstance(classOf[POCDMT000040ClinicalDocument])
+	private val jaxbContext = JAXBContext.newInstance(classOf[POCDMT000040ClinicalDocument])
 
 	// Create marshaller of clinical documents.
-	val marshaller = jaxbContext.createMarshaller()
+	private val marshaller = jaxbContext.createMarshaller()
 	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, java.lang.Boolean.TRUE)
 
-
+	/**
+	 * Returns marshalled version of given document.
+	 *
+	 * @return String with marshalled XML of given document
+	 */
 	def create (document: POCDMT000040ClinicalDocument): String = {
 		val writer = new StringWriter
 		// Marshal document.
