@@ -16,7 +16,11 @@ import eu.portavita.terminology.LocalTerminologyCache
 import eu.portavita.axle.model.PatientProfile
 
 /**
- * Application that generates CDA documents.
+ * Application that generates random CDA documents.
+ *
+ * Using a set of models of health organizations, patients, care provisions,
+ * and examinations, the application generates random CDAs and saves them to
+ * the specified output directory.
  */
 object Generator extends App {
 

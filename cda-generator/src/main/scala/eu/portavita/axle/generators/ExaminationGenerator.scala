@@ -27,6 +27,14 @@ import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.terminology.CodeSystem
 
+/**
+ * Generates random examinations and saves the CDA to disk.
+ *
+ * Actor that upon receiving examination requests generates a new random
+ * examination, builds a CDA, and saves the CDA to disk.
+ *
+ * @param code
+ */
 class ExaminationGenerator(
 	val code: String,
 	val discreteBayesianNetwork: Option[BayesianNetwork] = None,

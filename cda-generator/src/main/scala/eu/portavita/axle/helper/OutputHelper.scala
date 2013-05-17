@@ -29,7 +29,7 @@ object OutputHelper {
 
 	/**
 	 * Draws the next directory number.
-	 * @return
+	 * @return next directory number
 	 */
 	def getNextDirectoryNumber(): Int = {
 		this.synchronized {
@@ -40,7 +40,7 @@ object OutputHelper {
 
 	/**
 	 * Draws the next file number.
-	 * @return
+	 * @return next file number
 	 */
 	def getNextFileNumber(): Int = {
 		val chosenNumber =
