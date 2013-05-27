@@ -6,18 +6,20 @@ Synthetic healthcare database generator and decision support benchmark
 * minimally 4GB RAM
 * Oracle JDK 7 or OpenJDK
 * Maven 2.2
-* Centos 6 or Ubuntu 12.04
+* CentOS 6 or Ubuntu 12.04
 
-* Centos 6
-  * EPEL repository added
-  * `yum install -y openssh-clients openssh-server wget screengit parallel`
-  * `yum install -y make readline-devel zlib-devel uuid-devel htop man-pages man`
-  * `yum install -y java-1.7.0-openjdk-devel`
-  * `yum groupinstall -y "Development Tools"`
+The project contains for CentOS and Ubuntu scripts that must be run as root,
+and will take care of installing the prerequisites.
+
+* CentOS 6
+  * `yum install -y git` (as root)
+  * `git clone https://github.com/AXLEproject/axle-healthcare-benchmark`
+  * `bash -c axle-healthcare-benchmark/bootstrap/centosroot.sh` (as root)
 * Ubuntu 12.04
-  * `apt-get install git parallel make libreadline-dev zlib1g-dev libossp-uuid-dev`
-  * `apt-get install libxml2-dev flex bison gcc openssh-server`
-  * `apt-get install maven2`
+  * `sudo apt-get update`
+  * `sudo apt-get install -y git-core`
+  * `git clone https://github.com/AXLEproject/axle-healthcare-benchmark`
+  * `sudo bash -c axle-healthcare-benchmark/bootstrap/ubunturoot.sh`
 
 ## CDA Generator ##
 

@@ -1,7 +1,10 @@
 #
 # axle-healthcare-benchmark
 #
-# install prerequisites on CentOS 6
+# install prerequisites on CentOS 6.
+#
+# For a proper installation of maven, this script should be run from the home
+# directory of the user that owns the axle dataset software.
 #
 # Copyright (c) 2013, Portavita B.V.
 #

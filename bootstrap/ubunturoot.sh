@@ -6,6 +6,7 @@
 # Copyright (c) 2013, Portavita B.V.
 #
 
+# Especially maven needs up to date package lists
 apt-get update
 
 # misc packages
