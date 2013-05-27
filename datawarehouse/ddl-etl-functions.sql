@@ -436,7 +436,7 @@ AS $$
                       -- step 1: select distinct patients related to new acts
                       select distinct e as e, r as r
                       from "Person" e
-                      join "Patient" r on (r.player = e._id)
+                      right outer join "Patient" r on (r.player = e._id)
                       join "Participation" ptcp on (ptcp.role = r._id)
                       join new_observation n on (ptcp.act = n._id)
 /* Use select codesystem('ParticipationType', 'DIR'::cv('ParticipationType'))
@@ -514,7 +514,7 @@ AS $$
                       -- step 1: select distinct providers related to new acts
                       select distinct e as e, r as r
                       from "Person" e
-                      join "Role" r on (r.player = e._id)
+                      right outer join "Role" r on (r.player = e._id)
                       join "Participation" ptcp on (ptcp.role = r._id)
                       join new_observation n on (ptcp.act = n._id)
                       where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
