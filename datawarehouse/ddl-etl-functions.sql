@@ -955,12 +955,12 @@ BEGIN
        FROM ans
    )
    LOOP
-       EXECUTE format('CREATE VIEW view_snomed_tree."%s" AS '
+       EXECUTE format('CREATE VIEW view_snomed_tree.%I AS '
                    || 'SELECT * FROM fact_observation_evn o '
                    || 'WHERE o.code_cv << ''%s''::cv(''SNOMED-CT'') '
                    || 'OR o.value_cv << ''%s''::cv(''SNOMED-CT'')',
                      concepts.name, concepts.cdcode, concepts.cdcode);
-       EXECUTE format('COMMENT ON VIEW view_snomed_tree."%s" IS ''%s''',
+       EXECUTE format('COMMENT ON VIEW view_snomed_tree.%I IS %L',
                      concepts.name, concepts.comment);
    END LOOP;
 END;
