@@ -437,8 +437,8 @@ AS $$
                       select distinct e as e, r as r
                       from "Person" e
                       right outer join "Patient" r on (r.player = e._id)
-                      join "Participation" ptcp on (ptcp.role = r._id)
-                      join new_observation n on (ptcp.act = n._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
 /* Use select codesystem('ParticipationType', 'DIR'::cv('ParticipationType'))
  * to inspect the subtree under DIR of the codesystem */
                       where "typeCode" << 'DIR'::cv('ParticipationType')
@@ -515,8 +515,8 @@ AS $$
                       select distinct e as e, r as r
                       from "Person" e
                       right outer join "Role" r on (r.player = e._id)
-                      join "Participation" ptcp on (ptcp.role = r._id)
-                      join new_observation n on (ptcp.act = n._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
                       where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                       or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
                       ) p
@@ -592,8 +592,8 @@ AS $$
                       select distinct e as e, r as r
                       from "Organization" e
                       join "Role" r on (r.scoper = e._id)
-                      join "Participation" ptcp on (ptcp.role = r._id)
-                      join new_observation n on (ptcp.act = n._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
                       where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                       or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
                       ) p
@@ -822,13 +822,13 @@ AS $$
         , datatype((_any(value))[1])                                      as dt
         , "moodCode"                                                      as mood
         FROM new_observation      obs
-        LEFT JOIN "Participation" ptcp_pati
+        LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
                 AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
                 AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
         LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
         LEFT JOIN "Person" p                ON r.player = p._id
-        LEFT JOIN "Participation" ptcp_prov ON ptcp_prov.act = obs._id
+        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
                  AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                      OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
@@ -890,13 +890,13 @@ AS $$
         , datatype(value)                                                 as dt
         , "moodCode"                                                      as mood
         FROM new_observation      obs
-        LEFT JOIN "Participation" ptcp_pati
+        LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
                 AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
                 AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
         LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
         LEFT JOIN "Person" p                ON r.player = p._id
-        LEFT JOIN "Participation" ptcp_prov ON ptcp_prov.act = obs._id
+        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
                  AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                      OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
@@ -904,7 +904,7 @@ AS $$
         LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
         LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
         LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
-        LEFT JOIN "Participation" ptcp_prod ON ptcp_prod.act = obs._id
+        LEFT JOIN ONLY "Participation" ptcp_prod ON ptcp_prod.act = obs._id
                   AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
                   AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
         LEFT JOIN "Role"          r_prod    ON r_prod._id = ptcp_prod.role
