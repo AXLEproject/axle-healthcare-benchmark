@@ -320,6 +320,16 @@ CREATE INDEX ON "PublicHealthCase"(_timestamp);
 CREATE INDEX ON fact_observation_evn_pq(timestamp);
 CREATE INDEX ON fact_observation_evn_cv(timestamp);
 
+/* Create indexes to speed up ETL queries */
+CREATE INDEX ON "Participation"(act);
+CREATE INDEX ON "Participation"(role);
+CREATE INDEX ON dim_patient(set_nk);
+CREATE INDEX ON "Role"(scoper);
+CREATE INDEX ON "Role"(player);
+CREATE INDEX ON "Participation"("sequenceNumber");
+CREATE INDEX ON "Participation"("typeCode");
+
+
 /* Insert dummy values for dimensions */
 
 INSERT INTO dim_concept(id,code,displayname)
