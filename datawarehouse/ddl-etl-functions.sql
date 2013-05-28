@@ -799,8 +799,7 @@ AS $$
     , value_pq_canonical_value
     , timestamp
     )
-    SELECT id, pat_sk, prov_sk, orga_sk, from_sk, to_sk, effectivetime, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, product_sk, code_cv, pqval, pqunit, numval, canunit, canval, timestamp FROM (
-        SELECT  obs.id                                                    as id
+    SELECT  obs.id                                                    as id
         , get_patient_sk(p,r)                                             as pat_sk
         , get_provider_sk(e_prov, r_prov)                                 as prov_sk
         , get_organization_sk(e_orga, r_prov)                             as orga_sk
@@ -819,9 +818,7 @@ AS $$
         , unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
         , value(canonical(((_any(value))[1])::text::pq))                  as canval-- canonical value of the PQ
         , obs._timestamp                                                  as timestamp
-        , datatype((_any(value))[1])                                      as dt
-        , "moodCode"                                                      as mood
-        FROM new_observation      obs
+        FROM new_observation_evn_pq      obs
         LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
                 AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
@@ -836,8 +833,6 @@ AS $$
         LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
         LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
         LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
-        ) as foo
-        WHERE dt = 'pq' AND mood = 'EVN'::CV('ActMood')
    returning id
   )
   SELECT count(*) from insert_query;
@@ -870,8 +865,7 @@ AS $$
     , value_concept_sk
     , timestamp
     )
-    SELECT id, pat_sk, prov_sk, orga_sk, from_sk, to_sk, effectivetime, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, product_sk, code_cv, value_cv, value_concept_sk, timestamp FROM (
-        SELECT  obs.id                                                    as id
+    SELECT  obs.id                                                    as id
         , get_patient_sk(p,r)                                             as pat_sk
         , get_provider_sk(e_prov, r_prov)                                 as prov_sk
         , get_organization_sk(e_orga, r_prov)                             as orga_sk
@@ -887,9 +881,7 @@ AS $$
         , ((_cany(value))::cd[])[1]::CV                                   as value_cv
         , get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
         , obs._timestamp                                                  as timestamp
-        , datatype(value)                                                 as dt
-        , "moodCode"                                                      as mood
-        FROM new_observation      obs
+        FROM new_observation_evn_cd      obs
         LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
                 AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
@@ -909,8 +901,6 @@ AS $$
                   AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
         LEFT JOIN "Role"          r_prod    ON r_prod._id = ptcp_prod.role
         LEFT JOIN "Entity"        e_prod    ON e_prod._id = r_prod.player
-        ) as foo
-        WHERE dt = '_cd' AND mood = 'EVN'::CV('ActMood')
    returning id
   )
   SELECT count(*) from insert_query;
