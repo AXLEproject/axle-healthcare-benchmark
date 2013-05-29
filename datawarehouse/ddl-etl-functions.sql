@@ -683,62 +683,73 @@ COMMENT ON FUNCTION get_organization_sk("Organization","Role") IS
 'Lookup the organizations surrogate key.';
 
 
+CREATE OR REPLACE FUNCTION update_dim_time()
+RETURNS VOID
+AS $$
+   INSERT INTO dim_time ( day
+                        , month
+                        , year
+                        , dow
+                        , quarter
+                        , hour
+                        , minutes
+                        )
+   SELECT date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('isodow', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('quarter', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   FROM "Observation" obs
+   WHERE NOT EXISTS (SELECT 1
+                     FROM dim_time WHERE year = date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
+   UNION
+   SELECT DISTINCT date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('isodow', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('quarter', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
+   FROM "Observation" obs
+   WHERE NOT EXISTS (SELECT 1
+                     FROM dim_time WHERE year = date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
+$$ LANGUAGE SQL;
+COMMENT ON FUNCTION update_dim_time() IS
+'Updates the time dimension';
+
 CREATE OR REPLACE FUNCTION get_time_sk(ts)
 RETURNS dim_time.id%TYPE
 AS $$
-   WITH existing_time AS (
         SELECT id FROM dim_time
-        WHERE (    isnull(orig_timestamp,'NINF') AND isnull($1,'NINF')
-               OR  isnull(orig_timestamp,'PINF') AND isnull($1,'PINF')
-              )
-        OR (isnull(COALESCE($1,'NullFlavor.UNK'::ts),'UNK') AND isnull(orig_timestamp,'UNK'))
-        OR date_trunc('minute', dim_time.orig_timestamp) = date_trunc('minute', $1)
-        )
-   , new_time AS (
-        INSERT INTO dim_time ( day
-                             , month
-                             , year
-                             , dow
-                             , quarter
-                             , hour
-                             , minutes
-                             , orig_timestamp
-                             )
-        SELECT   date_part('day', $1)
-               , date_part('month', $1)
-               , date_part('year', $1)
-               , date_part('isodow', $1)
-               , date_part('quarter', $1)
-               , date_part('hour', $1)
-               , date_part('minute', $1)
-               , $1
-        WHERE NOT EXISTS (SELECT * FROM existing_time)
-        RETURNING id
-        )
-   select id from existing_time
-   UNION ALL
-   select id from new_time
+        WHERE year = date_part('year', $1)
+        AND month = date_part('month', $1)
+        AND day = date_part('day', $1)
+        AND hour = date_part('hour', $1)
+        AND minutes = date_part('minute', $1)
 ;
+$$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
+;
+COMMENT ON FUNCTION get_time_sk(ts) IS 'Lookup the time surrogate key.';
+
 $$ LANGUAGE SQL;
-COMMENT ON FUNCTION get_time_sk(ts) IS
-'Lookup the time surrogate key. A new time dimension record will be created if it does not already exists.';
 
 CREATE OR REPLACE FUNCTION get_template_id_sk(ii[])
 RETURNS dim_template.id%TYPE
 AS $$
-   WITH existing_template_id AS (
-        SELECT id FROM dim_template
-        WHERE template_id = $1::text[]
-   )
-   , new_template_id AS (
-        INSERT INTO dim_template(template_id, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9)
-        SELECT $1, $1[1], $1[2], $1[3], $1[4], $1[5], $1[6], $1[7], $1[8], $1[9]
-        WHERE NOT EXISTS (SELECT * FROM existing_template_id)
-        RETURNING id
-   )
-   SELECT id FROM existing_template_id
-   UNION ALL
-   SELECT id FROM new_template_id
+    SELECT id FROM dim_template
+    WHERE template_id = $1::text[]
 ;
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION get_template_id_sk(ii[]) IS 'Gets the surrogate key for and existing template_id, or inserts a row to the dim_template dimension table and returns the newly created surrogate key for this row';
@@ -1003,12 +1014,35 @@ COMMENT ON FUNCTION setup_view_templates() IS
    'Creates a view for each template_id used in the fact_observation_evn_pq table. Each view contains the records in the fact_observation_evn_pq that refer to this template'
    ;
 
+
+CREATE OR REPLACE FUNCTION setup_dimensions()
+RETURNS VOID AS $$
+DECLARE
+        messages TEXT;
+BEGIN
+        -- first update the time dimension
+        PERFORM update_dim_time();
+        -- next update the template dimension
+        PERFORM update_dim_template();
+        -- first update dimensions that support type-2 changes
+        messages :=  update_dim_patient();
+        RAISE NOTICE 'update_dim_patient: %', messages;
+        messages := update_dim_provider();
+        RAISE NOTICE'update_dim_provider: %', messages;
+        messages := update_dim_organization();
+        RAISE NOTICE'update_dim_organizations: %', messages;
+        -- next update fact tables
+END $$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION stream_etl_observation_evn()
 RETURNS VOID
 AS $$
 DECLARE
         messages TEXT;
 BEGIN
+        -- first update the time dimension
+        PERFORM update_dim_time();
         -- first update dimensions that support type-2 changes
         messages :=  update_dim_patient();
         RAISE NOTICE 'update_dim_patient: %', messages;

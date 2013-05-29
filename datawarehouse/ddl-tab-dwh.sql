@@ -63,7 +63,6 @@ CREATE TABLE dim_time(
 , quarter            INT
 , hour               INT
 , minutes            INT
-, orig_timestamp     ts
 );
 COMMENT ON TABLE dim_time IS
 'Dimension table for time granularities.';
@@ -334,9 +333,6 @@ CREATE INDEX ON "Participation"("typeCode");
 
 INSERT INTO dim_concept(id,code,displayname)
 VALUES (0,'Unknown','Unknown');
-
-INSERT INTO dim_time(id, orig_timestamp)
-VALUES (0,'NullFlavor.UNK'),(1,'NullFlavor.NINF'::ts),(2,'NullFlavor.PINF'::ts);
 
 INSERT INTO dim_patient(id,name_family,valid_time,current_flag)
 VALUES (0,'Unknown', ']NullFlavor.NINF;NullFlavor.PINF[',True);
