@@ -327,6 +327,7 @@ CREATE INDEX ON "Role"(scoper);
 CREATE INDEX ON "Role"(player);
 CREATE INDEX ON "Participation"("sequenceNumber");
 CREATE INDEX ON "Participation"("typeCode");
+CREATE INDEX ON dim_template(template_id);
 
 
 /* Insert dummy values for dimensions */

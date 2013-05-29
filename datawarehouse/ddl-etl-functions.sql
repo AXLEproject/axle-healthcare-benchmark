@@ -743,7 +743,25 @@ $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 ;
 COMMENT ON FUNCTION get_time_sk(ts) IS 'Lookup the time surrogate key.';
 
+CREATE OR REPLACE FUNCTION update_dim_template()
+RETURNS VOID
+AS $$
+   INSERT INTO dim_template(template_id, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9)
+   SELECT obs."templateId"
+   , obs."templateId"[1]
+   , obs."templateId"[2]
+   , obs."templateId"[3]
+   , obs."templateId"[4]
+   , obs."templateId"[5]
+   , obs."templateId"[6]
+   , obs."templateId"[7]
+   , obs."templateId"[8]
+   , obs."templateId"[9]
+   FROM "Observation" obs
+   WHERE obs."templateId" IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM dim_template WHERE template_id = obs."templateId"::text[])
 $$ LANGUAGE SQL;
+COMMENT ON FUNCTION update_dim_template() IS 'Updates the dim_template dimension';
 
 CREATE OR REPLACE FUNCTION get_template_id_sk(ii[])
 RETURNS dim_template.id%TYPE
@@ -751,8 +769,8 @@ AS $$
     SELECT id FROM dim_template
     WHERE template_id = $1::text[]
 ;
-$$ LANGUAGE SQL;
-COMMENT ON FUNCTION get_template_id_sk(ii[]) IS 'Gets the surrogate key for and existing template_id, or inserts a row to the dim_template dimension table and returns the newly created surrogate key for this row';
+$$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
+COMMENT ON FUNCTION get_template_id_sk(ii[]) IS 'Gets the surrogate key for and existing template_id';
 
 -- TODO handle qualifiers
 CREATE OR REPLACE FUNCTION get_concept_sk(cv)
