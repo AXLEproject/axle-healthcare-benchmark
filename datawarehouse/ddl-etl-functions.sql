@@ -49,7 +49,7 @@ AS $$
                 NULL
                 )::dimension_name) AS t(c);
 $$ LANGUAGE sql
-RETURNS NULL ON NULL INPUT;
+IMMUTABLE RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION bag_en2dimension_name(bag_en) IS
 'Transform RIM EntityName or RoleName to a dimension_name to be used in the DWHs dimension tables. This function must be refined by the user to select the desired name parts and assemble the fullname.';
 
@@ -69,7 +69,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_patient2dimension_name("Person", "Patient") IS
 'Returns a dimension_name to be used when updating a patient dimension.';
 
@@ -89,7 +89,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_role2dimension_name("Person", "Role") IS
 'Returns a dimension_name to be used when updating a provider dimension.';
 
@@ -109,7 +109,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2text("Organization", "Role") IS
 'Returns the text to be used when updating the name attribute of an organization dimension.';
 
@@ -138,7 +138,7 @@ $$
              value((state(address[1]))[1]),
              value((country(address[1]))[1])
              )::dimension_address
-$$ LANGUAGE SQL
+$$ LANGUAGE SQL IMMUTABLE
 RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION bag_ad2dimension_address(bag_ad) IS
 'Transform RIM EntityAddress or RoleAddress to a dimension_address to be used in the DWHs dimension tables. This function must be refined by the user to select the desired address parts.';
@@ -159,7 +159,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2dimension_address("Organization", "Role") IS
 'Returns a dimension_address to be used when updating an organization dimension.';
 
@@ -193,7 +193,7 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_patient2set_nk("Person", "Patient") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -226,7 +226,7 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_role2set_nk("Person", "Role") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -259,7 +259,7 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Organization and associated Role. This function must be refined by the user to select a meaningful natural key.';
 
@@ -292,7 +292,7 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION orga_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Role and associated Organiation. This function must be refined by the user to select a meaningful natural key.';
 
@@ -303,7 +303,7 @@ AS
 $$
         SELECT code(e."administrativeGenderCode")
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person2gender("Person") IS
 'Returns the gender code for the person to be used in the patient dimension.';
 
@@ -340,7 +340,7 @@ $$
  ,    (SELECT person_patient2set_nk(e,r) as dpk) o
 ;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION assemble_dim_patient(e "Person", r "Patient") IS
 'Transforms Patient and Person attributes to dim_patient attributes.';
 
@@ -376,7 +376,7 @@ $$
  ,    (SELECT person_role2set_nk(e,r) as dpk) o
 ;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION assemble_dim_provider(e "Person", r "Role") IS
 'Transforms Role and Person attributes to dim_provider attributes.';
 
@@ -411,7 +411,7 @@ $$
  ,    (SELECT organization_role2set_nk(e,r) as dok) o
  ;
 $$
-LANGUAGE SQL;
+LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION assemble_dim_organization(e "Organization", r "Role") IS
 'Transforms Role and Organization attributes to dim_organization attributes.';
 
