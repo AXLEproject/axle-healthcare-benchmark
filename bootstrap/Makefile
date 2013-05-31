@@ -20,8 +20,14 @@ PGDATA=$(BASEDIR)/data
 
 MGRIDHDL=mgridhdl-9.2-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
+MGRIDHDLURL=http://www.mgrid.net/downloads/hdl/9.2/$(MGRIDHDL)
+MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
-all: start installhdl createdb
+MGRIDMSG=mgridmsg-0.9-linux-x64-installer.run
+MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
+MGRIDMSGURL=http://www.mgrid.net/downloads/msg/0.9/$(MGRIDMSG)
+
+all: start installhdl installmsg createdb
 
 # Get PostgreSQL source code.
 # Note that only HEAD is fetched
@@ -46,17 +52,27 @@ start: $(PGDATA)
 
 # Download HDL and HDM
 $(MGRIDHDLFILE):
-	wget -O $(MGRIDHDLFILE) http://www.mgrid.net/downloads/hdl/9.2/$(MGRIDHDL)
+	wget -O $(MGRIDHDLFILE) $(MGRIDHDLURL)
 	chmod +x $(MGRIDHDLFILE)
 	touch $@
 
 # Install HDL and some Healthcare Data Models
 installhdl: $(MGRIDHDLFILE) $(PGSERVER)
-	$(MGRIDHDLFILE) --pg_config_path $(PGSERVER)/bin/pg_config --mode unattended --enable-components hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
+	$(MGRIDHDLFILE) --pg_config_path $(PGSERVER)/bin/pg_config --mode unattended --enable-components $(MGRIDHDLCOMPONENTS)
 
 # Create datawarehouse
 createdb: start installhdl
 	cd $(DATAWAREHOUSE) ; PATH=$(PGSERVER)/bin:$${PATH} make createdb
+
+# Download messaging SDK and install
+$(MGRIDMSGFILE):
+	wget -O $(MGRIDMSGFILE) $(MGRIDMSGURL)
+	chmod +x $(MGRIDMSGFILE)
+	touch $@
+
+# Install messaging SDK
+installmsg: $(MGRIDMSGFILE)
+	$(MGRIDMSGFILE) --mode unattended
 
 # Some other useful targets
 stop: $(PGDATA)
