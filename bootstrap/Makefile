@@ -11,12 +11,14 @@
 DWH=dwh
 
 PGGIT= git://git.postgresql.org/git/postgresql.git
+PGTUNEGIT= https://github.com/gregs1104/pgtune.git
 
 BASEDIR=$(shell pwd)/../database
 DATAWAREHOUSE=$(shell pwd)/../datawarehouse
 PGSOURCE=$(BASEDIR)/postgresql
 PGSERVER=$(BASEDIR)/postgres
 PGDATA=$(BASEDIR)/data
+PGTUNE=$(BASEDIR)/pgtune
 
 MGRIDHDL=mgridhdl-9.2-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
@@ -39,12 +41,22 @@ $(PGSOURCE):
 # Compile PostgreSQL server
 $(PGSERVER): $(PGSOURCE)
 	cd $(PGSOURCE) ; ./configure --prefix=$(PGSERVER) --with-ossp-uuid && make clean && make -j4 && make install
+	cd $(PGSOURCE)/contrib ; make -j4 && make install
+	touch $@
+
+# Get pgtune
+$(PGTUNE):
+	mkdir -p $(BASEDIR)
+	cd $(BASEDIR) ; git clone --depth 1 $(PGTUNEGIT)
 	touch $@
 
 # Initialise cluster
-$(PGDATA): $(PGSERVER)
+$(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
-	echo "TODO: proper postgresql.conf configuration for decision support setup"
+	echo "shared_preload_libraries = 'pg_stat_statements'" >> $(PGDATA)/postgresql.conf
+	echo "pg_stat_statements.max = 1000" >> $(PGDATA)/postgresql.conf
+	echo "pg_stat_statements.track = top" >> $(PGDATA)/postgresql.conf
+	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T DW -P Linux -c 5 || rm -rf $(PGDATA)
 
 # Start cluster
 start: $(PGDATA)
