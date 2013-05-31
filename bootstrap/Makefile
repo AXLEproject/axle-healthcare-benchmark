@@ -19,6 +19,7 @@ PGSOURCE=$(BASEDIR)/postgresql
 PGSERVER=$(BASEDIR)/postgres
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
+PGCONN=$(shell expr 3 + `grep MHz /proc/cpuinfo | wc -l`)
 
 MGRIDHDL=mgridhdl-9.2-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
@@ -56,7 +57,7 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 	echo "shared_preload_libraries = 'pg_stat_statements'" >> $(PGDATA)/postgresql.conf
 	echo "pg_stat_statements.max = 1000" >> $(PGDATA)/postgresql.conf
 	echo "pg_stat_statements.track = top" >> $(PGDATA)/postgresql.conf
-	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T DW -P Linux -c 5 || rm -rf $(PGDATA)
+	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T DW -P Linux -c $(PGCONN) || rm -rf $(PGDATA)
 
 # Start cluster
 start: $(PGDATA)
