@@ -21,32 +21,57 @@ and will take care of installing the prerequisites.
   * `git clone https://github.com/AXLEproject/axle-healthcare-benchmark`
   * `sudo bash -c axle-healthcare-benchmark/bootstrap/ubunturoot.sh`
 
+# Components #
+
 ## CDA Generator ##
 
-Generates an endless stream of CDA documents.
-The structure and distribution of the content of the documents is defined in a set of models in the models/ directory (not provided).
-Terminology data is read from the terminology/ directory that defines the value types and display names of all acts and coded values.
+Generates an endless stream of CDA documents.  The structure and distribution
+of the content of the documents is defined in a set of models in the models/
+directory.  Terminology data is read from the terminology/ directory that
+defines the value types and display names of all acts and coded values.
 
-### Before running ###
-bash initialize.sh -u &lt;required-files-url&gt;
+## Staging HL7v3 RIM database ##
 
-### Running ###
-* nano src/main/resources/application.conf
-	* Configure outputDirectory to a suitable directory
-* bash start.sh
+The staging database is used to 'stage' the persisted CDA documents.  The XML
+documents are loaded by the example CDA R2 parser that is part of the MGRID
+Messaging SDK.
 
-## Benchmark database bootstrapper ##
+## Data Warehouse and ETL ##
 
-### Bootstrap an empty datawarehouse ###
+The data warehouse follows a star schema design.  Data from the staging
+database is transformed using ETL, that is programmed as stored procedures.
+
+# Preparation #
+
+* Mail axle@portavita.eu for the password and put it in
+  `axle-healthcare-benchmark/cda-generator/password.txt`
+* Extract models with `cd axle-healthcare-benchmark/cda-generator ; bash initialize.sh`
+* Configure the CDA generator
+  `nano axle-healthcare-benchmark/cda-generator/src/main/resources/application.conf`
+  * Configure `outputDirectory` to a suitable directory
+  * Configure `numberOfCdas` to generate. (100,000 ~= 5GB datawarehouse)
+* Bootstrapping the datawarehouse:
  `cd axle-healthcare-benchmark/bootstrap; make all`
+ * download the PostgreSQL git in ../database/postgresql
+ * compile it, install it in ../database/postgres
+ * initialise a cluster in ../database/data
+ * download and install MGRID HDL and the appropriate data models.
+ * download and install the MGRID Messaging SDK.
+ * create a database called 'dwh' and install datawarehouse schema
+   and ETL functions in it.
+* `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin/${PATH}' >> .bashrc`
+* `source .bashrc`
+* `psql dwh -c "select add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');"`
 
-This will:
-* download the PostgreSQL git in ../database/postgresql
-* compile it, install it in ../database/postgres
-* initialise a cluster in ../database/data
-* download and install MGRID HDL and the appropriate data models.
-* create a database called 'dwh' and install datawarehouse schema
-  and ETL functions in it.
+# Generate and load data #
+* `cd axle-healthcare-benchmark/cda-generator; bash start.sh`
+* `cd axle-healthcare-benchmark`
+* `find cda-generator/output | parallel "python ~/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py {} | psql dwh" > /tmp/parse_cdas.log 2>&1`
+* `psql -c "select stream_etl_observation_evn()" dwh`
 
-### Delete the database cluster and data ###
- `cd axle-healthcare-benchmark/bootstrap; make stop; rm -rf ../database`
+# Run queries #
+* `psql -c queries/q01.sql dwh`
+
+# Delete data #
+* rm -rf the output directory configured in `src/main/resources/application.conf`
+* `cd axle-healthcare-benchmark/bootstrap; make stop; rm -rf ../database`
