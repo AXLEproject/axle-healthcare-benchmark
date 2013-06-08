@@ -43,7 +43,7 @@ ORDER BY patient_id, effective_from
 ;
 $$ LANGUAGE SQL;
 
-/* example calls for some codes for 2011
+/* example calls for some codes for 2011 */
 
 SELECT * FROM latest_measurements('50373000', '2.16.840.1.113883.6.96','20110101','20111231'); -- body height (SNOMED CT)
 SELECT * FROM latest_measurements('27113001', '2.16.840.1.113883.6.96','20110101','20111231'); -- body weight (SNOMED CT)
@@ -53,4 +53,3 @@ SELECT * FROM latest_measurements('86290005', '2.16.840.1.113883.6.96','20110101
 
 SELECT * FROM latest_measurements('8462-4', '2.16.840.1.113883.6.1','20110101','20111231'); -- intravascular diastolic (LOINC)
 SELECT * FROM latest_measurements('8480-6', '2.16.840.1.113883.6.1','20110101','20111231'); -- intravascular systolic (LOINC)
-*/

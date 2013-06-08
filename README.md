@@ -43,7 +43,7 @@ database is transformed using ETL, that is programmed as stored procedures.
 
 # Preparation #
 
-* Mail axle@portavita.eu for the password and put it in
+* Mail info@portavita.eu for the 'axle synthetic models' password and put it in
   `axle-healthcare-benchmark/cda-generator/password.txt`
 * Extract models with `cd axle-healthcare-benchmark/cda-generator ; bash initialize.sh`
 * Configure the CDA generator
@@ -59,9 +59,9 @@ database is transformed using ETL, that is programmed as stored procedures.
  * download and install the MGRID Messaging SDK.
  * create a database called 'dwh' and install datawarehouse schema
    and ETL functions in it.
-* `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin/${PATH}' >> .bashrc`
-* `source .bashrc`
-* `psql dwh -c "select add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');"`
+* `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin:${PATH}' >> ~/.bashrc`
+* `source ~/.bashrc`
+* `psql -c "select add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');" dwh`
 
 # Generate and load data #
 * `cd axle-healthcare-benchmark/cda-generator; bash start.sh`
@@ -70,7 +70,8 @@ database is transformed using ETL, that is programmed as stored procedures.
 * `psql -c "select stream_etl_observation_evn()" dwh`
 
 # Run queries #
-* `psql -c queries/q01.sql dwh`
+* `PAGER= psql -f queries/q01.sql dwh`
+* `PAGER=cat psql -f queries/q01.sql dwh`
 
 # Delete data #
 * rm -rf the output directory configured in `src/main/resources/application.conf`
