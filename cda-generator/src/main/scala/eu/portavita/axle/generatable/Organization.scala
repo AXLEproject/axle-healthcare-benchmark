@@ -12,7 +12,7 @@ import scala.util.Random
  * @param name Name of the organization.
  * @param startDate TODO
  */
-class Organization(val name: String, val startDate: Date) {
+class Organization(val id: Int, val name: String, val startDate: Date) {
 	override def toString = "Organization '" + name + "' (started on " + startDate + ")"
 }
 
@@ -24,8 +24,9 @@ object Organization {
 	 * @return
 	 */
 	def sample: Organization = {
+		val id = Random.nextInt
 		val name = Random.nextString(10)
 		val startDate = new Date
-		new Organization(name, startDate)
+		new Organization(id, name, startDate)
 	}
 }

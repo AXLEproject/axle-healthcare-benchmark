@@ -8,6 +8,7 @@ import java.util.Date
 import scala.util.Random
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.axle.helper.DateTimes
+import eu.portavita.concept.CareProvision
 
 /**
  * Represents a patient.
@@ -25,15 +26,22 @@ class Patient(
 	override val birthDate: Date,
 	val careProvisionStart: Date) extends Person(entityId, name, birthDate) {
 
+	val careProvisionId = Random.nextInt
+
 	/**
 	 * Returns a Java object for this patient.
 	 *
 	 * @return
 	 */
-	def toHl7Patient: eu.portavita.concept.Patient = {
-		val patient = new eu.portavita.concept.Patient
-		patient.entityId = entityId.toString
-		patient
+	def toHl7Patient: eu.portavita.concept.CareProvision = {
+		val patient = new eu.portavita.concept.Role
+		patient.playerId = entityId.toString
+		patient.scoperId = organization.id.toString
+		val careProvision = new eu.portavita.concept.CareProvision
+		careProvision.patient = patient
+		careProvision.code = "17074200"
+		careProvision.id = careProvisionId.toString
+		careProvision
 	}
 
 	override def toString = {
