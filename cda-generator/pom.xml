@@ -50,21 +50,21 @@
 		<dependency>
 			<groupId>eu.portavita.axle</groupId>
 			<artifactId>terminology-provider</artifactId>
-			<version>${pom.version}</version>
+			<version>${project.version}</version>
 			<scope>system</scope>
 			<systemPath>${basedir}/lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>eu.portavita.commodity12</groupId>
 			<artifactId>cda-builder</artifactId>
-			<version>${pom.version}</version>
+			<version>${project.version}</version>
 			<scope>system</scope>
 			<systemPath>${basedir}/lib/cda-builder-1.0-SNAPSHOT.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>eu.portavita.commodity12</groupId>
 			<artifactId>cda-marshaller</artifactId>
-			<version>${pom.version}</version>
+			<version>${project.version}</version>
 			<scope>system</scope>
 			<systemPath>${basedir}/lib/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
 		</dependency>
@@ -76,6 +76,7 @@
 			<plugin>
 				<groupId>org.scala-tools</groupId>
 				<artifactId>maven-scala-plugin</artifactId>
+				<version>2.15.2</version>
 				<executions>
 					<execution>
 						<id>scala-compile-first</id>
