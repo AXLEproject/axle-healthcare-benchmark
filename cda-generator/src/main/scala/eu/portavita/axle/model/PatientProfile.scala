@@ -53,7 +53,7 @@ class PatientProfile(
 	def sampleExaminations(age: Int): Map[String, Int] = {
 
 		// Set person age to the given age, so that this age is used instead of being sampled
-		val evidence = Map("PERSON_AGE" -> NumericObservation("PERSON_AGE", age.toDouble))
+		val evidence = Map("PERSON_AGE" -> NumericObservation("PERSON_AGE", age.toDouble, "y"))
 
 		// Sample distributions of numbers of examinations.
 		for {

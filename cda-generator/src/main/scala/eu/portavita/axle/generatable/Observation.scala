@@ -7,6 +7,7 @@ import scala.util.Random
 import eu.portavita.terminology.CodeSystem
 import java.util.Date
 import eu.portavita.concept.Act
+import eu.portavita.axle.Generator
 
 /**
  * Represents a single observation event.
@@ -41,7 +42,7 @@ abstract class Observation {
  * @param code Act code of the observation.
  * @param value Value of the observation.
  */
-case class NumericObservation(val code: String, val value: Double) extends Observation {
+case class NumericObservation(val code: String, val value: Double, val unit: String) extends Observation {
 	override def getCode = code
 	override def hasValue = true
 
@@ -53,6 +54,12 @@ case class NumericObservation(val code: String, val value: Double) extends Obser
 		act.moodCode = "EVN"
 		act.value = value.toString
 		act.numericValue1 = value.toString
+		act.unit = unit
+
+		if ("INT".equals(Generator.terminology.getConcept(act.codeSystem, act.code).getValueType())) {
+			act.numericValue1 = Math.round(value).toString
+			act.value = act.numericValue1
+		}
 
 		Some(act)
 	}

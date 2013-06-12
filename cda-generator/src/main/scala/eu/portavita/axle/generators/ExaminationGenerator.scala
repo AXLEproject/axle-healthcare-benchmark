@@ -216,6 +216,5 @@ object ExaminationGenerator {
 			}
 		}
 	}
-
 }
 

@@ -103,6 +103,7 @@ class DiscreteVariable(
  */
 class NumericVariable(
 	val code: String,
+	val unit: String,
 	val parents: Set[String],
 	val intercept: Double,
 	val coefficients: Map[String, Double],
@@ -123,7 +124,7 @@ class NumericVariable(
 		def mean = meanHelper(intercept, observedValues)
 
 		val value = standardDeviation * Random.nextGaussian() + mean
-		new NumericObservation(code, value)
+		new NumericObservation(code, value, unit)
 	}
 
 	override def toString(): String = {

@@ -4,6 +4,7 @@
 package eu.portavita.axle
 
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.actorRef2Scala
@@ -12,8 +13,8 @@ import eu.portavita.axle.generators.OrganizationGenerator
 import eu.portavita.axle.generators.PatientGenerator
 import eu.portavita.axle.messages.OrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
-import eu.portavita.terminology.LocalTerminologyCache
 import eu.portavita.axle.model.PatientProfile
+import eu.portavita.terminology.LocalTerminologyCache
 
 /**
  * Application that generates random CDA documents.
@@ -33,9 +34,10 @@ object Generator extends App {
 	val outputDirectory = config.getString("outputDirectory")
 
 	// Get local terminology provider.
-	private val terminologyDirectory = config.getString("terminologyDirectory")
+	val terminologyDirectory = config.getString("terminologyDirectory")
 	/** The terminology cache. */
 	val terminology = new LocalTerminologyCache(terminologyDirectory)
+	val unitMap = readUnitMap(terminologyDirectory + "/units.csv")
 
 	/** Create actor system. */
 	implicit val system = ActorSystem("CdaGenerator", config)
@@ -69,5 +71,24 @@ object Generator extends App {
 	system.log.info("Starting to generate data.")
 	for (i <- 1 to config.getInt("nrOfOrganizations")) {
 		organizationGenerator ! OrganizationRequest
+	}
+
+
+	/**
+	 * Reads a map from act code onto used unit from the given file.
+	 *
+	 * @param fileName Name of file that contains the unit information.
+	 *
+	 * @return map from act code onto used unit
+	 */
+	def readUnitMap(filename: String): Map[String, String] = {
+		val entries = scala.io.Source.fromFile(filename)
+
+		(for (entry <- entries.getLines) yield {
+			val parts = entry.split(",")
+			val code = parts(0)
+			val unit = parts(1)
+			(code, unit)
+		}) toMap
 	}
 }
