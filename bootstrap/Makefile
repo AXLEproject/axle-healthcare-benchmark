@@ -61,7 +61,7 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 
 # Start cluster
 start: $(PGDATA)
-	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d postgres || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) start
+	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d postgres || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
 
 # Download HDL and HDM
 $(MGRIDHDLFILE):
