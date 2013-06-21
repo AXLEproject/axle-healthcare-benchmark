@@ -17,6 +17,7 @@ BASEDIR=$(shell pwd)/../database
 DATAWAREHOUSE=$(shell pwd)/../datawarehouse
 PGSOURCE=$(BASEDIR)/postgresql
 PGSERVER=$(BASEDIR)/postgres
+PGBRANCH=REL9_3_STABLE
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
 PGCONN=$(shell expr 3 + `grep MHz /proc/cpuinfo | wc -l`)
@@ -37,6 +38,7 @@ all: start installhdl installmsg createdb
 $(PGSOURCE):
 	mkdir -p $(BASEDIR)
 	cd $(BASEDIR) ; git clone --depth 1 $(PGGIT)
+	cd $(PGSOURCE) ; git checkout $(PGBRANCH)
 	touch $@
 
 # Compile PostgreSQL server
@@ -61,7 +63,7 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 
 # Start cluster
 start: $(PGDATA)
-	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d postgres || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
+	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
 
 # Download HDL and HDM
 $(MGRIDHDLFILE):
@@ -89,7 +91,7 @@ installmsg: $(MGRIDMSGFILE)
 
 # Some other useful targets
 stop: $(PGDATA)
-	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d postgres && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast
+	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast
 
 psql: start
 	PATH=$(PGSERVER)/bin:${PATH} ; psql dwh
