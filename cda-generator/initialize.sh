@@ -33,9 +33,11 @@ done
 
 
 # Decrypt and decompress terminology
+rm -rf terminology
 openssl enc -d -aes-256-cbc -salt -in encrypted/terminology.tar.gz.enc -pass file:"$passwordPath" | tar xvz -C .
 
 # Decrypt and decompress models
+rm -rf models
 openssl enc -d -aes-256-cbc -salt -in encrypted/models.tar.gz.enc -pass file:"$passwordPath" | tar xvz -C .
 
 # Decrypt libraries
