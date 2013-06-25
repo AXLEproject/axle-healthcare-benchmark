@@ -29,7 +29,7 @@ rm -f apache-maven-2.2.1-bin.tar.gz
 cat >> .bashrc <<EOF
 export M2_HOME=/home/\${USER}/bin/apache-maven-2.2.1 
 export M2=\${M2_HOME}/bin 
-export PATH=\${M2}:$PATH 
+export PATH=\${M2}:\${PATH}
 EOF
 
 # packages for the message parser

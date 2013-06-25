@@ -66,7 +66,8 @@ database is transformed using ETL, that is programmed as stored procedures.
 # Generate and load data #
 * `cd axle-healthcare-benchmark/cda-generator; bash start.sh`
 * `cd axle-healthcare-benchmark/cda-generator/output`
-* `time ls | parallel "python /home/$USER/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py --quiet --dir={}|psql dwh" >/tmp/parse_cdas.log 2>&1`
+* `time ls | parallel "python /home/$USER/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py \
+	--quiet --dir={}|psql dwh" >/tmp/parse_cdas.log 2>&1`
 * `psql -c "select stream_etl_observation_evn()" dwh`
 
 # Run queries #
