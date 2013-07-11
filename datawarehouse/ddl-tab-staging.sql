@@ -1,0 +1,55 @@
+/*
+ * ddl-tab-staging.sql
+ *
+ * Additional views and indexes needed by the ETL functions.
+ *
+ * This file is part of the MGRID HDW sample datawarehouse release.
+ *
+ * Copyright (c) 2013, MGRID BV Netherlands
+ */
+
+
+/*** views for streaming ETL ***/
+
+CREATE OR REPLACE VIEW new_observation_evn_pq AS
+       SELECT *
+       FROM   "Observation"
+       WHERE "moodCode" = 'EVN'::CV('ActMood')
+       AND datatype(value) = '_pq'
+       AND _timestamp >
+       (SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_pq),
+                       '1-1-1970'::timestamptz))
+;
+
+COMMENT ON VIEW new_observation_evn_pq is
+'To facilitate streaming ETL: contains the Observations with the EVN moodcode and containing a PQ value that have a timestamp greater than the newest record in the fact_observation_evn_pq table';
+
+CREATE OR REPLACE VIEW new_observation_evn_cd AS
+       SELECT *
+       FROM   "Observation"
+       WHERE "moodCode" = 'EVN'::CV('ActMood')
+       AND datatype(value) = '_cd'
+       AND _timestamp >
+       (SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_cv),
+                       '1-1-1970'::timestamptz))
+;
+
+COMMENT ON VIEW new_observation_evn_cd is
+'To facilitate streaming ETL: contains the Observations with the EVN moodcode and containing a CD value that have a timestamp greater than the newest record in the fact_observation_evn_cv table';
+
+/* Create indexes for fast selection of newly arrived acts. */
+CREATE INDEX ON "Observation"(_timestamp);
+CREATE INDEX ON "DiagnosticImage"(_timestamp);
+CREATE INDEX ON "PublicHealthCase"(_timestamp);
+CREATE INDEX ON fact_observation_evn_pq(timestamp);
+CREATE INDEX ON fact_observation_evn_cv(timestamp);
+
+/* Create indexes to speed up ETL queries */
+CREATE INDEX ON "Participation"(act);
+CREATE INDEX ON "Participation"(role);
+CREATE INDEX ON dim_patient(set_nk);
+CREATE INDEX ON "Role"(scoper);
+CREATE INDEX ON "Role"(player);
+CREATE INDEX ON "Participation"("sequenceNumber");
+CREATE INDEX ON "Participation"("typeCode");
+CREATE INDEX ON dim_template(template_id);

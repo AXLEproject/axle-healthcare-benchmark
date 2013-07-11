@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# create_dwh.sh
-# Creates a sample RIM data warehouse.
+# create_prestaging.sh
+# Creates a target database for MGRID Messaging parsers.
 #
 # This file is part of the MGRID HDW sample datawarehouse release.
 #
@@ -49,13 +49,23 @@ case "${ACTION}" in
         echo "..Creating owner role and database"
         pgcommand postgres "CREATE USER $DBNAME"
         pgcommand postgres "CREATE DATABASE $DBNAME"
-
-        # Dimension tables and fact tables are created in schema atomic
-        pgcommand $DBNAME "CREATE SCHEMA atomic"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=atomic, public, \"\$user\";"
-
-        echo ".. Creating DWH tables"
-        pgcommandfromfile $DBNAME ddl-tab-dwh.sql
+        
+        echo "..Loading modules"
+        pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
+        pgcommand $DBNAME "CREATE EXTENSION ucum"
+        pgcommand $DBNAME "CREATE EXTENSION hl7"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,hl7_composites,pg_hl7,hl7,\"\$user\";"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
+        pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20110731"
+        pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
+        # We want the RIM to be in schema 'prestaging_rimxxx' instead of 'public'."
+        pgcommand $DBNAME "CREATE SCHEMA prestaging_rim2011"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=prestaging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3contextconduction_edition2011"
+        pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
