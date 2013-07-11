@@ -332,6 +332,7 @@ $$
         ,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
 -- valid time is set on insert/update
         ,      NULL
+        ,      NULL
 -- current_flag is set on insert/update
         ,      NULL
         )::dim_patient
@@ -355,8 +356,6 @@ $$
         ,      o.dpk
 -- assemble gender as text
         ,      m.dpg --code(e."administrativeGenderCode")
--- assemble effectivetime. Note: RIM < 2011 is IVL_TS, GTS otherwise.
-        ,      (r)."effectiveTime"
 -- assemble name parts
         ,      (n.dpn).name_family
         ,      (n.dpn).name_given
@@ -367,6 +366,7 @@ $$
 -- assemble type 2 hash
         ,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
 -- valid time is set on insert/update
+        ,      NULL
         ,      NULL
 -- current_flag is set on insert/update
         ,      NULL
@@ -389,8 +389,6 @@ $$
                NULL
 -- assemble set_nk
         ,      o.dok
--- assemble effectivetime. Note: RIM < 2011 is IVL_TS, GTS otherwise.
-        ,      (r)."effectiveTime"
 -- assemble name parts
         ,      n.don
 -- assemble address parts
@@ -402,6 +400,7 @@ $$
 -- assemble type 2 hash
         ,      hashtext(ROW(n.don, (m.doa).street, (m.doa).zipcode, (m.doa).city, (m.doa).state, (m.doa).country)::text)
 -- valid time is set on insert/update
+        ,      NULL
         ,      NULL
 -- current_flag is set on insert/update
         ,      NULL
@@ -433,8 +432,9 @@ AS $$
                 -- step 2: assemble the dimensional attributes
                 select distinct assemble_dim_patient(e, r) as a
                 from (
-                      -- step 1: select distinct patients related to new acts
-                      select distinct e as e, r as r
+                   -- step 1: select distinct patients related to new acts
+                   select distinct e, r from (
+                      select e as e, r as r, n."effectiveTime"
                       from "Person" e
                       right outer join "Patient" r on (r.player = e._id)
                       join only "Participation" ptcp on (ptcp.role = r._id)
@@ -443,12 +443,14 @@ AS $$
  * to inspect the subtree under DIR of the codesystem */
                       where "typeCode" << 'DIR'::cv('ParticipationType')
                       or    "typeCode" << 'IND'::cv('ParticipationType')
-                      ) p
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
                 )
         -- step 4: type 2 update: update the old current version and make it historic
         , type_2_update_query as (
                 update dim_patient d
-                set    valid_time = intervalbefore(d.valid_time, current_timestamp::ts) -- record is valid until now
+                set    valid_to =  current_timestamp - interval '1 microsecond' -- record is valid until now
                        ,      current_flag = false
                 -- we also need to update all type 1 attributes, since step 5 will not update
                 -- records already updated by this query.
@@ -471,7 +473,7 @@ AS $$
         , insert_query as (
                 insert into dim_patient (set_nk, gender, birthtime,
                                         name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
-                                        type_2_hash,valid_time, current_flag)
+                                        type_2_hash, valid_from, valid_to, current_flag)
                 select   (n.a).set_nk
                        , (n.a).gender
                        , (n.a).birthtime
@@ -482,7 +484,8 @@ AS $$
                        , (n.a).name_delimiter
                        , (n.a).name_full
                        , (n.a).type_2_hash
-                       , ('>=' || now()::ts)::ivl_ts as valid_time
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
                        , true as current_flag
                 from   patient_in_new_source n
                 where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
@@ -511,24 +514,29 @@ AS $$
                 -- step 2: assemble the dimensional attributes
                 select distinct assemble_dim_provider(e, r) as a
                 from (
-                      -- step 1: select distinct providers related to new acts
-                      select distinct e as e, r as r
+                   -- step 1: select distinct providers related to new acts
+                   select distinct e, r from (
+                      select distinct e as e, r as r, n."effectiveTime"
                       from "Person" e
                       right outer join "Role" r on (r.player = e._id)
                       join only "Participation" ptcp on (ptcp.role = r._id)
                       join "Observation" n on (ptcp.act = n._id)
                       where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                       or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-                      ) p
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
                 )
         -- step 4: type 2 update: update the old current version and make it historic
         , type_2_update_query as (
                 update dim_provider d
-                set    valid_time = intervalbefore(d.valid_time, current_timestamp::ts) -- record is valid until now
+                -- Preferably we would set the dimension valid time to the Role effectiveTime,
+                -- or the effectiveTime of the first Observation linked to the new provider.
+                -- As both times are NULL in the axle dataset, use the time of ETL.
+                set    valid_to = current_timestamp - interval '1 microsecond' -- record is valid until now
                        ,      current_flag = false
                 -- we also need to update all type 1 attributes, since step 5 will not update
                 -- records already updated by this query.
-                       ,      effective_time = (n.a).effective_time
                 from   provider_in_new_source n
                 where  (n.a).set_nk = d.set_nk
                 and    d.current_flag = true
@@ -538,19 +546,18 @@ AS $$
         -- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
         , type_1_update_query as (
                 update dim_provider d
-                set    effective_time = (n.a).effective_time
+                set    id = id  /* change to the set of type 1 attributes when available */
                 from   provider_in_new_source n
                 where  (n.a).set_nk = d.set_nk
-                and    (n.a).effective_time IS DISTINCT FROM d.effective_time
-                returning d.id, d.set_nk, d.current_flag) --, '1'::text)
+                and    false    /* remove when there are type 1 attributes */
+                returning d.id, d.set_nk, d.current_flag) --, '1'::text) ***/
         -- step 6: insert new current version (for new dimensions and type 2 updates)
         , insert_query as (
-                insert into dim_provider (set_nk, gender, effective_time,
+                insert into dim_provider (set_nk, gender,
                                         name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
-                                        type_2_hash,valid_time, current_flag)
+                                        type_2_hash, valid_from, valid_to, current_flag)
                 select   (n.a).set_nk
                        , (n.a).gender
-                       , (n.a).effective_time
                        , (n.a).name_family
                        , (n.a).name_given
                        , (n.a).name_prefix
@@ -558,7 +565,8 @@ AS $$
                        , (n.a).name_delimiter
                        , (n.a).name_full
                        , (n.a).type_2_hash
-                       , ('>=' || now()::ts)::ivl_ts as valid_time
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
                        , true as current_flag
                 from   provider_in_new_source n
                 where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
@@ -588,24 +596,26 @@ AS $$
                 -- step 2: assemble the dimensional attributes
                 select distinct assemble_dim_organization(e, r) as a
                 from (
-                      -- step 1: select distinct organizations related to new acts
-                      select distinct e as e, r as r
+                   -- step 1: select distinct organizations related to new acts
+                   select distinct e, r from (
+                      select distinct e as e, r as r, n."effectiveTime"
                       from "Organization" e
                       join "Role" r on (r.scoper = e._id)
                       join only "Participation" ptcp on (ptcp.role = r._id)
                       join "Observation" n on (ptcp.act = n._id)
                       where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                       or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-                      ) p
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
                 )
         -- step 4: type 2 update: update the old current version and make it historic
         , type_2_update_query as (
                 update dim_organization d
-                set    valid_time = intervalbefore(d.valid_time, current_timestamp::ts) -- record is valid until now
+                set    valid_from = current_timestamp - interval '1 microsecond' -- record is valid until now
                        ,      current_flag = false
                 -- we also need to update all type 1 attributes, since step 5 will not update
                 -- records already updated by this query.
-                       ,      effective_time = (n.a).effective_time
                 from   organization_in_new_source n
                 where  (n.a).set_nk = d.set_nk
                 and    d.current_flag = true
@@ -615,18 +625,17 @@ AS $$
         -- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
         , type_1_update_query as (
                 update dim_organization d
-                set    effective_time = (n.a).effective_time
+                set    id = id  -- set this to the set of type effective_time = (n.a).effective_time
                 from   organization_in_new_source n
                 where  (n.a).set_nk = d.set_nk
-                and    (n.a).effective_time IS DISTINCT FROM d.effective_time
+                and    false    -- remove this line when there are type 1 attributes
                 returning d.id, d.set_nk, d.current_flag) --, '1'::text)
         -- step 6: insert new current version (for new dimensions and type 2 updates)
         , insert_query as (
-                insert into dim_organization (set_nk, effective_time,
+                insert into dim_organization (set_nk,
                                         name, street, zipcode, city, state, country,
-                                        type_2_hash, valid_time, current_flag)
+                                        type_2_hash, valid_from, valid_to, current_flag)
                 select   (n.a).set_nk
-                       , (n.a).effective_time
                        , (n.a).name
                        , (n.a).street
                        , (n.a).zipcode
@@ -634,7 +643,8 @@ AS $$
                        , (n.a).state
                        , (n.a).country
                        , (n.a).type_2_hash
-                       , ('>=' || now()::ts)::ivl_ts as valid_time
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
                        , true as current_flag
                 from   organization_in_new_source n
                 where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
@@ -814,14 +824,11 @@ AS $$
     , organization_sk
     , from_time_sk
     , to_time_sk
-    , effective_time
     , concept_sk
     , concept_originaltext_reference
     , concept_originaltext_value
     , template_id_sk
     , product_sk
-    , code_cv
-    , value_pq
     , value_pq_unit
     , value_pq_value
     , value_pq_canonical_unit
@@ -834,14 +841,11 @@ AS $$
         , get_organization_sk(e_orga, r_prov)                             as orga_sk
         , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
         , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-        , convexhull((obs."effectiveTime").ivl)                           as effectivetime
         , get_concept_sk(obs.code)                                        as concept_sk
         , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
         , value(originaltext(obs.code))                                   as concept_originaltext_value
         , get_template_id_sk(obs."templateId")                            as template_id_sk
         , get_concept_sk(obs.code)                                        as product_sk
-        , value(obs.code)                                                 as code_cv
-        , ((_any(value))[1])::text::pq                                    as pqval   -- value in PQ
         , unit(((_any(value))[1])::text::pq)                              as pqunit  -- unit of the PQ (text)
         , value(((_any(value))[1])::text::pq)                             as numval  -- value of the PQ (numeric)
         , unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
@@ -883,14 +887,11 @@ AS $$
     , organization_sk
     , from_time_sk
     , to_time_sk
-    , effective_time
     , concept_sk
     , concept_originaltext_reference
     , concept_originaltext_value
     , template_id_sk
     , product_sk
-    , code_cv
-    , value_cv
     , value_concept_sk
     , timestamp
     )
@@ -900,14 +901,11 @@ AS $$
         , get_organization_sk(e_orga, r_prov)                             as orga_sk
         , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
         , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-        , convexhull((obs."effectiveTime").ivl)                           as effectivetime
         , get_concept_sk(obs.code)                                        as concept_sk
         , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
         , value(originaltext(obs.code))                                   as concept_originaltext_value
         , get_template_id_sk(obs."templateId")                            as template_id_sk
         , get_concept_sk(e_prod.code)                                     as product_sk
-        , value(obs.code)                                                 as code_cv
-        , ((_cany(value))::cd[])[1]::CV                                   as value_cv
         , get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
         , obs._timestamp                                                  as timestamp
         FROM new_observation_evn_cd      obs
@@ -1077,9 +1075,9 @@ BEGIN
         -- messages := update_fact_observation_evn_text();
         -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
         RAISE NOTICE 'setting up snomed tree & views';
-        PERFORM  setup_view_snomed_tree();
+--        PERFORM  setup_view_snomed_tree();
         RAISE NOTICE 'setting up template views';
-        PERFORM setup_view_templates();
+--        PERFORM setup_view_templates();
         RAISE NOTICE 'adding view_snomed_tree and view_templates schemas to search_path';
         EXECUTE 'alter database ' || current_database() || ' set search_path = rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
         EXECUTE 'set search_path to rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
