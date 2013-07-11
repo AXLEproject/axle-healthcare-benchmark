@@ -83,7 +83,8 @@ CREATE TABLE dim_patient (
 , name_delimiter                text
 , name_full                     text
 , type_2_hash                   int
-, valid_time                    ivl_ts
+, valid_from                    timestamptz
+, valid_to                      timestamptz
 , current_flag                  boolean
 );
 COMMENT ON TABLE dim_patient IS
@@ -92,9 +93,6 @@ COMMENT ON COLUMN dim_patient.set_nk IS
 'Natural key. As the way to uniquely identify a patient differs per source database, this value must be supplied by the user, by implementing the function person2nk.';
 COMMENT ON COLUMN dim_patient.name_full IS
 'As there is no standard translation from EN to the full name, the method to populate this column must be supplied by the user, by implementing the function bag_en2dimension_name_type.';
-COMMENT ON COLUMN dim_patient.valid_time IS
-'Use to link with fact.time_created.';
-
 
 DROP SEQUENCE IF EXISTS dim_provider_seq CASCADE;
 CREATE SEQUENCE dim_provider_seq;
@@ -104,7 +102,6 @@ CREATE TABLE dim_provider (
   id                            int PRIMARY KEY DEFAULT nextval('dim_provider_seq')
 , set_nk                        text[]
 , gender                        TEXT
-, effective_time                gts
 , name_family                   text
 , name_given                    text
 , name_prefix                   text
@@ -112,7 +109,8 @@ CREATE TABLE dim_provider (
 , name_delimiter                text
 , name_full                     text
 , type_2_hash                   int
-, valid_time                    ivl_ts
+, valid_from                    timestamptz
+, valid_to                      timestamptz
 , current_flag                  boolean
 );
 COMMENT ON TABLE dim_provider IS
@@ -128,7 +126,6 @@ DROP TABLE IF EXISTS dim_organization CASCADE;
 CREATE TABLE dim_organization (
   id                            int PRIMARY KEY DEFAULT nextval('dim_organization_seq')
 , set_nk                        text[]
-, effective_time                gts
 , name                          text
 , street                        text
 , zipcode                       text
@@ -136,7 +133,8 @@ CREATE TABLE dim_organization (
 , state                         text
 , country                       text
 , type_2_hash                   int
-, valid_time                    ivl_ts
+, valid_from                    timestamptz
+, valid_to                      timestamptz
 , current_flag                  boolean
 );
 COMMENT ON TABLE dim_organization IS
@@ -191,14 +189,11 @@ CREATE TABLE fact_observation_evn_pq(
 , organization_sk                 int           REFERENCES dim_organization(id)
 , from_time_sk                    int           REFERENCES dim_time(id)
 , to_time_sk                      int           REFERENCES dim_time(id)
-, effective_time                  ivl_ts
 , concept_sk                      int           REFERENCES dim_concept(id)
 , concept_originaltext_reference  text
 , concept_originaltext_value      text
 , template_id_sk                  int           REFERENCES dim_template(id)
 , product_sk                      int           REFERENCES dim_concept(id)
-, code_cv                         cv
-, value_pq                        pq
 , value_pq_unit                   text
 , value_pq_value                  numeric
 , value_pq_canonical_unit         text
@@ -213,7 +208,7 @@ COMMENT ON COLUMN fact_observation_evn_pq.timestamp IS
 'This is the same value as the source act timestamp and can be used to query what is the last etl-ed act.';
 COMMENT ON COLUMN fact_observation_evn_pq.act_id IS
 'Natural key';
-COMMENT ON COLUMN fact_observation_evn_pq.value_pq IS
+COMMENT ON COLUMN fact_observation_evn_pq.value_pq_unit IS
 'The pq values are only filled for values that are Physical Quantities';
 
 
@@ -229,14 +224,11 @@ CREATE TABLE fact_observation_evn_cv(
 , organization_sk                 int           REFERENCES dim_organization(id)
 , from_time_sk                    int           REFERENCES dim_time(id)
 , to_time_sk                      int           REFERENCES dim_time(id)
-, effective_time                  ivl_ts
 , concept_sk                      int           REFERENCES dim_concept(id)
 , concept_originaltext_reference  text
 , concept_originaltext_value      text
 , template_id_sk                  int           REFERENCES dim_template(id)
 , product_sk                      int           REFERENCES dim_concept(id)
-, code_cv                         cv
-, value_cv                        cv
 , value_concept_sk                int           REFERENCES dim_concept(id)
 , timestamp                       timestamptz
 );
@@ -261,13 +253,11 @@ CREATE TABLE fact_observation_evn_text(
 , organization_sk                 int              REFERENCES dim_organization(id)
 , from_time_sk                    int              REFERENCES dim_time(id)
 , to_time_sk                      int              REFERENCES dim_time(id)
-, effective_time                  ivl_ts
 , concept_sk                      int              REFERENCES dim_concept(id)
 , concept_originaltext_reference  text
 , concept_originaltext_value      text
 , template_id_sk                  int              REFERENCES dim_template(id)
 , product_sk                      int              REFERENCES dim_concept(id)
-, code_cv                         cv
 , value                           text
 , timestamp                       timestamptz
 );
@@ -275,10 +265,10 @@ CREATE TABLE fact_observation_evn_text(
 
 /*** overall view over fact tables ***/
 CREATE OR REPLACE VIEW fact_observation_evn AS
-      SELECT id, act_id, patient_sk, provider_sk, organization_sk, from_time_sk, to_time_sk, effective_time, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, code_cv, value_pq, value_pq_unit, value_pq_value, value_pq_canonical_unit, value_pq_canonical_value, null as value_cv, null as value_concept_sk, null as value, product_sk, timestamp
+      SELECT id, act_id, patient_sk, provider_sk, organization_sk, from_time_sk, to_time_sk, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, value_pq_unit, value_pq_value, value_pq_canonical_unit, value_pq_canonical_value, null as value_concept_sk, null as value, product_sk, timestamp
       FROM fact_observation_evn_pq
       UNION ALL
-      SELECT id, act_id, patient_sk, provider_sk, organization_sk, from_time_sk, to_time_sk, effective_time, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, code_cv, null as value_pq, null as value_pq_unit, null as value_pq_value, null as value_pq_canonical_unit, null as value_pq_canonical_value, value_cv, value_concept_sk, null, product_sk, timestamp
+      SELECT id, act_id, patient_sk, provider_sk, organization_sk, from_time_sk, to_time_sk, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, null as value_pq_unit, null as value_pq_value, null as value_pq_canonical_unit, null as value_pq_canonical_value, value_concept_sk, null, product_sk, timestamp
       FROM fact_observation_evn_cv
 ;
 COMMENT ON VIEW fact_observation_evn IS
@@ -335,14 +325,14 @@ CREATE INDEX ON dim_template(template_id);
 INSERT INTO dim_concept(id,code,displayname)
 VALUES (0,'Unknown','Unknown');
 
-INSERT INTO dim_patient(id,name_family,valid_time,current_flag)
-VALUES (0,'Unknown', ']NullFlavor.NINF;NullFlavor.PINF[',True);
+INSERT INTO dim_patient(id,name_family,valid_from, valid_to ,current_flag)
+VALUES (0,'Unknown', '00010101 00:00:00', '99991231 23:59:59',True);
 
-INSERT INTO dim_provider(id,name_family,valid_time,current_flag)
-VALUES (0,'Unknown', ']NullFlavor.NINF;NullFlavor.PINF[',True);
+INSERT INTO dim_provider(id,name_family,valid_from, valid_to,current_flag)
+VALUES (0,'Unknown', '00010101 00:00:00', '99991231 23:59:59',True);
 
-INSERT INTO dim_organization(id,name,valid_time,current_flag)
-VALUES (0,'Unknown', ']NullFlavor.NINF;NullFlavor.PINF[',True);
+INSERT INTO dim_organization(id,name,valid_from, valid_to,current_flag)
+VALUES (0,'Unknown', '00010101 00:00:00', '99991231 23:59:59',True);
 
 /* insert known template ids */
 INSERT INTO template(template_title,template_type,template_id,source) VALUES
