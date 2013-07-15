@@ -15,7 +15,7 @@ create extension dblink;
 create foreign data wrapper pg validator postgresql_fdw_validator;
 create server dwh foreign data wrapper pg options (hostaddr '127.0.0.1', dbname 'dwh', port '6543');
 create user mapping for mgrid server dwh;
-select dblink_connect('dwh', 'dwh');
+select dblink_connect('dwh', 'dbname=dwh');
 
 
 CREATE OR REPLACE VIEW new_observation_evn_pq AS

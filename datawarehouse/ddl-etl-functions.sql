@@ -48,7 +48,7 @@ AS $$
 	    );
 $$ LANGUAGE SQL;
 
-PERFORM create_temp_tables();
+SELECT create_temp_tables();
 
 DROP TYPE IF EXISTS dimension_name CASCADE;
 CREATE TYPE dimension_name AS (
@@ -67,32 +67,32 @@ CREATE OR REPLACE FUNCTION bag_en2dimension_name(name bag_en)
 RETURNS dimension_name
 AS $$
    SELECT ROW((c).name_family,
-	      (c).name_given,
-	      (c).name_prefix,
-	      (c).name_suffix,
-	      (c).name_delimiter,
-	      format('%s%s%s%s%s%s%s%s%s',
-			   (c).name_prefix,
-			   CASE WHEN (c).name_prefix IS NULL THEN '' ELSE ' ' END,
-			   (c).name_given,
-			   CASE WHEN (c).name_given IS NULL THEN '' ELSE ' ' END,
-			   (c).name_delimiter,
-			   CASE WHEN (c).name_delimiter IS NULL THEN '' ELSE ' ' END,
-			   (c).name_family,
-			   CASE WHEN (c).name_suffix IS NULL THEN '' ELSE ' ' END,
-			   (c).name_suffix)
-	     )::dimension_name
+              (c).name_given,
+              (c).name_prefix,
+              (c).name_suffix,
+              (c).name_delimiter,
+              format('%s%s%s%s%s%s%s%s%s',
+                           (c).name_prefix,
+                           CASE WHEN (c).name_prefix IS NULL THEN '' ELSE ' ' END,
+                           (c).name_given,
+                           CASE WHEN (c).name_given IS NULL THEN '' ELSE ' ' END,
+                           (c).name_delimiter,
+                           CASE WHEN (c).name_delimiter IS NULL THEN '' ELSE ' ' END,
+                           (c).name_family,
+                           CASE WHEN (c).name_suffix IS NULL THEN '' ELSE ' ' END,
+                           (c).name_suffix)
+             )::dimension_name
  FROM (
    SELECT
-	ROW(
-		-- get the first family namepart from the first entity name
-		value((family(name[1]))[1]),
-		value((given(name[1]))[1]),
-		value((prefix(name[1]))[1]),
-		value((suffix(name[1]))[1]),
-		value((delimiter(name[1]))[1]),
-		NULL
-		)::dimension_name) AS t(c);
+        ROW(
+                -- get the first family namepart from the first entity name
+                value((family(name[1]))[1]),
+                value((given(name[1]))[1]),
+                value((prefix(name[1]))[1]),
+                value((suffix(name[1]))[1]),
+                value((delimiter(name[1]))[1]),
+                NULL
+                )::dimension_name) AS t(c);
 $$ LANGUAGE sql
 IMMUTABLE RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION bag_en2dimension_name(bag_en) IS
@@ -103,16 +103,16 @@ CREATE OR REPLACE FUNCTION person_patient2dimension_name(e "Person", r "Patient"
 RETURNS dimension_name
 AS
 $$
-	SELECT CASE
-	       -- the role name is preferred, since it will be more specific for the role the person plays
-	       WHEN r."name" IS NOT NULL THEN
-		    bag_en2dimension_name(r."name")
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    bag_en2dimension_name(e."name")
-	       ELSE
-		    NULL
-	       END;
+        SELECT CASE
+               -- the role name is preferred, since it will be more specific for the role the person plays
+               WHEN r."name" IS NOT NULL THEN
+                    bag_en2dimension_name(r."name")
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    bag_en2dimension_name(e."name")
+               ELSE
+                    NULL
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_patient2dimension_name("Person", "Patient") IS
@@ -123,16 +123,16 @@ CREATE OR REPLACE FUNCTION person_role2dimension_name(e "Person", r "Role")
 RETURNS dimension_name
 AS
 $$
-	SELECT CASE
-	       -- the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    bag_en2dimension_name(r."name")
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    bag_en2dimension_name(e."name")
-	       ELSE
-		    NULL
-	       END;
+        SELECT CASE
+               -- the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    bag_en2dimension_name(r."name")
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    bag_en2dimension_name(e."name")
+               ELSE
+                    NULL
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_role2dimension_name("Person", "Role") IS
@@ -143,16 +143,16 @@ CREATE OR REPLACE FUNCTION organization_role2text(e "Organization", r "Role")
 RETURNS text
 AS
 $$
-	SELECT CASE
-	       -- the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    value((value(r.name[1]))[1])
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    value((value(e.name[1]))[1])
-	       ELSE
-		    NULL
-	       END;
+        SELECT CASE
+               -- the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    value((value(r.name[1]))[1])
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    value((value(e.name[1]))[1])
+               ELSE
+                    NULL
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2text("Organization", "Role") IS
@@ -176,13 +176,13 @@ RETURNS dimension_address
 AS
 $$
   SELECT ROW(
-	     -- get the first street address line from the first address
-	     value((streetaddressline(address[1]))[1]),
-	     value((postalcode(address[1]))[1]),
-	     value((city(address[1]))[1]),
-	     value((state(address[1]))[1]),
-	     value((country(address[1]))[1])
-	     )::dimension_address
+             -- get the first street address line from the first address
+             value((streetaddressline(address[1]))[1]),
+             value((postalcode(address[1]))[1]),
+             value((city(address[1]))[1]),
+             value((state(address[1]))[1]),
+             value((country(address[1]))[1])
+             )::dimension_address
 $$ LANGUAGE SQL IMMUTABLE
 RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION bag_ad2dimension_address(bag_ad) IS
@@ -193,16 +193,16 @@ CREATE OR REPLACE FUNCTION organization_role2dimension_address(e "Organization",
 RETURNS dimension_address
 AS
 $$
-	SELECT CASE
-	       -- the role address is preferred, since it will be more specific for the role the organization plays
-	       WHEN r."addr" IS NOT NULL THEN
-		    bag_ad2dimension_address(r."addr")
-	       -- then the entity addr
-	       WHEN e."addr" IS NOT NULL THEN
-		    bag_ad2dimension_address(e."addr")
-	       ELSE
-		    NULL
-	       END;
+        SELECT CASE
+               -- the role address is preferred, since it will be more specific for the role the organization plays
+               WHEN r."addr" IS NOT NULL THEN
+                    bag_ad2dimension_address(r."addr")
+               -- then the entity addr
+               WHEN e."addr" IS NOT NULL THEN
+                    bag_ad2dimension_address(e."addr")
+               ELSE
+                    NULL
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2dimension_address("Organization", "Role") IS
@@ -214,29 +214,29 @@ CREATE OR REPLACE FUNCTION person_patient2set_nk(e "Person", r "Patient")
 RETURNS text[]
 AS
 $$
-	-- note: do not use a hash function here, because collisions are likely (birthday problem),
-	-- and a collision means a false positive person match.
+        -- note: do not use a hash function here, because collisions are likely (birthday problem),
+        -- and a collision means a false positive person match.
 
-	SELECT CASE
-	       -- Using the role or entity id's is preferred.
-	       WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
-	       -- make ii[] distinct and ordered for right equal semantics on set_ii
-		  (select array_agg(x)::text[] from
-			  (select distinct x from
-				  (select unnest(e."id") as x
-				   union all
-				   select unnest(r."id")
-				  ) AS y order by x
-			  ) t)
-	       -- then the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(r."name")]::text[]
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(e."name")]::text[]
-	       ELSE
-		    ARRAY[r."_id"]::text[]
-	       END;
+        SELECT CASE
+               -- Using the role or entity ids is preferred.
+               WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
+               -- make ii[] distinct and ordered for right equal semantics on set_ii
+                  (select array_agg(x)::text[] from
+                          (select distinct x from
+                                  (select unnest(e."id") as x
+                                   union all
+                                   select unnest(r."id")
+                                  ) AS y order by x
+                          ) t)
+               -- then the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(r."name")]::text[]
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(e."name")]::text[]
+               ELSE
+                    ARRAY[r."_id"]::text[]
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_patient2set_nk("Person", "Patient") IS
@@ -247,29 +247,29 @@ CREATE OR REPLACE FUNCTION person_role2set_nk(e "Person", r "Role")
 RETURNS text[]
 AS
 $$
-	-- note: do not use a hash function here, because collisions are likely (birthday problem),
-	-- and a collision means a false positive person match.
+        -- note: do not use a hash function here, because collisions are likely (birthday problem),
+        -- and a collision means a false positive person match.
 
-	SELECT CASE
-	       -- Using the role or entity id's is preferred.
-	       WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
-	       -- make ii[] distinct and ordered for right equal semantics on set_ii
-		  (select array_agg(x)::text[] from
-			  (select distinct x from
-				  (select unnest(e."id") as x
-				   union all
-				   select unnest(r."id")
-				  ) AS y order by x
-			  ) t)
-	       -- then the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(r."name")]::text[]
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(e."name")]::text[]
-	       ELSE
-		    ARRAY[r."_id"]::text[]
-	       END;
+        SELECT CASE
+               -- Using the role or entity id's is preferred.
+               WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
+               -- make ii[] distinct and ordered for right equal semantics on set_ii
+                  (select array_agg(x)::text[] from
+                          (select distinct x from
+                                  (select unnest(e."id") as x
+                                   union all
+                                   select unnest(r."id")
+                                  ) AS y order by x
+                          ) t)
+               -- then the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(r."name")]::text[]
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(e."name")]::text[]
+               ELSE
+                    ARRAY[r."_id"]::text[]
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person_role2set_nk("Person", "Role") IS
@@ -280,29 +280,29 @@ CREATE OR REPLACE FUNCTION organization_role2set_nk(e "Organization", r "Role")
 RETURNS text[]
 AS
 $$
-	-- note: do not use a hash function here, because collisions are likely (birthday problem),
-	-- and a collision means a false positive person match.
+        -- note: do not use a hash function here, because collisions are likely (birthday problem),
+        -- and a collision means a false positive person match.
 
-	SELECT CASE
-	       -- Using the role or entity id's is preferred.
-	       WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
-	       -- make ii[] distinct and ordered for right equal semantics on set_ii
-		  (select array_agg(x)::text[] from
-			  (select distinct x from
-				  (select unnest(e."id") as x
-				   union all
-				   select unnest(r."id")
-				  ) AS y order by x
-			  ) t)
-	       -- then the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(r."name")]::text[]
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(e."name")]::text[]
-	       ELSE
-		    ARRAY[r."_id"]::text[]
-	       END;
+        SELECT CASE
+               -- Using the role or entity id's is preferred.
+               WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
+               -- make ii[] distinct and ordered for right equal semantics on set_ii
+                  (select array_agg(x)::text[] from
+                          (select distinct x from
+                                  (select unnest(e."id") as x
+                                   union all
+                                   select unnest(r."id")
+                                  ) AS y order by x
+                          ) t)
+               -- then the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(r."name")]::text[]
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(e."name")]::text[]
+               ELSE
+                    ARRAY[r."_id"]::text[]
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION organization_role2set_nk("Organization", "Role") IS
@@ -313,29 +313,29 @@ CREATE OR REPLACE FUNCTION orga_role2set_nk(e "Organization", r "Role")
 RETURNS text[]
 AS
 $$
-	-- note: do not use a hash function here, because collisions are likely (birthday problem),
-	-- and a collision means a false positive organization match.
+        -- note: do not use a hash function here, because collisions are likely (birthday problem),
+        -- and a collision means a false positive organization match.
 
-	SELECT CASE
-	       -- Using the role or entity id's is preferred.
-	       WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
-	       -- make ii[] distinct and ordered for right equal semantics on set_ii
-		  (select array_agg(x)::text[] from
-			  (select distinct x from
-				  (select unnest(e."id") as x
-				   union all
-				   select unnest(r."id")
-				  ) AS y order by x
-			  ) t)
-	       -- then the role name is preferred
-	       WHEN r."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(r."name")]::text[]
-	       -- then the entity name
-	       WHEN e."name" IS NOT NULL THEN
-		    ARRAY[bag_en2dimension_name(e."name")]::text[]
-	       ELSE
-		    ARRAY[r."_id"]::text[]
-	       END;
+        SELECT CASE
+               -- Using the role or entity id's is preferred.
+               WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
+               -- make ii[] distinct and ordered for right equal semantics on set_ii
+                  (select array_agg(x)::text[] from
+                          (select distinct x from
+                                  (select unnest(e."id") as x
+                                   union all
+                                   select unnest(r."id")
+                                  ) AS y order by x
+                          ) t)
+               -- then the role name is preferred
+               WHEN r."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(r."name")]::text[]
+               -- then the entity name
+               WHEN e."name" IS NOT NULL THEN
+                    ARRAY[bag_en2dimension_name(e."name")]::text[]
+               ELSE
+                    ARRAY[r."_id"]::text[]
+               END;
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION orga_role2set_nk("Organization", "Role") IS
@@ -346,7 +346,7 @@ CREATE OR REPLACE FUNCTION person2gender(e "Person")
 RETURNS text
 AS
 $$
-	SELECT code(e."administrativeGenderCode")
+        SELECT code(e."administrativeGenderCode")
 $$
 LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION person2gender("Person") IS
@@ -357,30 +357,30 @@ CREATE OR REPLACE FUNCTION assemble_dim_patient(e "Person", r "Patient")
 RETURNS dim_patient
 AS
 $$
-	SELECT ROW(
+        SELECT ROW(
 -- id is fixed on insert
-	       NULL
+               NULL
 -- assemble set_nk
-	,      o.dpk
+        ,      o.dpk
 -- assemble gender as text
-	,      m.dpg --code(e."administrativeGenderCode")
+        ,      m.dpg --code(e."administrativeGenderCode")
 -- assemble birthtime
-	,      (e)."birthTime"::ts::timestamptz
+        ,      (e)."birthTime"::ts::timestamptz
 -- assemble name parts
-	,      (n.dpn).name_family
-	,      (n.dpn).name_given
-	,      (n.dpn).name_prefix
-	,      (n.dpn).name_suffix
-	,      (n.dpn).name_delimiter
-	,      (n.dpn).name_full
+        ,      (n.dpn).name_family
+        ,      (n.dpn).name_given
+        ,      (n.dpn).name_prefix
+        ,      (n.dpn).name_suffix
+        ,      (n.dpn).name_delimiter
+        ,      (n.dpn).name_full
 -- assemble type 2 hash
-	,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
+        ,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
 -- valid time is set on insert/update
-	,      NULL
-	,      NULL
+        ,      NULL
+        ,      NULL
 -- current_flag is set on insert/update
-	,      NULL
-	)::dim_patient
+        ,      NULL
+        )::dim_patient
  FROM (SELECT person_patient2dimension_name(e, r) as dpn) n
  ,    (SELECT person2gender(e) as dpg) m
  ,    (SELECT person_patient2set_nk(e,r) as dpk) o
@@ -394,28 +394,28 @@ CREATE OR REPLACE FUNCTION assemble_dim_provider(e "Person", r "Role")
 RETURNS dim_provider
 AS
 $$
-	SELECT ROW(
+        SELECT ROW(
 -- id is fixed on insert
-	       NULL
+               NULL
 -- assemble set_nk
-	,      o.dpk
+        ,      o.dpk
 -- assemble gender as text
-	,      m.dpg --code(e."administrativeGenderCode")
+        ,      m.dpg --code(e."administrativeGenderCode")
 -- assemble name parts
-	,      (n.dpn).name_family
-	,      (n.dpn).name_given
-	,      (n.dpn).name_prefix
-	,      (n.dpn).name_suffix
-	,      (n.dpn).name_delimiter
-	,      (n.dpn).name_full
+        ,      (n.dpn).name_family
+        ,      (n.dpn).name_given
+        ,      (n.dpn).name_prefix
+        ,      (n.dpn).name_suffix
+        ,      (n.dpn).name_delimiter
+        ,      (n.dpn).name_full
 -- assemble type 2 hash
-	,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
+        ,      hashtext(ROW(m.dpg, (n.dpn).name_family, (n.dpn).name_given, (n.dpn).name_prefix, (n.dpn).name_suffix, (n.dpn).name_delimiter)::text)
 -- valid time is set on insert/update
-	,      NULL
-	,      NULL
+        ,      NULL
+        ,      NULL
 -- current_flag is set on insert/update
-	,      NULL
-	)::dim_provider
+        ,      NULL
+        )::dim_provider
  FROM (SELECT person_role2dimension_name(e, r) as dpn) n
  ,    (SELECT person2gender(e) as dpg) m
  ,    (SELECT person_role2set_nk(e,r) as dpk) o
@@ -429,27 +429,27 @@ CREATE OR REPLACE FUNCTION assemble_dim_organization(e "Organization", r "Role")
 RETURNS dim_organization
 AS
 $$
-	SELECT ROW(
+        SELECT ROW(
 -- id is fixed on insert
-	       NULL
+               NULL
 -- assemble set_nk
-	,      o.dok
+        ,      o.dok
 -- assemble name parts
-	,      n.don
+        ,      n.don
 -- assemble address parts
-	,      (m.doa).street
-	,      (m.doa).zipcode
-	,      (m.doa).city
-	,      (m.doa).state
-	,      (m.doa).country
+        ,      (m.doa).street
+        ,      (m.doa).zipcode
+        ,      (m.doa).city
+        ,      (m.doa).state
+        ,      (m.doa).country
 -- assemble type 2 hash
-	,      hashtext(ROW(n.don, (m.doa).street, (m.doa).zipcode, (m.doa).city, (m.doa).state, (m.doa).country)::text)
+        ,      hashtext(ROW(n.don, (m.doa).street, (m.doa).zipcode, (m.doa).city, (m.doa).state, (m.doa).country)::text)
 -- valid time is set on insert/update
-	,      NULL
-	,      NULL
+        ,      NULL
+        ,      NULL
 -- current_flag is set on insert/update
-	,      NULL
-	)::dim_organization
+        ,      NULL
+        )::dim_organization
  FROM (SELECT organization_role2text(e,r) as don) n
  ,    (SELECT organization_role2dimension_address(e, r) as doa) m
  ,    (SELECT organization_role2set_nk(e,r) as dok) o
@@ -472,81 +472,81 @@ AS $$
  patient2nk() can be edited to generate a natural key that gives meaningful
  results on the source data.  **/
 
-	WITH
-	patient_in_new_source as (
-		-- step 2: assemble the dimensional attributes
-		select distinct assemble_dim_patient(e, r) as a
-		from (
-		   -- step 1: select distinct patients related to new acts
-		   select distinct e, r from (
-		      select e as e, r as r, n."effectiveTime"
-		      from "Person" e
-		      right outer join "Patient" r on (r.player = e._id)
-		      join only "Participation" ptcp on (ptcp.role = r._id)
-		      join "Observation" n on (ptcp.act = n._id)
+        WITH
+        patient_in_new_source as (
+                -- step 2: assemble the dimensional attributes
+                select distinct assemble_dim_patient(e, r) as a
+                from (
+                   -- step 1: select distinct patients related to new acts
+                   select distinct e, r from (
+                      select e as e, r as r, n."effectiveTime"
+                      from "Person" e
+                      right outer join "Patient" r on (r.player = e._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
 /* Use select codesystem('ParticipationType', 'DIR'::cv('ParticipationType'))
  * to inspect the subtree under DIR of the codesystem */
-		      where "typeCode" << 'DIR'::cv('ParticipationType')
-		      or    "typeCode" << 'IND'::cv('ParticipationType')
-		      order by n."effectiveTime"
-		      ) ordered_patients
-		   ) p
-		)
-	-- step 4: type 2 update: update the old current version and make it historic
-	, type_2_update_query as (
-		update dim_patient d
-		set    valid_to =  current_timestamp - interval '1 microsecond' -- record is valid until now
-		       ,      current_flag = false
-		-- we also need to update all type 1 attributes, since step 5 will not update
-		-- records already updated by this query.
-		       ,      birthtime = (n.a).birthtime
-		from   patient_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    d.current_flag = true
-		 -- step 3: identify dimension records changed in their type 2 attributes
-		and    (n.a).type_2_hash <> d.type_2_hash
-		returning d.id, d.set_nk, d.current_flag) --, '2'::text)
-	-- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
-	, type_1_update_query as (
-		update dim_patient d
-		set    birthtime = (n.a).birthtime
-		from   patient_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    (n.a).birthtime IS DISTINCT FROM d.birthtime
-		returning d.id, d.set_nk, d.current_flag) --, '1'::text)
-	-- step 6: insert new current version (for new dimensions and type 2 updates)
-	, insert_query as (
-		insert into dim_patient (set_nk, gender, birthtime,
-					name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
-					type_2_hash, valid_from, valid_to, current_flag)
-		select   (n.a).set_nk
-		       , (n.a).gender
-		       , (n.a).birthtime
-		       , (n.a).name_family
-		       , (n.a).name_given
-		       , (n.a).name_prefix
-		       , (n.a).name_suffix
-		       , (n.a).name_delimiter
-		       , (n.a).name_full
-		       , (n.a).type_2_hash
-		       , current_timestamp as valid_from
-		       , '99991231 23:59:59' as valid_to
-		       , true as current_flag
-		from   patient_in_new_source n
-		where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
-		and not exists (select *
-				from   dim_patient ex
-				where  ex.set_nk = (n.a).set_nk
-				and    ex.current_flag
-				-- step 3: identify dimension records changed in their type 2 attributes
-				and    ex.type_2_hash = (n.a).type_2_hash)
-		returning dim_patient.id
-		)
-	-- note: order below is important for correct application of simultaneous type 1 and type 2 updates
-	select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
-	       ' | new: '::text || (select count(*) from insert_query) ||
-	       ' | type 1 updated: '  || (select count(*) from type_1_update_query)
-	       as result;
+                      where "typeCode" << 'DIR'::cv('ParticipationType')
+                      or    "typeCode" << 'IND'::cv('ParticipationType')
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
+                )
+        -- step 4: type 2 update: update the old current version and make it historic
+        , type_2_update_query as (
+                update dim_patient d
+                set    valid_to =  current_timestamp - interval '1 microsecond' -- record is valid until now
+                       ,      current_flag = false
+                -- we also need to update all type 1 attributes, since step 5 will not update
+                -- records already updated by this query.
+                       ,      birthtime = (n.a).birthtime
+                from   patient_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    d.current_flag = true
+                 -- step 3: identify dimension records changed in their type 2 attributes
+                and    (n.a).type_2_hash <> d.type_2_hash
+                returning d.id, d.set_nk, d.current_flag) --, '2'::text)
+        -- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
+        , type_1_update_query as (
+                update dim_patient d
+                set    birthtime = (n.a).birthtime
+                from   patient_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    (n.a).birthtime IS DISTINCT FROM d.birthtime
+                returning d.id, d.set_nk, d.current_flag) --, '1'::text)
+        -- step 6: insert new current version (for new dimensions and type 2 updates)
+        , insert_query as (
+                insert into dim_patient (set_nk, gender, birthtime,
+                                        name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
+                                        type_2_hash, valid_from, valid_to, current_flag)
+                select   (n.a).set_nk
+                       , (n.a).gender
+                       , (n.a).birthtime
+                       , (n.a).name_family
+                       , (n.a).name_given
+                       , (n.a).name_prefix
+                       , (n.a).name_suffix
+                       , (n.a).name_delimiter
+                       , (n.a).name_full
+                       , (n.a).type_2_hash
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
+                       , true as current_flag
+                from   patient_in_new_source n
+                where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
+                and not exists (select *
+                                from   dim_patient ex
+                                where  ex.set_nk = (n.a).set_nk
+                                and    ex.current_flag
+                                -- step 3: identify dimension records changed in their type 2 attributes
+                                and    ex.type_2_hash = (n.a).type_2_hash)
+                returning dim_patient.id
+                )
+        -- note: order below is important for correct application of simultaneous type 1 and type 2 updates
+        select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
+               ' | new: '::text || (select count(*) from insert_query) ||
+               ' | type 1 updated: '  || (select count(*) from type_1_update_query)
+               as result;
 $$ LANGUAGE sql;
 COMMENT ON FUNCTION update_dim_patient() IS
 'Load and update the patient dimension table.';
@@ -554,80 +554,80 @@ COMMENT ON FUNCTION update_dim_patient() IS
 CREATE OR REPLACE FUNCTION update_dim_provider()
 RETURNS text
 AS $$
-	WITH
-	provider_in_new_source as (
-		-- step 2: assemble the dimensional attributes
-		select distinct assemble_dim_provider(e, r) as a
-		from (
-		   -- step 1: select distinct providers related to new acts
-		   select distinct e, r from (
-		      select distinct e as e, r as r, n."effectiveTime"
-		      from "Person" e
-		      right outer join "Role" r on (r.player = e._id)
-		      join only "Participation" ptcp on (ptcp.role = r._id)
-		      join "Observation" n on (ptcp.act = n._id)
-		      where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-		      or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-		      order by n."effectiveTime"
-		      ) ordered_patients
-		   ) p
-		)
-	-- step 4: type 2 update: update the old current version and make it historic
-	, type_2_update_query as (
-		update dim_provider d
-		-- Preferably we would set the dimension valid time to the Role effectiveTime,
-		-- or the effectiveTime of the first Observation linked to the new provider.
-		-- As both times are NULL in the axle dataset, use the time of ETL.
-		set    valid_to = current_timestamp - interval '1 microsecond' -- record is valid until now
-		       ,      current_flag = false
-		-- we also need to update all type 1 attributes, since step 5 will not update
-		-- records already updated by this query.
-		from   provider_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    d.current_flag = true
-		 -- step 3: identify dimension records changed in their type 2 attributes
-		and    (n.a).type_2_hash <> d.type_2_hash
-		returning d.id, d.set_nk, d.current_flag) --, '2'::text)
-	-- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
-	, type_1_update_query as (
-		update dim_provider d
-		set    id = id  /* change to the set of type 1 attributes when available */
-		from   provider_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    false    /* remove when there are type 1 attributes */
-		returning d.id, d.set_nk, d.current_flag) --, '1'::text) ***/
-	-- step 6: insert new current version (for new dimensions and type 2 updates)
-	, insert_query as (
-		insert into dim_provider (set_nk, gender,
-					name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
-					type_2_hash, valid_from, valid_to, current_flag)
-		select   (n.a).set_nk
-		       , (n.a).gender
-		       , (n.a).name_family
-		       , (n.a).name_given
-		       , (n.a).name_prefix
-		       , (n.a).name_suffix
-		       , (n.a).name_delimiter
-		       , (n.a).name_full
-		       , (n.a).type_2_hash
-		       , current_timestamp as valid_from
-		       , '99991231 23:59:59' as valid_to
-		       , true as current_flag
-		from   provider_in_new_source n
-		where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
-		and not exists (select *
-				from   dim_provider ex
-				where  ex.set_nk = (n.a).set_nk
-				and    ex.current_flag
-				-- step 3: identify dimension records changed in their type 2 attributes
-				and    ex.type_2_hash = (n.a).type_2_hash)
-		returning dim_provider.id
-		)
-	-- note: order below is important for correct application of simultaneous type 1 and type 2 updates
-	select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
-	       ' | new: '::text || (select count(*) from insert_query) ||
-	       ' | type 1 updated: '  || (select count(*) from type_1_update_query)
-	       as result;
+        WITH
+        provider_in_new_source as (
+                -- step 2: assemble the dimensional attributes
+                select distinct assemble_dim_provider(e, r) as a
+                from (
+                   -- step 1: select distinct providers related to new acts
+                   select distinct e, r from (
+                      select distinct e as e, r as r, n."effectiveTime"
+                      from "Person" e
+                      right outer join "Role" r on (r.player = e._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
+                      where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
+                      or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
+                )
+        -- step 4: type 2 update: update the old current version and make it historic
+        , type_2_update_query as (
+                update dim_provider d
+                -- Preferably we would set the dimension valid time to the Role effectiveTime,
+                -- or the effectiveTime of the first Observation linked to the new provider.
+                -- As both times are NULL in the axle dataset, use the time of ETL.
+                set    valid_to = current_timestamp - interval '1 microsecond' -- record is valid until now
+                       ,      current_flag = false
+                -- we also need to update all type 1 attributes, since step 5 will not update
+                -- records already updated by this query.
+                from   provider_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    d.current_flag = true
+                 -- step 3: identify dimension records changed in their type 2 attributes
+                and    (n.a).type_2_hash <> d.type_2_hash
+                returning d.id, d.set_nk, d.current_flag) --, '2'::text)
+        -- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
+        , type_1_update_query as (
+                update dim_provider d
+                set    id = id  /* change to the set of type 1 attributes when available */
+                from   provider_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    false    /* remove when there are type 1 attributes */
+                returning d.id, d.set_nk, d.current_flag) --, '1'::text) ***/
+        -- step 6: insert new current version (for new dimensions and type 2 updates)
+        , insert_query as (
+                insert into dim_provider (set_nk, gender,
+                                        name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
+                                        type_2_hash, valid_from, valid_to, current_flag)
+                select   (n.a).set_nk
+                       , (n.a).gender
+                       , (n.a).name_family
+                       , (n.a).name_given
+                       , (n.a).name_prefix
+                       , (n.a).name_suffix
+                       , (n.a).name_delimiter
+                       , (n.a).name_full
+                       , (n.a).type_2_hash
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
+                       , true as current_flag
+                from   provider_in_new_source n
+                where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
+                and not exists (select *
+                                from   dim_provider ex
+                                where  ex.set_nk = (n.a).set_nk
+                                and    ex.current_flag
+                                -- step 3: identify dimension records changed in their type 2 attributes
+                                and    ex.type_2_hash = (n.a).type_2_hash)
+                returning dim_provider.id
+                )
+        -- note: order below is important for correct application of simultaneous type 1 and type 2 updates
+        select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
+               ' | new: '::text || (select count(*) from insert_query) ||
+               ' | type 1 updated: '  || (select count(*) from type_1_update_query)
+               as result;
 $$ LANGUAGE sql;
 COMMENT ON FUNCTION update_dim_provider() IS
 'Load and update the provider dimension table.';
@@ -636,76 +636,76 @@ COMMENT ON FUNCTION update_dim_provider() IS
 CREATE OR REPLACE FUNCTION update_dim_organization()
 RETURNS text
 AS $$
-	WITH
-	organization_in_new_source as (
-		-- step 2: assemble the dimensional attributes
-		select distinct assemble_dim_organization(e, r) as a
-		from (
-		   -- step 1: select distinct organizations related to new acts
-		   select distinct e, r from (
-		      select distinct e as e, r as r, n."effectiveTime"
-		      from "Organization" e
-		      join "Role" r on (r.scoper = e._id)
-		      join only "Participation" ptcp on (ptcp.role = r._id)
-		      join "Observation" n on (ptcp.act = n._id)
-		      where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-		      or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-		      order by n."effectiveTime"
-		      ) ordered_patients
-		   ) p
-		)
-	-- step 4: type 2 update: update the old current version and make it historic
-	, type_2_update_query as (
-		update dim_organization d
-		set    valid_from = current_timestamp - interval '1 microsecond' -- record is valid until now
-		       ,      current_flag = false
-		-- we also need to update all type 1 attributes, since step 5 will not update
-		-- records already updated by this query.
-		from   organization_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    d.current_flag = true
-		 -- step 3: identify dimension records changed in their type 2 attributes
-		and    (n.a).type_2_hash <> d.type_2_hash
-		returning d.id, d.set_nk, d.current_flag) --, '2'::text)
-	-- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
-	, type_1_update_query as (
-		update dim_organization d
-		set    id = id  -- set this to the set of type effective_time = (n.a).effective_time
-		from   organization_in_new_source n
-		where  (n.a).set_nk = d.set_nk
-		and    false    -- remove this line when there are type 1 attributes
-		returning d.id, d.set_nk, d.current_flag) --, '1'::text)
-	-- step 6: insert new current version (for new dimensions and type 2 updates)
-	, insert_query as (
-		insert into dim_organization (set_nk,
-					name, street, zipcode, city, state, country,
-					type_2_hash, valid_from, valid_to, current_flag)
-		select   (n.a).set_nk
-		       , (n.a).name
-		       , (n.a).street
-		       , (n.a).zipcode
-		       , (n.a).city
-		       , (n.a).state
-		       , (n.a).country
-		       , (n.a).type_2_hash
-		       , current_timestamp as valid_from
-		       , '99991231 23:59:59' as valid_to
-		       , true as current_flag
-		from   organization_in_new_source n
-		where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
-		and not exists (select *
-				from   dim_organization ex
-				where  ex.set_nk = (n.a).set_nk
-				and    ex.current_flag
-				-- step 3: identify dimension records changed in their type 2 attributes
-				and    ex.type_2_hash = (n.a).type_2_hash)
-		returning dim_organization.id
-		)
-	-- note: order below is important for correct application of simultaneous type 1 and type 2 updates
-	select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
-	       ' | new: '::text || (select count(*) from insert_query) ||
-	       ' | type 1 updated: '  || (select count(*) from type_1_update_query)
-	       as result;
+        WITH
+        organization_in_new_source as (
+                -- step 2: assemble the dimensional attributes
+                select distinct assemble_dim_organization(e, r) as a
+                from (
+                   -- step 1: select distinct organizations related to new acts
+                   select distinct e, r from (
+                      select distinct e as e, r as r, n."effectiveTime"
+                      from "Organization" e
+                      join "Role" r on (r.scoper = e._id)
+                      join only "Participation" ptcp on (ptcp.role = r._id)
+                      join "Observation" n on (ptcp.act = n._id)
+                      where "typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
+                      or    "typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
+                      order by n."effectiveTime"
+                      ) ordered_patients
+                   ) p
+                )
+        -- step 4: type 2 update: update the old current version and make it historic
+        , type_2_update_query as (
+                update dim_organization d
+                set    valid_from = current_timestamp - interval '1 microsecond' -- record is valid until now
+                       ,      current_flag = false
+                -- we also need to update all type 1 attributes, since step 5 will not update
+                -- records already updated by this query.
+                from   organization_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    d.current_flag = true
+                 -- step 3: identify dimension records changed in their type 2 attributes
+                and    (n.a).type_2_hash <> d.type_2_hash
+                returning d.id, d.set_nk, d.current_flag) --, '2'::text)
+        -- step 5: type 1 update: correct current and historic dimension records with the new value for the type 1 attributes
+        , type_1_update_query as (
+                update dim_organization d
+                set    id = id  -- set this to the set of type effective_time = (n.a).effective_time
+                from   organization_in_new_source n
+                where  (n.a).set_nk = d.set_nk
+                and    false    -- remove this line when there are type 1 attributes
+                returning d.id, d.set_nk, d.current_flag) --, '1'::text)
+        -- step 6: insert new current version (for new dimensions and type 2 updates)
+        , insert_query as (
+                insert into dim_organization (set_nk,
+                                        name, street, zipcode, city, state, country,
+                                        type_2_hash, valid_from, valid_to, current_flag)
+                select   (n.a).set_nk
+                       , (n.a).name
+                       , (n.a).street
+                       , (n.a).zipcode
+                       , (n.a).city
+                       , (n.a).state
+                       , (n.a).country
+                       , (n.a).type_2_hash
+                       , current_timestamp as valid_from
+                       , '99991231 23:59:59' as valid_to
+                       , true as current_flag
+                from   organization_in_new_source n
+                where  (n.a).set_nk not in(select set_nk from type_1_update_query where current_flag)
+                and not exists (select *
+                                from   dim_organization ex
+                                where  ex.set_nk = (n.a).set_nk
+                                and    ex.current_flag
+                                -- step 3: identify dimension records changed in their type 2 attributes
+                                and    ex.type_2_hash = (n.a).type_2_hash)
+                returning dim_organization.id
+                )
+        -- note: order below is important for correct application of simultaneous type 1 and type 2 updates
+        select 'type 2 updated: '  || (select count(*) from type_2_update_query) ||
+               ' | new: '::text || (select count(*) from insert_query) ||
+               ' | type 1 updated: '  || (select count(*) from type_1_update_query)
+               as result;
 $$ LANGUAGE sql;
 COMMENT ON FUNCTION update_dim_organization() IS
 'Load and update the organization dimension table.';
@@ -742,13 +742,13 @@ CREATE OR REPLACE FUNCTION update_dim_time()
 RETURNS VOID
 AS $$
    INSERT INTO dim_time ( day
-			, month
-			, year
-			, dow
-			, quarter
-			, hour
-			, minutes
-			)
+                        , month
+                        , year
+                        , dow
+                        , quarter
+                        , hour
+                        , minutes
+                        )
    SELECT date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
    , date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
    , date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
@@ -758,12 +758,12 @@ AS $$
    , date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
    FROM "Observation" obs
    WHERE NOT EXISTS (SELECT 1
-		     FROM dim_time WHERE year = date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND month = date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND day = date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND hour = date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND minutes = date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
-		    )
+                     FROM dim_time WHERE year = date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
    UNION
    SELECT DISTINCT date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
    , date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
@@ -774,12 +774,12 @@ AS $$
    , date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
    FROM "Observation" obs
    WHERE NOT EXISTS (SELECT 1
-		     FROM dim_time WHERE year = date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND month = date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND day = date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
-		     AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
-		    )
+                     FROM dim_time WHERE year = date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_dim_time() IS
 'Updates the time dimension';
@@ -787,12 +787,12 @@ COMMENT ON FUNCTION update_dim_time() IS
 CREATE OR REPLACE FUNCTION get_time_sk(ts)
 RETURNS dim_time.id%TYPE
 AS $$
-	SELECT id FROM dim_time
-	WHERE year = date_part('year', $1)
-	AND month = date_part('month', $1)
-	AND day = date_part('day', $1)
-	AND hour = date_part('hour', $1)
-	AND minutes = date_part('minute', $1)
+        SELECT id FROM dim_time
+        WHERE year = date_part('year', $1)
+        AND month = date_part('month', $1)
+        AND day = date_part('day', $1)
+        AND hour = date_part('hour', $1)
+        AND minutes = date_part('minute', $1)
 ;
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 ;
@@ -832,15 +832,15 @@ CREATE OR REPLACE FUNCTION get_concept_sk(cv)
 RETURNS dim_concept.id%TYPE
 AS $$
    WITH existing_concept AS (
-	SELECT id FROM dim_concept
-	WHERE code = code($1)
-	AND   codesystem = codesystem($1)
-	)
+        SELECT id FROM dim_concept
+        WHERE code = code($1)
+        AND   codesystem = codesystem($1)
+        )
    , new_concept AS (
-	INSERT INTO dim_concept (code, codesystem, codesystemname, codesystemversion, displayname, translation, qualifier)
-	SELECT code($1), codesystem($1), codesystemname($1), codesystemversion($1), displayname($1), NULL, NULL
-	WHERE NOT EXISTS (SELECT * FROM existing_concept)
-	RETURNING id)
+        INSERT INTO dim_concept (code, codesystem, codesystemname, codesystemversion, displayname, translation, qualifier)
+        SELECT code($1), codesystem($1), codesystemname($1), codesystemversion($1), displayname($1), NULL, NULL
+        WHERE NOT EXISTS (SELECT * FROM existing_concept)
+        RETURNING id)
    select id from existing_concept
    UNION ALL
    select id from new_concept;
@@ -882,37 +882,37 @@ AS $$
     , timestamp
     )
     SELECT nextval('fact_observation_evn_pq_seq')
-        , obs.id                                                    as id
-	, get_patient_sk(p,r)                                             as pat_sk
-	, get_provider_sk(e_prov, r_prov)                                 as prov_sk
-	, get_organization_sk(e_orga, r_prov)                             as orga_sk
-	, get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
-	, get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-	, get_concept_sk(obs.code)                                        as concept_sk
-	, value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
-	, value(originaltext(obs.code))                                   as concept_originaltext_value
-	, get_template_id_sk(obs."templateId")                            as template_id_sk
-	, get_concept_sk(obs.code)                                        as product_sk
-	, unit(((_any(value))[1])::text::pq)                              as pqunit  -- unit of the PQ (text)
-	, value(((_any(value))[1])::text::pq)                             as numval  -- value of the PQ (numeric)
-	, unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
-	, value(canonical(((_any(value))[1])::text::pq))                  as canval-- canonical value of the PQ
-	, obs._timestamp                                                  as timestamp
-	FROM new_observation_evn_pq      obs
-	LEFT JOIN ONLY "Participation" ptcp_pati
-		ON ptcp_pati.act = obs._id
-		AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
-		AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
-	LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
-	LEFT JOIN "Person" p                ON r.player = p._id
-	LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
-		 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
-		 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-		     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-		     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
-	LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
-	LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
-	LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
+        ,  obs.id                                                         as id
+        , get_patient_sk(p,r)                                             as pat_sk
+        , get_provider_sk(e_prov, r_prov)                                 as prov_sk
+        , get_organization_sk(e_orga, r_prov)                             as orga_sk
+        , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
+        , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
+        , get_concept_sk(obs.code)                                        as concept_sk
+        , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
+        , value(originaltext(obs.code))                                   as concept_originaltext_value
+        , get_template_id_sk(obs."templateId")                            as template_id_sk
+        , get_concept_sk(obs.code)                                        as product_sk
+        , unit(((_any(value))[1])::text::pq)                              as pqunit  -- unit of the PQ (text)
+        , value(((_any(value))[1])::text::pq)                             as numval  -- value of the PQ (numeric)
+        , unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
+        , value(canonical(((_any(value))[1])::text::pq))                  as canval-- canonical value of the PQ
+        , obs._timestamp                                                  as timestamp
+        FROM new_observation_evn_pq      obs
+        LEFT JOIN ONLY "Participation" ptcp_pati
+                ON ptcp_pati.act = obs._id
+                AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
+                AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
+        LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
+        LEFT JOIN "Person" p                ON r.player = p._id
+        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
+                 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
+                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
+                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
+        LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
+        LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
+        LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
    returning id
   )
   SELECT count(*) from insert_query;
@@ -944,39 +944,39 @@ AS $$
     , timestamp
     )
     SELECT nextval('fact_observation_evn_cv_seq')
-        , obs.id                                                          as id
-	, get_patient_sk(p,r)                                             as pat_sk
-	, get_provider_sk(e_prov, r_prov)                                 as prov_sk
-	, get_organization_sk(e_orga, r_prov)                             as orga_sk
-	, get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
-	, get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-	, get_concept_sk(obs.code)                                        as concept_sk
-	, value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
-	, value(originaltext(obs.code))                                   as concept_originaltext_value
-	, get_template_id_sk(obs."templateId")                            as template_id_sk
-	, get_concept_sk(e_prod.code)                                     as product_sk
-	, get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
-	, obs._timestamp                                                  as timestamp
-	FROM new_observation_evn_cd      obs
-	LEFT JOIN ONLY "Participation" ptcp_pati
-		ON ptcp_pati.act = obs._id
-		AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
-		AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
-	LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
-	LEFT JOIN "Person" p                ON r.player = p._id
-	LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
-		 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
-		 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-		     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-		     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
-	LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
-	LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
-	LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
-	LEFT JOIN ONLY "Participation" ptcp_prod ON ptcp_prod.act = obs._id
-		  AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
-		  AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
-	LEFT JOIN "Role"          r_prod    ON r_prod._id = ptcp_prod.role
-	LEFT JOIN "Entity"        e_prod    ON e_prod._id = r_prod.player
+        ,  obs.id                                                        as id
+        , get_patient_sk(p,r)                                             as pat_sk
+        , get_provider_sk(e_prov, r_prov)                                 as prov_sk
+        , get_organization_sk(e_orga, r_prov)                             as orga_sk
+        , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
+        , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
+        , get_concept_sk(obs.code)                                        as concept_sk
+        , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
+        , value(originaltext(obs.code))                                   as concept_originaltext_value
+        , get_template_id_sk(obs."templateId")                            as template_id_sk
+        , get_concept_sk(e_prod.code)                                     as product_sk
+        , get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
+        , obs._timestamp                                                  as timestamp
+        FROM new_observation_evn_cd      obs
+        LEFT JOIN ONLY "Participation" ptcp_pati
+                ON ptcp_pati.act = obs._id
+                AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
+                AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
+        LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
+        LEFT JOIN "Person" p                ON r.player = p._id
+        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
+                 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
+                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
+                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
+        LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
+        LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
+        LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
+        LEFT JOIN ONLY "Participation" ptcp_prod ON ptcp_prod.act = obs._id
+                  AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
+                  AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
+        LEFT JOIN "Role"          r_prod    ON r_prod._id = ptcp_prod.role
+        LEFT JOIN "Entity"        e_prod    ON e_prod._id = r_prod.player
    returning id
   )
   SELECT count(*) from insert_query;
@@ -1001,43 +1001,43 @@ BEGIN
 
    FOR concepts IN (
        WITH ans AS (
-	    SELECT a.*, row_number()
-	    OVER (ORDER BY a.cd1)
-	    FROM (  SELECT DISTINCT a.*
-		    FROM pg_code a
-		    JOIN pg_code c ON a.cdid = ANY(c.cdancestors)
-		    JOIN pg_oid cs ON cs.oiid = c.cdcsid
-		    WHERE ROW(c.cdcode, cs.oioid) IN
-		       (SELECT code, codesystem from dim_concept d
-			JOIN fact_observation_evn o
-			ON d.id = o.concept_sk
-			OR d.id = o.value_concept_sk
-		       )
-		    AND  cs.oioid = '2.16.840.1.113883.6.96'
-		    ) a
+            SELECT a.*, row_number()
+            OVER (ORDER BY a.cd1)
+            FROM (  SELECT DISTINCT a.*
+                    FROM pg_code a
+                    JOIN pg_code c ON a.cdid = ANY(c.cdancestors)
+                    JOIN pg_oid cs ON cs.oiid = c.cdcsid
+                    WHERE ROW(c.cdcode, cs.oioid) IN
+                       (SELECT code, codesystem from dim_concept d
+                        JOIN fact_observation_evn o
+                        ON d.id = o.concept_sk
+                        OR d.id = o.value_concept_sk
+                       )
+                    AND  cs.oioid = '2.16.840.1.113883.6.96'
+                    ) a
        )
        SELECT rtrim(overlay('000000'
-		  placing row_number::text
-		  from 7 - length(row_number::text)
-		  for length(row_number::text)))
-		  || ' ' || cdcode::text as name
-	    ,  rtrim(overlay('------------------------------'
-		     placing cddescription
-		     from array_length(cdancestors, 1)
-		     for 30))
-		  || CASE WHEN length(cddescription) > 0 THEN ' ' ELSE '' END
-		  as comment
-	    ,  cdcode
+                  placing row_number::text
+                  from 7 - length(row_number::text)
+                  for length(row_number::text)))
+                  || ' ' || cdcode::text as name
+            ,  rtrim(overlay('------------------------------'
+                     placing cddescription
+                     from array_length(cdancestors, 1)
+                     for 30))
+                  || CASE WHEN length(cddescription) > 0 THEN ' ' ELSE '' END
+                  as comment
+            ,  cdcode
        FROM ans
    )
    LOOP
        EXECUTE format('CREATE VIEW view_snomed_tree.%I AS '
-		   || 'SELECT * FROM fact_observation_evn o '
-		   || 'WHERE o.code_cv << ''%s''::cv(''SNOMED-CT'') '
-		   || 'OR o.value_cv << ''%s''::cv(''SNOMED-CT'')',
-		     concepts.name, concepts.cdcode, concepts.cdcode);
+                   || 'SELECT * FROM fact_observation_evn o '
+                   || 'WHERE o.code_cv << ''%s''::cv(''SNOMED-CT'') '
+                   || 'OR o.value_cv << ''%s''::cv(''SNOMED-CT'')',
+                     concepts.name, concepts.cdcode, concepts.cdcode);
        EXECUTE format('COMMENT ON VIEW view_snomed_tree.%I IS %L',
-		     concepts.name, concepts.comment);
+                     concepts.name, concepts.comment);
    END LOOP;
 END;
 $$ LANGUAGE plpgsql
@@ -1058,21 +1058,21 @@ BEGIN
    EXECUTE 'CREATE SCHEMA view_templates';
 
     FOR rec IN SELECT template_id, template_title, tt.source FROM
-		  (SELECT DISTINCT(unnest(d.template_id)) AS id
-		   FROM fact_observation_evn f
-		   JOIN dim_template d on f.template_id_sk = d.id
-		  ) distinct_ids
-		  JOIN template tt on distinct_ids.id = tt.template_id
+                  (SELECT DISTINCT(unnest(d.template_id)) AS id
+                   FROM fact_observation_evn f
+                   JOIN dim_template d on f.template_id_sk = d.id
+                  ) distinct_ids
+                  JOIN template tt on distinct_ids.id = tt.template_id
     LOOP
-	EXECUTE 'CREATE OR REPLACE VIEW view_templates."'
-			|| replace(rec.template_id,'.','_') || '" AS ' ||
-		'SELECT f.* FROM fact_observation_evn f
-		 JOIN dim_template t ON t.id = f.template_id_sk
-		 WHERE t.template_id @> ARRAY[''' || rec.template_id || ''']';
-	EXECUTE format('COMMENT ON VIEW view_templates."'
-			|| replace(rec.template_id,'.','_') || '" IS ''%s''',
-		     rec.template_title);
-	END LOOP;
+        EXECUTE 'CREATE OR REPLACE VIEW view_templates."'
+                        || replace(rec.template_id,'.','_') || '" AS ' ||
+                'SELECT f.* FROM fact_observation_evn f
+                 JOIN dim_template t ON t.id = f.template_id_sk
+                 WHERE t.template_id @> ARRAY[''' || rec.template_id || ''']';
+        EXECUTE format('COMMENT ON VIEW view_templates."'
+                        || replace(rec.template_id,'.','_') || '" IS ''%s''',
+                     rec.template_title);
+        END LOOP;
 END; $$ LANGUAGE plpgsql
 ;
 COMMENT ON FUNCTION setup_view_templates() IS
@@ -1083,20 +1083,20 @@ COMMENT ON FUNCTION setup_view_templates() IS
 CREATE OR REPLACE FUNCTION setup_dimensions()
 RETURNS VOID AS $$
 DECLARE
-	messages TEXT;
+        messages TEXT;
 BEGIN
-	-- first update the time dimension
-	PERFORM update_dim_time();
-	-- next update the template dimension
-	PERFORM update_dim_template();
-	-- first update dimensions that support type-2 changes
-	messages :=  update_dim_patient();
-	RAISE NOTICE 'update_dim_patient: %', messages;
-	messages := update_dim_provider();
-	RAISE NOTICE'update_dim_provider: %', messages;
-	messages := update_dim_organization();
-	RAISE NOTICE'update_dim_organizations: %', messages;
-	-- next update fact tables
+        -- first update the time dimension
+        PERFORM update_dim_time();
+        -- next update the template dimension
+        PERFORM update_dim_template();
+        -- first update dimensions that support type-2 changes
+        messages :=  update_dim_patient();
+        RAISE NOTICE 'update_dim_patient: %', messages;
+        messages := update_dim_provider();
+        RAISE NOTICE'update_dim_provider: %', messages;
+        messages := update_dim_organization();
+        RAISE NOTICE'update_dim_organizations: %', messages;
+        -- next update fact tables
 END $$ LANGUAGE plpgsql;
 
 
@@ -1104,41 +1104,41 @@ CREATE OR REPLACE FUNCTION stream_etl_observation_evn()
 RETURNS VOID
 AS $$
 DECLARE
-	messages TEXT;
+        messages TEXT;
 BEGIN
-	-- setup dblink
-	BEGIN
-		PERFORM dblink_disconnect('dwh');
-	EXCEPTION WHEN OTHERS THEN NULL;
-	END;
-	PERFORM dblink_connect('dwh','dwh');
+        -- setup dblink
+        BEGIN
+                PERFORM dblink_disconnect('dwh');
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+        PERFORM dblink_connect('dwh');
 
-	PERFORM create_temp_tables();
+        PERFORM create_temp_tables();
 
-	-- first update the time dimension
-	PERFORM update_dim_time();
-	-- first update dimensions that support type-2 changes
-	messages :=  update_dim_patient();
-	RAISE NOTICE 'update_dim_patient: %', messages;
-	messages := update_dim_provider();
-	RAISE NOTICE'update_dim_provider: %', messages;
-	messages := update_dim_organization();
-	RAISE NOTICE'update_dim_organizations: %', messages;
-	-- next update fact tables
-	messages := update_fact_observation_evn_pq();
-	RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
-	messages := update_fact_observation_evn_cv();
-	RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
-	-- not implemented:
-	-- messages := update_fact_observation_evn_text();
-	-- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
-	RAISE NOTICE 'setting up snomed tree & views';
+        -- first update the time dimension
+        PERFORM update_dim_time();
+        -- first update dimensions that support type-2 changes
+        messages :=  update_dim_patient();
+        RAISE NOTICE 'update_dim_patient: %', messages;
+        messages := update_dim_provider();
+        RAISE NOTICE'update_dim_provider: %', messages;
+        messages := update_dim_organization();
+        RAISE NOTICE'update_dim_organizations: %', messages;
+        -- next update fact tables
+        messages := update_fact_observation_evn_pq();
+        RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
+        messages := update_fact_observation_evn_cv();
+        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
+        -- not implemented:
+        -- messages := update_fact_observation_evn_text();
+        -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
+        RAISE NOTICE 'setting up snomed tree & views';
 --        PERFORM  setup_view_snomed_tree();
-	RAISE NOTICE 'setting up template views';
+        RAISE NOTICE 'setting up template views';
 --        PERFORM setup_view_templates();
-	RAISE NOTICE 'adding view_snomed_tree and view_templates schemas to search_path';
-	EXECUTE 'alter database ' || current_database() || ' set search_path = rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
-	EXECUTE 'set search_path to rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
+        RAISE NOTICE 'adding view_snomed_tree and view_templates schemas to search_path';
+        EXECUTE 'alter database ' || current_database() || ' set search_path = rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
+        EXECUTE 'set search_path to rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
 END;
 $$ LANGUAGE plpgsql;
 
