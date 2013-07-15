@@ -182,7 +182,7 @@ CREATE SEQUENCE fact_observation_evn_pq_seq;
 
 DROP TABLE IF EXISTS fact_observation_evn_pq CASCADE;
 CREATE TABLE fact_observation_evn_pq(
-  id                              int           PRIMARY KEY DEFAULT nextval('fact_observation_evn_pq_seq')
+  id                              int           PRIMARY KEY
 , act_id                          text[]
 , patient_sk                      int           REFERENCES dim_patient(id)
 , provider_sk                     int           REFERENCES dim_provider(id)
@@ -217,7 +217,7 @@ CREATE SEQUENCE fact_observation_evn_cv_seq;
 
 DROP TABLE IF EXISTS fact_observation_evn_cv CASCADE;
 CREATE TABLE fact_observation_evn_cv(
-  id                              int           PRIMARY KEY DEFAULT nextval('fact_observation_evn_cv_seq')
+  id                              int           PRIMARY KEY
 , act_id                          text[]
 , patient_sk                      int           REFERENCES dim_patient(id)
 , provider_sk                     int           REFERENCES dim_provider(id)
@@ -246,7 +246,7 @@ CREATE SEQUENCE fact_observation_evn_text_seq;
 
 DROP TABLE IF EXISTS fact_observation_evn_text CASCADE;
 CREATE TABLE fact_observation_evn_text(
-  id                              int              PRIMARY KEY DEFAULT nextval('fact_observation_evn_text_seq')
+  id                              int              PRIMARY KEY
 , act_id                          text[]
 , patient_sk                      int              REFERENCES dim_patient(id)
 , provider_sk                     int              REFERENCES dim_provider(id)

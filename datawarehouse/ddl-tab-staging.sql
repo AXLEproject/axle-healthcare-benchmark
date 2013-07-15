@@ -11,14 +11,24 @@
 
 /*** views for streaming ETL ***/
 
+create extension dblink;
+create foreign data wrapper pg validator postgresql_fdw_validator;
+create server dwh foreign data wrapper pg options (hostaddr '127.0.0.1', dbname 'dwh', port '6543');
+create user mapping for mgrid server dwh;
+select dblink_connect('dwh', 'dwh');
+
+
 CREATE OR REPLACE VIEW new_observation_evn_pq AS
        SELECT *
        FROM   "Observation"
        WHERE "moodCode" = 'EVN'::CV('ActMood')
        AND datatype(value) = '_pq'
-       AND _timestamp >
-       (SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_pq),
-                       '1-1-1970'::timestamptz))
+       AND _timestamp > (
+           SELECT max_timestamp
+           FROM dblink( 'dwh'
+                      , 'SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_pq), ''1-1-1970''::timestamptz)'
+                      ) AS t(max_timestamp timestamptz)
+       )
 ;
 
 COMMENT ON VIEW new_observation_evn_pq is
@@ -29,9 +39,12 @@ CREATE OR REPLACE VIEW new_observation_evn_cd AS
        FROM   "Observation"
        WHERE "moodCode" = 'EVN'::CV('ActMood')
        AND datatype(value) = '_cd'
-       AND _timestamp >
-       (SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_cv),
-                       '1-1-1970'::timestamptz))
+       AND _timestamp > (
+           SELECT max_timestamp
+           FROM dblink( 'dwh'
+                      , 'SELECT COALESCE((SELECT max(timestamp) FROM fact_observation_evn_cv), ''1-1-1970''::timestamptz)'
+                      ) AS t(max_timestamp timestamptz)
+       )
 ;
 
 COMMENT ON VIEW new_observation_evn_cd is
