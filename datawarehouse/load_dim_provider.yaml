@@ -1,0 +1,17 @@
+VERSION: 1.0.0.1
+DATABASE: dwh
+PORT: 6543
+GPLOAD:
+        INPUT:
+                - SOURCE:
+                        FILE:
+                              - /tmp/dim_provider.csv
+                - FORMAT: CSV
+                - QUOTE: '"'
+                - DELIMITER: ','
+        OUTPUT:
+                - TABLE: dim_provider
+                - MODE: merge
+                - MODE: id
+                - UPDATE_COLUMNS: [ set_nk, gender, name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full, type_2_hash, valid_from, valid_to, current_flag ]
+                - MATCH_COLUMNS: [ id ]
