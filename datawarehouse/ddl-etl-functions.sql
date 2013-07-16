@@ -827,6 +827,30 @@ AS $$
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION get_template_id_sk(ii[]) IS 'Gets the surrogate key for and existing template_id';
 
+-- make shell function so the next one will compile
+CREATE OR REPLACE FUNCTION get_concept_sk(cv)
+RETURNS dim_concept.id%TYPE
+AS $$
+SELECT NULL::int;
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION concept_ancestor(int, cv)
+RETURNS int[]
+AS
+$$
+ SELECT array_prepend($1, ARRAY(
+   SELECT get_concept_sk(a.cdcode||':'||codesystem($2))
+   FROM pg_code a
+   JOIN pg_code b
+   ON a.cdid = ANY(b.cdancestors)
+   AND a.cdid <> b.cdid
+   WHERE b.cdid=internalid($2)
+ ));
+$$
+LANGUAGE SQL IMMUTABLE STRICT
+COST 1500
+;
+
 -- TODO handle qualifiers
 CREATE OR REPLACE FUNCTION get_concept_sk(cv)
 RETURNS dim_concept.id%TYPE
@@ -837,13 +861,14 @@ AS $$
         AND   codesystem = codesystem($1)
         )
    , new_concept AS (
-        INSERT INTO dim_concept (code, codesystem, codesystemname, codesystemversion, displayname, translation, qualifier)
-        SELECT code($1), codesystem($1), codesystemname($1), codesystemversion($1), displayname($1), NULL, NULL
+        INSERT INTO dim_concept (id, code, codesystem, codesystemname, codesystemversion, displayname, ancestor, translation, qualifier)
+        SELECT nextval('dim_concept_seq'), code($1), codesystem($1), codesystemname($1), codesystemversion($1), displayname($1), concept_ancestor(currval('dim_concept_seq')::int, $1), NULL, NULL
         WHERE NOT EXISTS (SELECT * FROM existing_concept)
         RETURNING id)
    select id from existing_concept
    UNION ALL
    select id from new_concept;
+
 $$ LANGUAGE SQL
 RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION get_concept_sk(cv) IS

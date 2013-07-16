@@ -25,20 +25,23 @@ DROP TABLE IF EXISTS dim_concept_role CASCADE;
  * and codesystem and NULL qualifier to find the parent concept.
  */
 CREATE TABLE dim_concept (
-  id                          int PRIMARY KEY DEFAULT nextval('dim_concept_seq')
+  id                          int PRIMARY KEY
 , code                        TEXT
 , codesystem                  TEXT
 , codesystemname              TEXT
 , codesystemversion           TEXT
 , displayname                 TEXT
+, ancestor                    int[] /* references dim_concept(id) */
 , translation                 int[] /* references dim_concept(id) */
 , qualifier                   int[] /* references dim_concept_role(id) */
 );
 COMMENT ON TABLE dim_concept IS
 'Dimension table for concepts (cd, cv and cs attributes).';
+COMMENT ON COLUMN dim_concept.ancestor IS
+'The reflexive transitive closure of the implied-by relation for hierarchical codesystems. References dim_concept(id).';
 COMMENT ON COLUMN dim_concept.translation IS
 'The translations of the concept in another language. References dim_concept(id).';
-COMMENT ON COLUMN dim_concept.translation IS
+COMMENT ON COLUMN dim_concept.qualifier IS
 'The qualifiers of this concept. References dim_concept_role(id).';
 
 CREATE TABLE dim_concept_role (
