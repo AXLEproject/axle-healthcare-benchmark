@@ -45,7 +45,7 @@ COMMENT ON COLUMN dim_concept.qualifier IS
 'The qualifiers of this concept. References dim_concept_role(id).';
 
 CREATE TABLE dim_concept_role (
-  id                          int PRIMARY KEY DEFAULT nextval('dim_concept_role_seq')
+  id                          int PRIMARY KEY
 , name                        int REFERENCES dim_concept(id) NOT NULL
 , value                       int REFERENCES dim_concept(id) NOT NULL
 , inverted                    BOOLEAN
@@ -76,7 +76,7 @@ CREATE SEQUENCE dim_patient_seq;
 
 DROP TABLE IF EXISTS dim_patient CASCADE;
 CREATE TABLE dim_patient (
-  id                            int PRIMARY KEY DEFAULT nextval('dim_patient_seq')
+  id                            int PRIMARY KEY
 , set_nk                        text[]
 , gender                        TEXT
 , birthtime                     date
@@ -103,7 +103,7 @@ CREATE SEQUENCE dim_provider_seq;
 
 DROP TABLE IF EXISTS dim_provider CASCADE;
 CREATE TABLE dim_provider (
-  id                            int PRIMARY KEY DEFAULT nextval('dim_provider_seq')
+  id                            int PRIMARY KEY
 , set_nk                        text[]
 , gender                        TEXT
 , name_family                   text
@@ -128,7 +128,7 @@ CREATE SEQUENCE dim_organization_seq;
 
 DROP TABLE IF EXISTS dim_organization CASCADE;
 CREATE TABLE dim_organization (
-  id                            int PRIMARY KEY DEFAULT nextval('dim_organization_seq')
+  id                            int PRIMARY KEY
 , set_nk                        text[]
 , name                          text
 , street                        text
@@ -163,7 +163,7 @@ CREATE SEQUENCE dim_template_seq;
 
 DROP TABLE IF EXISTS dim_template CASCADE;
 CREATE TABLE dim_template (
-  id                            int PRIMARY KEY DEFAULT nextval('dim_template_seq')
+  id                            int PRIMARY KEY
 , template_id                   text[]
 , id_1                          text
 , id_2                          text

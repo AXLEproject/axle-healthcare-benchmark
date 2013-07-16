@@ -516,10 +516,11 @@ AS $$
                 returning d.id, d.set_nk, d.current_flag) --, '1'::text)
         -- step 6: insert new current version (for new dimensions and type 2 updates)
         , insert_query as (
-                insert into dim_patient (set_nk, gender, birthtime,
+                insert into dim_patient (id, set_nk, gender, birthtime,
                                         name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
                                         type_2_hash, valid_from, valid_to, current_flag)
-                select   (n.a).set_nk
+                select nextval('dim_patient_seq')
+                       , (n.a).set_nk
                        , (n.a).gender
                        , (n.a).birthtime
                        , (n.a).name_family
@@ -598,10 +599,11 @@ AS $$
                 returning d.id, d.set_nk, d.current_flag) --, '1'::text) ***/
         -- step 6: insert new current version (for new dimensions and type 2 updates)
         , insert_query as (
-                insert into dim_provider (set_nk, gender,
+                insert into dim_provider (id, set_nk, gender,
                                         name_family, name_given, name_prefix, name_suffix, name_delimiter, name_full,
                                         type_2_hash, valid_from, valid_to, current_flag)
-                select   (n.a).set_nk
+                select nextval('dim_provider_seq')
+                       , (n.a).set_nk
                        , (n.a).gender
                        , (n.a).name_family
                        , (n.a).name_given
@@ -677,10 +679,11 @@ AS $$
                 returning d.id, d.set_nk, d.current_flag) --, '1'::text)
         -- step 6: insert new current version (for new dimensions and type 2 updates)
         , insert_query as (
-                insert into dim_organization (set_nk,
+                insert into dim_organization (id, set_nk,
                                         name, street, zipcode, city, state, country,
                                         type_2_hash, valid_from, valid_to, current_flag)
-                select   (n.a).set_nk
+                select nextval('dim_organization_seq')
+                       , (n.a).set_nk
                        , (n.a).name
                        , (n.a).street
                        , (n.a).zipcode
@@ -810,8 +813,9 @@ COMMENT ON FUNCTION get_time_sk(ts) IS 'Lookup the time surrogate key.';
 CREATE OR REPLACE FUNCTION update_dim_template()
 RETURNS VOID
 AS $$
-   INSERT INTO dim_template(template_id, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9)
-   SELECT obs."templateId"
+   INSERT INTO dim_template(id, template_id, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9)
+   SELECT nextval('dim_template_seq')
+   , obs."templateId"
    , obs."templateId"[1]
    , obs."templateId"[2]
    , obs."templateId"[3]
@@ -821,7 +825,11 @@ AS $$
    , obs."templateId"[7]
    , obs."templateId"[8]
    , obs."templateId"[9]
-   FROM "Observation" obs
+   FROM (
+        SELECT * FROM new_observation_evn_pq
+        UNION ALL
+        SELECT * FROM new_observation_evn_cd
+   ) obs
    WHERE obs."templateId" IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM dim_template WHERE template_id = obs."templateId"::text[])
 $$ LANGUAGE SQL;
