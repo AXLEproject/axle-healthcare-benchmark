@@ -51,16 +51,20 @@ case "${ACTION}" in
         pgcommand postgres "CREATE DATABASE $DBNAME"
 
         echo "..Loading modules"
+        pgcommand $DBNAME "CREATE EXTENSION dblink"
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
+        pgcommand $DBNAME "CREATE SCHEMA etl"
+        pgcommand $DBNAME "CREATE SCHEMA staging_rim2011"
+        pgcommand $DBNAME "CREATE SCHEMA view_snomed_tree"
+        pgcommand $DBNAME "CREATE SCHEMA view_templates"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
         pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20110731"
         pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
         # We want the RIM to be in schema 'staging_rimxxx' instead of 'public'."
-        pgcommand $DBNAME "CREATE SCHEMA staging_rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
@@ -68,11 +72,16 @@ case "${ACTION}" in
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
         echo ".. Creating ETL support tables, views and indexes"
-        # We need the dwh tables mainly for type definitions used by the etl functions
+        # To transform to the dwh format, the staging database has a copy of
+        # the datawarehouse tables. To keep things organized, we load the dwh
+        # tables in the schema etl.
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=etl,staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommandfromfile $DBNAME ddl-tab-dwh.sql
         pgcommandfromfile $DBNAME ddl-tab-staging.sql
         echo ".. Creating ETL functions"
         pgcommandfromfile $DBNAME ddl-etl-functions.sql
+        # Finally set the search_path to the final setup
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,etl,staging_rim2011,view_snomed_tree,view_templates,hl7_composites,pg_hl7,hl7,\"\$user\";"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
