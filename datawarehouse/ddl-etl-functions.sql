@@ -739,47 +739,56 @@ COMMENT ON FUNCTION get_organization_sk("Organization","Role") IS
 
 
 CREATE OR REPLACE FUNCTION update_dim_time()
-RETURNS VOID
+RETURNS text
 AS $$
-   INSERT INTO dim_time ( day
+   WITH
+   obs_times AS (
+        SELECT DISTINCT UNNEST(ARRAY[
+          lowvalue(convexhull((obs."effectiveTime").ivl))
+        , highvalue(convexhull((obs."effectiveTime").ivl))
+        ])::timestamptz AS t
+        FROM (
+             SELECT * FROM new_observation_evn_pq
+             UNION ALL
+             SELECT * FROM new_observation_evn_cd
+        ) obs
+   ),
+   new_times AS (
+        SELECT t
+        FROM obs_times a
+        WHERE NOT EXISTS (
+              SELECT *
+              FROM dim_time d
+              WHERE d.time = a.t
+        )
+        AND t IS NOT NULL
+   ),
+   insert_query AS (
+      INSERT INTO dim_time ( id
+                        , day
                         , month
                         , year
                         , dow
                         , quarter
                         , hour
                         , minutes
+                        , time
                         )
-   SELECT date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('isodow', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('quarter', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
-   FROM "Observation" obs
-   WHERE NOT EXISTS (SELECT 1
-                     FROM dim_time WHERE year = date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND month = date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND day = date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND hour = date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND minutes = date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
-                    )
-   UNION
-   SELECT DISTINCT date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('isodow', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('quarter', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
-   , date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
-   FROM "Observation" obs
-   WHERE NOT EXISTS (SELECT 1
-                     FROM dim_time WHERE year = date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND month = date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND day = date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
-                     AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
-                    )
+      SELECT nextval('dim_time_seq')
+      , date_part('day', t)
+      , date_part('month', t)
+      , date_part('year', t)
+      , date_part('isodow', t)
+      , date_part('quarter', t)
+      , date_part('hour', t)
+      , date_part('minute', t)
+      , t
+      FROM new_times
+      RETURNING dim_time.id
+   )
+   SELECT 'new: '::text || (SELECT count(*) FROM insert_query)
+   AS result;
+;
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_dim_time() IS
 'Updates the time dimension';
@@ -1098,31 +1107,9 @@ BEGIN
                         || replace(rec.template_id,'.','_') || '" IS ''%s''',
                      rec.template_title);
         END LOOP;
-END; $$ LANGUAGE plpgsql
-;
+END; $$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION setup_view_templates() IS
-   'Creates a view for each template_id used in the fact_observation_evn_pq table. Each view contains the records in the fact_observation_evn_pq that refer to this template'
-   ;
-
-
-CREATE OR REPLACE FUNCTION setup_dimensions()
-RETURNS VOID AS $$
-DECLARE
-        messages TEXT;
-BEGIN
-        -- first update the time dimension
-        PERFORM update_dim_time();
-        -- next update the template dimension
-        PERFORM update_dim_template();
-        -- first update dimensions that support type-2 changes
-        messages :=  update_dim_patient();
-        RAISE NOTICE 'update_dim_patient: %', messages;
-        messages := update_dim_provider();
-        RAISE NOTICE'update_dim_provider: %', messages;
-        messages := update_dim_organization();
-        RAISE NOTICE'update_dim_organizations: %', messages;
-        -- next update fact tables
-END $$ LANGUAGE plpgsql;
+   'Creates a view for each template_id used in the fact_observation_evn_pq table. Each view contains the records in the fact_observation_evn_pq that refer to this template';
 
 
 CREATE OR REPLACE FUNCTION stream_etl_observation_evn()
@@ -1141,7 +1128,10 @@ BEGIN
         PERFORM create_temp_tables();
 
         -- first update the time dimension
-        PERFORM update_dim_time();
+        messages := update_dim_time();
+        RAISE NOTICE 'update_dim_time: %', messages;
+        -- next update the template dimension
+        PERFORM update_dim_template();
         -- first update dimensions that support type-2 changes
         messages :=  update_dim_patient();
         RAISE NOTICE 'update_dim_patient: %', messages;
@@ -1149,11 +1139,12 @@ BEGIN
         RAISE NOTICE'update_dim_provider: %', messages;
         messages := update_dim_organization();
         RAISE NOTICE'update_dim_organizations: %', messages;
+
         -- next update fact tables
         messages := update_fact_observation_evn_pq();
         RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
-        messages := update_fact_observation_evn_cv();
-        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
+--        messages := update_fact_observation_evn_cv();
+--        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
         -- not implemented:
         -- messages := update_fact_observation_evn_text();
         -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
