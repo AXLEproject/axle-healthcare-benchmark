@@ -58,7 +58,7 @@ CREATE SEQUENCE dim_time_seq START WITH 3;
 
 DROP TABLE IF EXISTS dim_time CASCADE;
 CREATE TABLE dim_time(
-  id                 int PRIMARY KEY DEFAULT nextval('dim_time_seq')
+  id                 int PRIMARY KEY
 , day                INT
 , month              INT
 , year               INT
@@ -66,6 +66,7 @@ CREATE TABLE dim_time(
 , quarter            INT
 , hour               INT
 , minutes            INT
+, time               timestamptz
 );
 COMMENT ON TABLE dim_time IS
 'Dimension table for time granularities.';
