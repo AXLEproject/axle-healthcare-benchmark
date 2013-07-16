@@ -1137,8 +1137,6 @@ BEGIN
         RAISE NOTICE 'setting up template views';
 --        PERFORM setup_view_templates();
         RAISE NOTICE 'adding view_snomed_tree and view_templates schemas to search_path';
-        EXECUTE 'alter database ' || current_database() || ' set search_path = rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
-        EXECUTE 'set search_path to rdw, view_snomed_tree, view_templates, public, staging_rim2011, hl7_composites, pg_hl7, hl7, "$user"';
 END;
 $$ LANGUAGE plpgsql;
 
