@@ -1151,8 +1151,8 @@ BEGIN
         -- next update fact tables
         messages := update_fact_observation_evn_pq();
         RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
---        messages := update_fact_observation_evn_cv();
---        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
+        messages := update_fact_observation_evn_cv();
+        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
         -- not implemented:
         -- messages := update_fact_observation_evn_text();
         -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
