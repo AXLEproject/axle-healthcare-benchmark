@@ -204,7 +204,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION organization_role2dimension_address("Organization", "Role") IS
 'Returns a dimension_address to be used when updating an organization dimension.';
 
@@ -214,9 +214,6 @@ CREATE OR REPLACE FUNCTION person_patient2set_nk(e "Person", r "Patient")
 RETURNS text[]
 AS
 $$
-        -- note: do not use a hash function here, because collisions are likely (birthday problem),
-        -- and a collision means a false positive person match.
-
         SELECT CASE
                -- Using the role or entity ids is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -238,7 +235,8 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL STABLE STRICT
+COST 10000;
 COMMENT ON FUNCTION person_patient2set_nk("Person", "Patient") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -247,9 +245,6 @@ CREATE OR REPLACE FUNCTION person_role2set_nk(e "Person", r "Role")
 RETURNS text[]
 AS
 $$
-        -- note: do not use a hash function here, because collisions are likely (birthday problem),
-        -- and a collision means a false positive person match.
-
         SELECT CASE
                -- Using the role or entity id's is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -271,7 +266,8 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL STABLE STRICT
+COST 10000;
 COMMENT ON FUNCTION person_role2set_nk("Person", "Role") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -280,9 +276,6 @@ CREATE OR REPLACE FUNCTION organization_role2set_nk(e "Organization", r "Role")
 RETURNS text[]
 AS
 $$
-        -- note: do not use a hash function here, because collisions are likely (birthday problem),
-        -- and a collision means a false positive person match.
-
         SELECT CASE
                -- Using the role or entity id's is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -304,7 +297,9 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL STABLE STRICT
+COST 10000;
+
 COMMENT ON FUNCTION organization_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Organization and associated Role. This function must be refined by the user to select a meaningful natural key.';
 
@@ -313,9 +308,6 @@ CREATE OR REPLACE FUNCTION orga_role2set_nk(e "Organization", r "Role")
 RETURNS text[]
 AS
 $$
-        -- note: do not use a hash function here, because collisions are likely (birthday problem),
-        -- and a collision means a false positive organization match.
-
         SELECT CASE
                -- Using the role or entity id's is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -337,7 +329,8 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL STABLE STRICT
+COST 10000;
 COMMENT ON FUNCTION orga_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Role and associated Organiation. This function must be refined by the user to select a meaningful natural key.';
 
@@ -716,27 +709,36 @@ COMMENT ON FUNCTION update_dim_organization() IS
 CREATE OR REPLACE FUNCTION get_patient_sk("Person", "Patient")
 RETURNS dim_patient.id%TYPE
 AS $$
-   SELECT id FROM dim_patient
-   WHERE person_patient2set_nk($1,$2) = dim_patient.set_nk;
-$$ LANGUAGE SQL;
+    -- prevent inlining of person_patient2set_nk
+    WITH p AS (SELECT person_patient2set_nk($1,$2) AS set_nk)
+    SELECT id FROM dim_patient
+    WHERE dim_patient.set_nk = (SELECT set_nk FROM p OFFSET 0);
+$$ LANGUAGE SQL STABLE
+COST 10000;
 COMMENT ON FUNCTION get_patient_sk("Person", "Patient") IS
 'Lookup the patients surrogate key.';
 
 CREATE OR REPLACE FUNCTION get_provider_sk("Person","Role")
 RETURNS dim_provider.id%TYPE
 AS $$
+    -- prevent inlining of person_role2set_nk
+    WITH p AS (SELECT person_role2set_nk($1,$2) AS set_nk)
     SELECT id FROM dim_provider
-    WHERE person_role2set_nk($1,$2) = dim_provider.set_nk;
-$$ LANGUAGE SQL;
+    WHERE dim_provider.set_nk = (SELECT set_nk FROM p OFFSET 0);
+$$ LANGUAGE SQL STABLE
+COST 10000;
 COMMENT ON FUNCTION get_provider_sk("Person","Role") IS
 'Lookup the healthcare providers surrogate key.';
 
 CREATE OR REPLACE FUNCTION get_organization_sk("Organization","Role")
 RETURNS dim_organization.id%TYPE
 AS $$
+    -- prevent inlining of orga_role2set_nk
+    WITH o AS (SELECT orga_role2set_nk($1,$2) AS set_nk)
     SELECT id FROM dim_organization
-    WHERE orga_role2set_nk($1,$2) = dim_organization.set_nk;
-$$ LANGUAGE SQL;
+    WHERE dim_organization.set_nk = (SELECT set_nk FROM o OFFSET 0);
+$$ LANGUAGE SQL STABLE
+COST 10000;
 COMMENT ON FUNCTION get_organization_sk("Organization","Role") IS
 'Lookup the organizations surrogate key.';
 
@@ -747,8 +749,8 @@ AS $$
    WITH
    obs_times AS (
         SELECT DISTINCT UNNEST(ARRAY[
-          lowvalue(convexhull((obs."effectiveTime").ivl))
-        , highvalue(convexhull((obs."effectiveTime").ivl))
+          date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+        , date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
         ])::timestamptz AS t
         FROM (
              SELECT * FROM new_observation_evn_pq
@@ -800,11 +802,7 @@ CREATE OR REPLACE FUNCTION get_time_sk(ts)
 RETURNS dim_time.id%TYPE
 AS $$
         SELECT id FROM dim_time
-        WHERE year = date_part('year', $1)
-        AND month = date_part('month', $1)
-        AND day = date_part('day', $1)
-        AND hour = date_part('hour', $1)
-        AND minutes = date_part('minute', $1)
+        WHERE time = date_trunc('minute', ($1)::timestamptz)
 ;
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 ;
