@@ -874,16 +874,24 @@ AS $$
         SELECT id FROM dim_concept
         WHERE code = code($1)
         AND   codesystem = codesystem($1)
-        )
+   )
+   , translated_concept AS (
+        SELECT get_concept_sk((target_code||':'||'2.16.840.1.113883.6.96')::cv) AS id
+        FROM   terminology_mapping
+        WHERE  source_code = code($1)
+   )
    , new_concept AS (
         INSERT INTO dim_concept (id, code, codesystem, codesystemname, codesystemversion, displayname, ancestor, translation, qualifier)
         SELECT nextval('dim_concept_seq'), code($1), codesystem($1), codesystemname($1), codesystemversion($1), displayname($1), concept_ancestor(currval('dim_concept_seq')::int, $1), NULL, NULL
         WHERE NOT EXISTS (SELECT * FROM existing_concept)
-        RETURNING id)
+        AND   NOT EXISTS (SELECT * FROM translated_concept)
+        RETURNING id
+   )
    select id from existing_concept
    UNION ALL
+   select id from translated_concept
+   UNION ALL
    select id from new_concept;
-
 $$ LANGUAGE SQL
 RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION get_concept_sk(cv) IS

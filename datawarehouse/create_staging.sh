@@ -82,6 +82,8 @@ case "${ACTION}" in
         pgcommandfromfile $DBNAME ddl-etl-functions.sql
         # Finally set the search_path to the final setup
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,etl,staging_rim2011,view_snomed_tree,view_templates,hl7_composites,pg_hl7,hl7,\"\$user\";"
+        # Load term mappings
+        pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
