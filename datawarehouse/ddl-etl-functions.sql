@@ -777,6 +777,7 @@ AS $$
                         , quarter
                         , hour
                         , minutes
+<<<<<<< HEAD
                         , time
                         )
       SELECT nextval('dim_time_seq')
@@ -794,6 +795,43 @@ AS $$
    SELECT 'new: '::text || (SELECT count(*) FROM insert_query)
    AS result;
 ;
+=======
+                        , date_time
+                        )
+   SELECT date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('isodow', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('quarter', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+   , lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz
+   FROM "Observation" obs
+   WHERE NOT EXISTS (SELECT 1
+                     FROM dim_time WHERE year = date_part('year', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
+   UNION
+   SELECT DISTINCT date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('isodow', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('quarter', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
+   , lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz
+   FROM "Observation" obs
+   WHERE NOT EXISTS (SELECT 1
+                     FROM dim_time WHERE year = date_part('year', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND month = date_part('month', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND day = date_part('day', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
+                     AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
+                    )
+>>>>>>> Add datetime to time dimension for easier selects.
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_dim_time() IS
 'Updates the time dimension';
