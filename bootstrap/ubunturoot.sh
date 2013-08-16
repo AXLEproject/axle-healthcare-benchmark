@@ -17,6 +17,8 @@ apt-get install -y git gcc bison flex gdb make
 apt-get install -y libxml2-dev make libreadline-dev zlib1g-dev libossp-uuid-dev
 
 # packages for the cda generator
+# install 7 explicitly, since the generator does not work on java 6, ubuntu 12.04's default
+apt-get install -y openjdk-7-jdk
 apt-get install -y maven2
 
 # packages for the message parser
