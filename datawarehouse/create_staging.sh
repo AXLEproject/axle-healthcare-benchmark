@@ -68,7 +68,10 @@ case "${ACTION}" in
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3contextconduction_edition2011"
+        pgcommand $DBNAME "CREATE EXTENSION bp"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3_c_block_contextconduction_edition2011"
+	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
+	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
         echo ".. Creating ETL support tables, views and indexes"
@@ -78,12 +81,12 @@ case "${ACTION}" in
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=etl,staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommandfromfile $DBNAME ddl-tab-dwh.sql
         pgcommandfromfile $DBNAME ddl-tab-staging.sql
+        # Load term mappings
+        pgcommandfromfile $DBNAME "terminology_mapping.sql"
         echo ".. Creating ETL functions"
         pgcommandfromfile $DBNAME ddl-etl-functions.sql
         # Finally set the search_path to the final setup
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,etl,staging_rim2011,view_snomed_tree,view_templates,hl7_composites,pg_hl7,hl7,\"\$user\";"
-        # Load term mappings
-        pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
