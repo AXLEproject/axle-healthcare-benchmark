@@ -48,7 +48,7 @@ all: createdb
 
 # load some generated cdas
 stage:
-#	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "SELECT add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');" $(STDB)
+	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "SELECT add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');" $(STDB)
 # todo: remove sed replacements once bugs finished in cda generator models
 	cd ../cda-generator/output ; time ls | parallel "python /home/$(USER)/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py --quiet --dir={} | sed -e 's/m^2/m2/' -e 's/mm Hg/mm[Hg]/' -e 's/17074200/170742000/' -e 's/18803012/88803002/' | psql staging" > /tmp/parse_cdas.log 2>&1
 

@@ -64,7 +64,10 @@ case "${ACTION}" in
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=prestaging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3contextconduction_edition2011"
+        pgcommand $DBNAME "CREATE EXTENSION bp"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3_c_block_contextconduction_edition2011"
+        # In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
+        # we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
         echo "..Restricting login to owner"
