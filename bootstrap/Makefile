@@ -23,9 +23,9 @@ PGTUNE=$(BASEDIR)/pgtune
 PGCONN=$(shell expr 3 + `grep MHz /proc/cpuinfo | wc -l`)
 AXLEPWD=$(shell cat ../cda-generator/password.txt)
 
-MGRIDHDL=mgridhdl-1.0-linux-x64-installer.run
+MGRIDHDL=mgridhdl-1.0rc1-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
-MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/1.0/$(MGRIDHDL)
+MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/1.0rc1/$(MGRIDHDL)
 MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
 MGRIDMSG=mgridmsg-0.9-linux-x64-installer.run
