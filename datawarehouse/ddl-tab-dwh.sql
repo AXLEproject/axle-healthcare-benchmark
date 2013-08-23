@@ -274,6 +274,37 @@ CREATE TABLE fact_observation_evn_text(
 );
 **/
 
+DROP SEQUENCE IF EXISTS dim_status_seq;
+CREATE SEQUENCE fact_status_seq;
+
+DROP TABLE IF EXISTS dim_status;
+CREATE TABLE dim_status (
+  id                              int              PRIMARY KEY DEFAULT nextval('fact_status_seq')
+, value                           text
+);
+
+DROP SEQUENCE IF EXISTS fact_careprovisions_seq;
+CREATE SEQUENCE fact_careprovisions_seq;
+
+DROP TABLE IF EXISTS fact_careprovisions;
+CREATE TABLE fact_careprovisions (
+  id                              int              PRIMARY KEY DEFAULT nextval('fact_careprovisions_seq')
+, act_id                          text[]
+, patient_sk                      int              REFERENCES dim_patient(id)
+, from_time_sk                    int              REFERENCES dim_time(id)
+, to_time_sk                      int              REFERENCES dim_time(id)
+, code_sk                         int              REFERENCES dim_concept(id)
+, status                          int              REFERENCES dim_status(id)
+, principal_practitioner_sk       int              REFERENCES dim_provider(id)
+, pp_organization_sk              int              REFERENCES dim_organization(id)
+, pp_sub_organization_sk          int              REFERENCES dim_organization(id)
+, general_practitioner_sk         int              REFERENCES dim_provider(id)
+, diagnosis_sk                    int              REFERENCES dim_concept(id) -- to be filled with latest diagnosis ?
+, day_key_effective               int              REFERENCES dim_time
+)
+;
+
+
 /*** overall view over fact tables ***/
 CREATE OR REPLACE VIEW fact_observation_evn AS
       SELECT id, act_id, patient_sk, provider_sk, organization_sk, from_time_sk, to_time_sk, concept_sk, concept_originaltext_reference, concept_originaltext_value, template_id_sk, value_pq_unit, value_pq_value, value_pq_canonical_unit, value_pq_canonical_value, null as value_concept_sk, null as value, product_sk, timestamp
