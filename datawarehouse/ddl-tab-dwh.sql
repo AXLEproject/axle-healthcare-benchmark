@@ -84,6 +84,7 @@ CREATE TABLE dim_patient (
 , set_nk                        text[]
 , gender                        TEXT
 , birthtime                     date
+, deceased_time                 date DEFAULT NULL
 , name_family                   text
 , name_given                    text
 , name_prefix                   text
