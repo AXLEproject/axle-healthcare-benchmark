@@ -208,6 +208,7 @@ CREATE TABLE fact_observation_evn_pq(
 , value_pq_canonical_unit         text
 , value_pq_canonical_value        numeric
 , timestamp                       timestamptz
+, day_key_effective               int           REFERENCES dim_time(id)
 );
 
 COMMENT ON TABLE fact_observation_evn_pq IS
@@ -240,6 +241,7 @@ CREATE TABLE fact_observation_evn_cv(
 , product_sk                      int           REFERENCES dim_concept(id)
 , value_concept_sk                int           REFERENCES dim_concept(id)
 , timestamp                       timestamptz
+, day_key_effective               int           REFERENCES dim_time(id)
 );
 
 COMMENT ON TABLE fact_observation_evn_cv IS
