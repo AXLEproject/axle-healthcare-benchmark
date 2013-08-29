@@ -22,7 +22,7 @@ STUSER= ${USER}
 STDB= staging
 
 DWHHOST= localhost
-DWHPORT= 6543
+DWHPORT= 5432
 DWHUSER= ${USER}
 DWHDB= dwh
 
@@ -55,7 +55,7 @@ stage:
 transform:
 	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "SELECT stream_etl_observation_evn(); SELECT copy_dwh_tables();" $(STDB)
 
-load:
+gpload:
 	gpload -f load_dim_concept.yaml
 	gpload -f load_dim_concept_role.yaml
 	gpload -f load_dim_organization.yaml
@@ -65,3 +65,14 @@ load:
 	gpload -f load_dim_time.yaml
 	gpload -f load_fact_observation_evn_cv.yaml
 	gpload -f load_fact_observation_evn_pq.yaml
+
+pgload:
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_concept')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_concept_role')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_organization')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_patient')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_provider')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_template')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_dimension('dim_time')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_fact('fact_observation_evn_cv')"
+	psql -h $(DWHHOST) -p $(DWHPORT) -U $(DWHUSER) $(DWHDB) -c "SELECT load_fact('fact_observation_evn_pq')"

@@ -1215,13 +1215,13 @@ CREATE OR REPLACE FUNCTION copy_dwh_tables()
 RETURNS VOID
 AS $$
 BEGIN
-   COPY dim_concept                   TO '/tmp/dim_concept.csv'                  (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_concept_role              TO '/tmp/dim_concept_role.csv'             (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_time                      TO '/tmp/dim_time.csv'                     (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_patient                   TO '/tmp/dim_patient.csv'                  (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_provider                  TO '/tmp/dim_provider.csv'                 (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_organization              TO '/tmp/dim_organization.csv'             (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_template                  TO '/tmp/dim_template.csv'                 (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv'      (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv'      (FORMAT 'csv', DELIMITER ',', QUOTE '"');
+   COPY dim_concept                   TO '/tmp/dim_concept.csv';
+   COPY dim_concept_role              TO '/tmp/dim_concept_role.csv';    --         (FORMAT 'csv', DELIMITER ',' , NULL '');
+   COPY dim_time                      TO '/tmp/dim_time.csv';            --         (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_patient                   TO '/tmp/dim_patient.csv';          --        (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_provider                  TO '/tmp/dim_provider.csv';          --       (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_organization              TO '/tmp/dim_organization.csv';       --      (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_template                  TO '/tmp/dim_template.csv';            --     (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv';  --    (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv';   --   (FORMAT 'csv', DELIMITER ',', NULL '');
 END; $$ LANGUAGE plpgsql;

@@ -56,6 +56,7 @@ case "${ACTION}" in
 
         echo ".. Creating DWH tables"
         pgcommandfromfile $DBNAME ddl-tab-dwh.sql
+        pgcommandfromfile $DBNAME ddl-func-dwh.sql
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
