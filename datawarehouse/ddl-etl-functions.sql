@@ -28,6 +28,7 @@ AS $$
 	  , value_pq_canonical_unit         text
 	  , value_pq_canonical_value        numeric
 	  , timestamp                       timestamptz
+          , day_key_effective               int
 	  );
 
 	  CREATE TEMP TABLE IF NOT EXISTS temp_fact_observation_evn_cv(
@@ -45,6 +46,7 @@ AS $$
 	    , product_sk                      int
 	    , value_concept_sk                int
 	    , timestamp                       timestamptz
+            , day_key_effective               int
 	    );
 $$ LANGUAGE SQL;
 
@@ -966,6 +968,7 @@ AS $$
     , value_pq_canonical_unit
     , value_pq_canonical_value
     , timestamp
+    , day_key_effective
     )
     SELECT nextval('fact_observation_evn_pq_seq')
         ,  obs.id                                                         as id
@@ -984,6 +987,7 @@ AS $$
         , unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
         , value(canonical(((_any(value))[1])::text::pq))                  as canval-- canonical value of the PQ
         , obs._timestamp                                                  as timestamp
+        , get_time_sk(current_timestamp)                                  as day_key_effective
         FROM new_observation_evn_pq      obs
         LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
@@ -1028,6 +1032,7 @@ AS $$
     , product_sk
     , value_concept_sk
     , timestamp
+    , day_key_effective
     )
     SELECT nextval('fact_observation_evn_cv_seq')
         ,  obs.id                                                        as id
@@ -1043,6 +1048,7 @@ AS $$
         , get_concept_sk(e_prod.code)                                     as product_sk
         , get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
         , obs._timestamp                                                  as timestamp
+        , get_time_sk(current_timestamp)                                  as day_key_effective
         FROM new_observation_evn_cd      obs
         LEFT JOIN ONLY "Participation" ptcp_pati
                 ON ptcp_pati.act = obs._id
