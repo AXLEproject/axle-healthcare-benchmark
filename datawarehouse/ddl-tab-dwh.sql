@@ -66,11 +66,7 @@ CREATE TABLE dim_time(
 , quarter            INT
 , hour               INT
 , minutes            INT
-<<<<<<< HEAD
-, time               timestamptz
-=======
 , date_time          TIMESTAMPTZ
->>>>>>> Add datetime to time dimension for easier selects.
 );
 COMMENT ON TABLE dim_time IS
 'Dimension table for time granularities.';

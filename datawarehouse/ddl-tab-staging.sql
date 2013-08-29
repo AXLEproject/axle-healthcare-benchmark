@@ -66,5 +66,5 @@ CREATE INDEX ON "Role"(player);
 CREATE INDEX ON "Participation"("sequenceNumber");
 CREATE INDEX ON "Participation"("typeCode");
 CREATE INDEX ON dim_template(template_id);
-CREATE INDEX ON dim_time(time);
+CREATE INDEX ON dim_time(date_time);
 

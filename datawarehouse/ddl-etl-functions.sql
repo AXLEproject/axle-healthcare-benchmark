@@ -747,58 +747,15 @@ COMMENT ON FUNCTION get_organization_sk("Organization","Role") IS
 
 
 CREATE OR REPLACE FUNCTION update_dim_time()
-RETURNS text
+RETURNS VOID
 AS $$
-   WITH
-   obs_times AS (
-        SELECT DISTINCT UNNEST(ARRAY[
-          date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl)))
-        , date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
-        ])::timestamptz AS t
-        FROM (
-             SELECT * FROM new_observation_evn_pq
-             UNION ALL
-             SELECT * FROM new_observation_evn_cd
-        ) obs
-   ),
-   new_times AS (
-        SELECT t
-        FROM obs_times a
-        WHERE NOT EXISTS (
-              SELECT *
-              FROM dim_time d
-              WHERE d.time = a.t
-        )
-        AND t IS NOT NULL
-   ),
-   insert_query AS (
-      INSERT INTO dim_time ( id
-                        , day
+   INSERT INTO dim_time ( day
                         , month
                         , year
                         , dow
                         , quarter
                         , hour
                         , minutes
-<<<<<<< HEAD
-                        , time
-                        )
-      SELECT nextval('dim_time_seq')
-      , date_part('day', t)
-      , date_part('month', t)
-      , date_part('year', t)
-      , date_part('isodow', t)
-      , date_part('quarter', t)
-      , date_part('hour', t)
-      , date_part('minute', t)
-      , t
-      FROM new_times
-      RETURNING dim_time.id
-   )
-   SELECT 'new: '::text || (SELECT count(*) FROM insert_query)
-   AS result;
-;
-=======
                         , date_time
                         )
    SELECT date_part('day', lowvalue(convexhull((obs."effectiveTime").ivl)))
@@ -834,7 +791,7 @@ AS $$
                      AND hour = date_part('hour', highvalue(convexhull((obs."effectiveTime").ivl)))
                      AND minutes = date_part('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
                     )
->>>>>>> Add datetime to time dimension for easier selects.
+;
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_dim_time() IS
 'Updates the time dimension';
@@ -843,7 +800,7 @@ CREATE OR REPLACE FUNCTION get_time_sk(ts)
 RETURNS dim_time.id%TYPE
 AS $$
         SELECT id FROM dim_time
-        WHERE time = date_trunc('minute', ($1)::timestamptz)
+        WHERE date_time = date_trunc('minute', ($1)::timestamptz)
 ;
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 ;
@@ -1187,8 +1144,8 @@ BEGIN
         PERFORM create_temp_tables();
 
         -- first update the time dimension
-        messages := update_dim_time();
-        RAISE NOTICE 'update_dim_time: %', messages;
+        PERFORM update_dim_time();
+        RAISE NOTICE 'updated dim_time';
         -- next update the template dimension
         PERFORM update_dim_template();
         -- first update dimensions that support type-2 changes
