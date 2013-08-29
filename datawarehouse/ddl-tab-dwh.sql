@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS dim_concept_role CASCADE;
  * and codesystem and NULL qualifier to find the parent concept.
  */
 CREATE TABLE dim_concept (
-  id                          int PRIMARY KEY
+  id                          int PRIMARY KEY DEFAULT nextval('dim_concept_seq')
 , code                        TEXT
 , codesystem                  TEXT
 , codesystemname              TEXT
@@ -45,7 +45,7 @@ COMMENT ON COLUMN dim_concept.qualifier IS
 'The qualifiers of this concept. References dim_concept_role(id).';
 
 CREATE TABLE dim_concept_role (
-  id                          int PRIMARY KEY
+  id                          int PRIMARY KEY DEFAULT nextval('dim_concept_role_seq')
 , name                        int REFERENCES dim_concept(id) NOT NULL
 , value                       int REFERENCES dim_concept(id) NOT NULL
 , inverted                    BOOLEAN
@@ -58,7 +58,7 @@ CREATE SEQUENCE dim_time_seq START WITH 3;
 
 DROP TABLE IF EXISTS dim_time CASCADE;
 CREATE TABLE dim_time(
-  id                 int PRIMARY KEY
+  id                 int PRIMARY KEY DEFAULT nextval('dim_time_seq')
 , day                INT
 , month              INT
 , year               INT
@@ -76,7 +76,7 @@ CREATE SEQUENCE dim_patient_seq;
 
 DROP TABLE IF EXISTS dim_patient CASCADE;
 CREATE TABLE dim_patient (
-  id                            int PRIMARY KEY
+  id                            int PRIMARY KEY DEFAULT nextval('dim_patient_seq')
 , set_nk                        text[]
 , gender                        TEXT
 , birthtime                     date
@@ -104,7 +104,7 @@ CREATE SEQUENCE dim_provider_seq;
 
 DROP TABLE IF EXISTS dim_provider CASCADE;
 CREATE TABLE dim_provider (
-  id                            int PRIMARY KEY
+  id                            int PRIMARY KEY DEFAULT nextval('dim_provider_seq')
 , set_nk                        text[]
 , gender                        TEXT
 , name_family                   text
@@ -129,7 +129,7 @@ CREATE SEQUENCE dim_organization_seq;
 
 DROP TABLE IF EXISTS dim_organization CASCADE;
 CREATE TABLE dim_organization (
-  id                            int PRIMARY KEY
+  id                            int PRIMARY KEY DEFAULT NEXTVAL('dim_organization_seq')
 , set_nk                        text[]
 , name                          text
 , street                        text
@@ -164,7 +164,7 @@ CREATE SEQUENCE dim_template_seq;
 
 DROP TABLE IF EXISTS dim_template CASCADE;
 CREATE TABLE dim_template (
-  id                            int PRIMARY KEY
+  id                            int PRIMARY KEY DEFAULT nextval('dim_template_seq')
 , template_id                   text[]
 , id_1                          text
 , id_2                          text
@@ -187,7 +187,7 @@ CREATE SEQUENCE fact_observation_evn_pq_seq;
 
 DROP TABLE IF EXISTS fact_observation_evn_pq CASCADE;
 CREATE TABLE fact_observation_evn_pq(
-  id                              int           PRIMARY KEY
+  id                              int           PRIMARY KEY DEFAULT nextval('fact_observation_evn_pq_seq')
 , act_id                          text[]
 , patient_sk                      int           REFERENCES dim_patient(id)
 , provider_sk                     int           REFERENCES dim_provider(id)
@@ -223,7 +223,7 @@ CREATE SEQUENCE fact_observation_evn_cv_seq;
 
 DROP TABLE IF EXISTS fact_observation_evn_cv CASCADE;
 CREATE TABLE fact_observation_evn_cv(
-  id                              int           PRIMARY KEY
+  id                              int           PRIMARY KEY DEFAULT nextval('fact_observation_evn_cv_seq')
 , act_id                          text[]
 , patient_sk                      int           REFERENCES dim_patient(id)
 , provider_sk                     int           REFERENCES dim_provider(id)
@@ -270,16 +270,16 @@ CREATE TABLE fact_observation_evn_text(
 );
 **/
 
-DROP SEQUENCE IF EXISTS dim_status_seq;
-CREATE SEQUENCE fact_status_seq;
+DROP SEQUENCE IF EXISTS dim_status_seq CASCADE;
+CREATE SEQUENCE dim_status_seq;
 
-DROP TABLE IF EXISTS dim_status;
+DROP TABLE IF EXISTS dim_status CASCADE;
 CREATE TABLE dim_status (
-  id                              int              PRIMARY KEY DEFAULT nextval('fact_status_seq')
+  id                              int              PRIMARY KEY DEFAULT nextval('dim_status_seq')
 , value                           text
 );
 
-DROP SEQUENCE IF EXISTS fact_careprovisions_seq;
+DROP SEQUENCE IF EXISTS fact_careprovisions_seq CASCADE;
 CREATE SEQUENCE fact_careprovisions_seq;
 
 DROP TABLE IF EXISTS fact_careprovisions;
