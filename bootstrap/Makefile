@@ -10,7 +10,10 @@
 # Name of database containing datawarehouse. Note: also configure in ../datawarehouse/Makefile
 DWH=dwh
 
-PGGIT= git://git.postgresql.org/git/postgresql.git
+
+PGRELEASE=9.3rc1
+PGSRCTAR=postgresql-$(PGRELEASE).tar.bz2
+PGSRCURL=http://ftp.postgresql.org/pub/source/v$(PGRELEASE)/$(PGSRCTAR)
 PGTUNEGIT= https://github.com/gregs1104/pgtune.git
 
 BASEDIR=$(shell pwd)/../database
@@ -38,9 +41,7 @@ all: start installhdl installmsg createdb
 # Note that only HEAD is fetched
 $(PGSOURCE):
 	mkdir -p $(BASEDIR)
-	cd $(BASEDIR) ; git clone --depth 1 $(PGGIT)
-	cd $(PGSOURCE) ; git checkout $(PGBRANCH)
-	touch $@
+	cd $(BASEDIR) ; wget $(PGSRCURL) ; tar jxf $(PGSRCTAR) ; ln -s postgresql-$(PGRELEASE)/ postgresql
 
 # Compile PostgreSQL server
 $(PGSERVER): $(PGSOURCE)
