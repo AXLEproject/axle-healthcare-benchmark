@@ -361,6 +361,7 @@ $$
         ,      m.dpg --code(e."administrativeGenderCode")
 -- assemble birthtime
         ,      (e)."birthTime"::ts::timestamptz
+        ,      (e)."deceasedTime"::ts::timestamptz
 -- assemble name parts
         ,      (n.dpn).name_family
         ,      (n.dpn).name_given
