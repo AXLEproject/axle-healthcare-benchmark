@@ -278,6 +278,28 @@ CREATE OR REPLACE VIEW fact_observation_evn AS
 COMMENT ON VIEW fact_observation_evn IS
 'A view that combines the individual fact tables. Used for easy querying of e.g. the last timestamp for streaming ETL.';
 
+/*
+ * On PostgreSQL > 9.1 databases, loading data in the datawarehouse is done
+ * with file_fdw.
+ */
+CREATE OR REPLACE FUNCTION pg_version_num() RETURNS int
+AS $$
+   SELECT setting::int FROM pg_settings WHERE NAME='server_version_num';
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION dropme() RETURNS void
+AS $$
+BEGIN
+        IF pg_version_num() >= 90100 THEN
+           EXECUTE 'DROP SERVER IF EXISTS changeset CASCADE;';
+           EXECUTE 'CREATE EXTENSION file_fdw;';
+           EXECUTE 'CREATE SERVER changeset FOREIGN DATA WRAPPER file_fdw;';
+        END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT dropme();
+DROP FUNCTION dropme();
 
 /* Insert dummy values for dimensions */
 

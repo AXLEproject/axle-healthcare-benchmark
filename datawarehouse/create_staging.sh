@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# create_dwh.sh
+# create_staging.sh
 # Creates staging RIM database.
 #
 # This file is part of the MGRID HDW sample datawarehouse release.
@@ -8,10 +8,10 @@
 # Copyright (c) 2013, MGRID BV Netherlands
 #
 usage() {
-    echo "USAGE: $0 <PG_HOST> <PG_PORT> <PG_USER> <DB_NAME> <ACTION>";
-    echo "e.g.: $0 localhost 6042 pvmgrid dwh_eemla create";
-    echo "action is one of drop, create";
-    exit 1;
+    echo "USAGE: $0 <PG_HOST> <PG_PORT> <PG_USER> <DB_NAME> <ACTION> <DWHHOST> <DWHPORT> <DWHDB>"
+    echo "e.g.: $0 localhost 5432 m staging create localhost 6543 dwh"
+    echo "action is one of drop, create"
+    exit 1
 }
 
 fail() {
@@ -19,16 +19,7 @@ fail() {
     exit 1
 }
 
-pgcommand() {
-    psql -a --host $PG_HOST --port $PG_PORT $1 --user $PG_USER -c "$2" || fail "could not $2"
-}
-
-pgcommandfromfile() {
-    echo "executing commands from file $2"
-    psql --host $PG_HOST --port $PG_PORT $1 --user $PG_USER -f $2 || fail "error while executing commands from $2"
-}
-
-if [ $# -lt 5 ]; then
+if [ $# -lt 8 ]; then
     usage
 else
     PG_HOST=$1;
@@ -36,7 +27,21 @@ else
     PG_USER=$3;
     DBNAME=$4;
     ACTION=$5;
+    DWHHOST=$6;
+    DWHPORT=$7;
+    DWHDB=$8
 fi
+
+PSQL="psql --host ${PG_HOST} --port ${PG_PORT} --user ${PG_USER}"
+
+pgcommand() {
+    ${PSQL} --dbname $1 -c "$2" || fail "could not $2"
+}
+
+pgcommandfromfile() {
+    echo "executing commands from file $2"
+    ${PSQL} --dbname $1 -f $2 || fail "error while executing commands from $2"
+}
 
 case "${ACTION}" in
     drop)
@@ -79,10 +84,15 @@ case "${ACTION}" in
         # the datawarehouse tables. To keep things organized, we load the dwh
         # tables in the schema etl.
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=etl,staging_rim2011,public,hl7_composites,pg_hl7,hl7,\"\$user\";"
-        pgcommandfromfile $DBNAME ddl-tab-dwh.sql
-        pgcommandfromfile $DBNAME ddl-tab-staging.sql
         # Load term mappings
         pgcommandfromfile $DBNAME "terminology_mapping.sql"
+        pgcommandfromfile $DBNAME ddl-tab-dwh.sql
+
+        sed -e "s/_DWHHOST_/${DWHHOST}/" \
+            -e "s/_DWHNAME_/${DWHDB}/" \
+            -e "s/_DWHPORT_/${DWHPORT}/" \
+            ddl-tab-staging.sql | ${PSQL} -q --dbname ${DBNAME}
+
         echo ".. Creating ETL functions"
         pgcommandfromfile $DBNAME ddl-etl-functions.sql
         # Finally set the search_path to the final setup

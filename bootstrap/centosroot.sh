@@ -41,3 +41,7 @@ enabled=1
 gpgcheck=0
 EOF
 yum install -y python-lxml parallel
+
+# packages for ETL
+yum install -y python-pip python-yaml
+pip install shyaml

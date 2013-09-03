@@ -26,3 +26,5 @@ apt-get install -y maven2
 apt-get install -y zeroinstall-injector
 0alias parallel http://git.savannah.gnu.org/cgit/parallel.git/plain/packager/0install/parallel.xml
 
+# packages for ETL
+echo need python yaml

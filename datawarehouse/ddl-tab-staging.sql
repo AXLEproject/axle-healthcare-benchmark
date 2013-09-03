@@ -13,7 +13,7 @@
 
 CREATE FOREIGN DATA WRAPPER pg VALIDATOR postgresql_fdw_validator;
 CREATE SERVER dwh FOREIGN DATA WRAPPER dblink_fdw
-       OPTIONS (hostaddr '127.0.0.1', dbname 'dwh', port '6543');
+       OPTIONS (hostaddr '_DWHHOST_', dbname '_DWHNAME_', port '_DWHPORT_'); /* user '_DWHUSER_' */
 CREATE USER MAPPING FOR CURRENT_USER SERVER dwh;
 SELECT dblink_connect('dwh', 'dwh');
 

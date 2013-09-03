@@ -5,11 +5,10 @@
 #
 # Copyright (c) 2013, MGRID BV Netherlands
 #
-.PHONY: dropdb createdb all
+.PHONY: dropdb createdb all gpload pgload stage opaque transform
 
 SHAREDIR=$(shell pg_config --sharedir)
 EXTENSIONDIR= $(SHAREDIR)/extension
-
 
 PSTHOST= localhost
 PSTPORT= 5432
@@ -21,41 +20,44 @@ STPORT= 5432
 STUSER= ${USER}
 STDB= staging
 
-DWHHOST= localhost
-DWHPORT= 6543
+DWHHOST= 127.0.0.1
+DWHPORT= 5432
 DWHUSER= ${USER}
 DWHDB= dwh
-
 
 # create databases
 dropdb_prestaging:
 	./create_prestaging.sh $(PSTHOST) $(PSTPORT) $(PSTUSER) $(PSTDB) drop
 dropdb_staging:
-	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) drop
+	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) drop  $(DWHHOST) $(DWHPORT) $(DWHDB)
 dropdb_dwh:
 	./create_dwh.sh $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB) drop
-dropdb: dropdb_prestaging dropdb_staging dropdb_dwh
+#\todo dropdb: dropdb_prestaging dropdb_staging dropdb_dwh
+dropdb: dropdb_staging dropdb_dwh
 
 createdb_prestaging:
 	./create_prestaging.sh $(PSTHOST) $(PSTPORT) $(PSTUSER) $(PSTDB) create
 createdb_staging:
-	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) create
+	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) create  $(DWHHOST) $(DWHPORT) $(DWHDB)
 createdb_dwh:
 	./create_dwh.sh $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB) create
-createdb: createdb_prestaging createdb_dwh createdb_staging
+#\todo createdb: createdb_prestaging createdb_dwh createdb_staging
+createdb: createdb_dwh createdb_staging
 
 all: createdb
 
 # load some generated cdas
-stage:
+opaque:
 	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "SELECT add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');" $(STDB)
+stage:
 # todo: remove sed replacements once bugs finished in cda generator models
-	cd ../cda-generator/output ; time ls | parallel "python /home/$(USER)/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py --quiet --dir={} | sed -e 's/m^2/m2/' -e 's/mm Hg/mm[Hg]/' -e 's/17074200/170742000/' -e 's/18803012/88803002/' | psql staging" > /tmp/parse_cdas.log 2>&1
+	cd ../cda-generator/output ; time ls | parallel "python /home/$(USER)/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py --quiet --dir={} | sed -e 's/m^2/m2/' -e 's/mm Hg/mm[Hg]/' -e 's/17074200/170742000/' -e 's/18803012/88803002/' | psql -h $(STHOST) -p $(STPORT) -U $(STUSER) $(STDB)" > /tmp/parse_cdas.log 2>&1
+	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "VACUUM ANALYZE" $(STDB)
 
 transform:
 	psql -h $(STHOST) -p $(STPORT) -U $(STUSER) -c "SELECT stream_etl_observation_evn(); SELECT copy_dwh_tables();" $(STDB)
 
-load:
+gpload:
 	gpload -f load_dim_concept.yaml
 	gpload -f load_dim_concept_role.yaml
 	gpload -f load_dim_organization.yaml
@@ -65,3 +67,30 @@ load:
 	gpload -f load_dim_time.yaml
 	gpload -f load_fact_observation_evn_cv.yaml
 	gpload -f load_fact_observation_evn_pq.yaml
+
+pgload_dim_concept:
+	./pgload load_dim_concept.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_concept_role:
+	./pgload load_dim_concept_role.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_organization:
+	./pgload load_dim_organization.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_patient:
+	./pgload load_dim_patient.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_provider:
+	./pgload load_dim_provider.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_template:
+	./pgload load_dim_template.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_dim_time:
+	./pgload load_dim_time.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_fact_observation_evn_cv:
+	./pgload load_fact_observation_evn_cv.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+pgload_fact_observation_evn_pq:
+	./pgload load_fact_observation_evn_pq.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
+
+pgload_dimensions: pgload_dim_concept pgload_dim_concept_role pgload_dim_organization pgload_dim_patient pgload_dim_provider pgload_dim_template pgload_dim_time
+
+pgload_facts: pgload_fact_observation_evn_cv pgload_fact_observation_evn_pq
+
+pgload:
+	make -j pgload_dimensions
+	make -j pgload_facts

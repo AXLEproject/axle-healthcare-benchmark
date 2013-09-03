@@ -57,18 +57,13 @@ database is transformed using ETL, that is programmed as stored procedures.
  * initialise a cluster in ../database/data
  * download and install MGRID HDL and the appropriate data models.
  * download and install the MGRID Messaging SDK.
- * create a database called 'dwh' and install datawarehouse schema
-   and ETL functions in it.
+ * create 'staging' and 'dwh' databases.
 * `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin:${PATH}' >> ~/.bashrc`
 * `source ~/.bashrc`
-* `psql -c "select add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');" dwh`
 
 # Generate and load data #
 * `cd axle-healthcare-benchmark/cda-generator; bash start.sh`
-* `cd axle-healthcare-benchmark/cda-generator/output`
-* `time ls | parallel "python /home/$USER/mgrid-messaging-0.9/cda_r2/convert_CDA_R2.py --quiet --dir={} \`
-	`| psql dwh" >/tmp/parse_cdas.log 2>&1`
-* `psql -c "select stream_etl_observation_evn()" dwh`
+* `cd axle-healthcare-benchmark/datawarehouse; make opaque ; make stage ; make transform ; make pgload`
 
 # Run queries #
 * `PAGER= psql -f queries/q01.sql dwh`

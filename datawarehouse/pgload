@@ -1,0 +1,232 @@
+#!/bin/sh
+#
+# pgload.sh
+# Loads data into a PostgreSQL database given a gpload yaml file.
+#
+# This file is part of the MGRID HDW sample datawarehouse release.
+#
+# Copyright (c) 2013, MGRID BV Netherlands
+#
+trap "exit 1" TERM
+export TOP_PID=$$
+
+usage() {
+    echo "USAGE: $0 <YAML_FILE> [PG_HOST [PG_PORT [PG_USER [DB_NAME]]]]";
+    echo "e.g.: $0 load_dim_provider.sql localhost 5432 m dwh";
+    exit 1;
+}
+
+fail() {
+    echo $1
+    kill -s TERM ${TOP_PID}
+}
+
+pgcommand_v0() {
+    psql $3 -tA --host $PG_HOST --port $PG_PORT --dbname $1 --user $PG_USER -c "$2" || fail "could not $2"
+}
+pgcommand() {
+    pgcommand_v0 "$1" "$2" "-q"
+}
+pgcommand_verbose() {
+    pgcommand_v0 "$1" "$2" ""
+}
+
+if [ $# -lt 1 ]; then
+    usage
+else
+    YAML_FILE=$1;
+    PG_HOST=$2;
+    PG_PORT=$3;
+    PG_USER=$4;
+    DB_NAME=$5;
+fi
+
+UPDATEMODE=`shyaml get-value "GPLOAD.OUTPUT.1.MODE" <  ${YAML_FILE} | tr [:lower:] [:upper:]`
+
+if [ "x${UPDATEMODE}" != "xINSERT" -a "x${UPDATEMODE}" != "xMERGE" ]; then
+    fail "Invalid output mode ${UPDATEMODE}, should be 'INSERT' or 'MERGE'"
+fi
+
+TABLE=`shyaml get-value "GPLOAD.OUTPUT.0.TABLE" < ${YAML_FILE}`
+if [ "x$TABLE" = "x" ]; then
+    fail "Could not find target table in ${YAML_FILE}"
+fi
+UNIQNAME="${TABLE}_$$"
+SOURCETABLE="changeset_${UNIQNAME}"
+
+SOURCEFILE=`shyaml get-value "GPLOAD.INPUT.0.SOURCE.FILE.0" < ${YAML_FILE}`
+if [ "x$SOURCEFILE" = "x" ]; then
+    fail "Could not find source file in ${YAML_FILE}"
+fi
+
+PG_HOST="${PG_HOST:-$(shyaml get-value "HOST" < ${YAML_FILE} || echo "")}"
+PG_PORT="${PG_PORT:-$(shyaml get-value "PORT" < ${YAML_FILE} || echo "")}"
+PG_USER="${PG_USER:-${USER}}"
+DB_NAME="${DB_NAME:-$(shyaml get-value "DATABASE" < ${YAML_FILE} || echo "")}"
+
+COLUMNDEFS=$(pgcommand $DB_NAME "select a.attname || ':' || t.typname from pg_attribute a join pg_class c on a.attrelid = c.oid join pg_type t on a.atttypid = t.oid where c.relname='${TABLE}' and a.attnum > 0 and not a.attisdropped order by attnum;")
+
+
+if [ "${UPDATEMODE}" = "INSERT" ]; then
+    ### INSERT MODE
+    pgcommand_verbose $DB_NAME "COPY ${TABLE} FROM '${SOURCEFILE}' WITH CSV"
+else
+    ### UPDATE MODE
+
+## prevent concurrent merges
+LOCKNAME="pgload_${TABLE}"
+LOCKSTMT="SELECT pg_advisory_lock(hashtext('${LOCKNAME}'))"
+UPDATE_COLUMNS=`shyaml get-values "GPLOAD.OUTPUT.3.UPDATE_COLUMNS" < ${YAML_FILE}`
+MATCH_COLUMNS=`shyaml get-values "GPLOAD.OUTPUT.4.MATCH_COLUMNS" < ${YAML_FILE}`
+
+## create foreign table
+CFTS="CREATE FOREIGN TABLE ${SOURCETABLE} ("
+unset c
+for i in ${COLUMNDEFS}
+do
+    IFS=":"
+    set -- ${i}
+    ATTNAME=$1
+    ATTTYPE=$2
+    unset IFS
+
+    CFTS="${CFTS}${c} ${ATTNAME} ${ATTTYPE}"
+    c=", "
+done
+CFTS="${CFTS} ) SERVER changeset OPTIONS (filename '${SOURCEFILE}', format 'csv');"
+
+pgcommand $DB_NAME "${CFTS}"
+
+## create update statement
+UTS="${LOCKSTMT}; WITH unchanged AS ( SELECT "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} t.${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS} FROM ${SOURCETABLE} s JOIN ${TABLE} t ON "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} t.${ATTNAME} = s.${ATTNAME} "
+    c=" AND "
+done
+
+UTS="${UTS} WHERE (t) IS NOT DISTINCT FROM (s) ), "
+UTS="${UTS} upd AS ( UPDATE ${TABLE} t SET "
+unset c
+for i in ${UPDATE_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} ${ATTNAME} = s.${ATTNAME}"
+    c=", "
+done
+
+UTS="${UTS} FROM ${SOURCETABLE} s LEFT JOIN unchanged u USING ("
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} ${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS} ) WHERE "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} t.${ATTNAME} = s.${ATTNAME}"
+    c=" AND "
+done
+## it is not unchanged (so changed)
+UTS="${UTS} AND u.id IS NULL RETURNING "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} s.${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS}), ins AS ( INSERT INTO ${TABLE} SELECT s.* FROM ${SOURCETABLE} s LEFT JOIN upd t USING ( "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} ${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS}) LEFT JOIN unchanged u USING ("
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} ${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS} ) WHERE "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} t.${ATTNAME} IS NULL "
+    c=" AND "
+done
+
+UTS="${UTS} AND "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} u.${ATTNAME} IS NULL "
+    c=" AND "
+done
+
+UTS="${UTS} RETURNING "
+unset c
+for i in ${MATCH_COLUMNS}
+do
+    set -- ${i}
+    ATTNAME=$1
+
+    UTS="${UTS}${c} ${ATTNAME} "
+    c=", "
+done
+
+UTS="${UTS} ) SELECT 'unchanged: ' || (select count(*) from unchanged) ||"
+UTS="${UTS} ' updated: '  || (select count(*) from upd) ||"
+UTS="${UTS} ' new: '::text || (select count(*) from ins);"
+
+pgcommand $DB_NAME "$UTS"
+
+## drop foreign table
+pgcommand $DB_NAME "DROP FOREIGN TABLE ${SOURCETABLE};"
+
+fi
