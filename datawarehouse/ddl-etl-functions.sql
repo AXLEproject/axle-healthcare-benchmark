@@ -214,6 +214,10 @@ CREATE OR REPLACE FUNCTION person_patient2set_nk(e "Person", r "Patient")
 RETURNS text[]
 AS
 $$
+        SELECT ARRAY[e."id"::text];
+/***
+        The code below should be done in C since SQL is too slow...
+
         SELECT CASE
                -- Using the role or entity ids is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -234,9 +238,9 @@ $$
                ELSE
                     ARRAY[r."_id"]::text[]
                END;
+***/
 $$
-LANGUAGE SQL STABLE STRICT
-COST 10000;
+LANGUAGE SQL;
 COMMENT ON FUNCTION person_patient2set_nk("Person", "Patient") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -245,6 +249,10 @@ CREATE OR REPLACE FUNCTION person_role2set_nk(e "Person", r "Role")
 RETURNS text[]
 AS
 $$
+        SELECT ARRAY[e."id"::text];
+/***
+        The code below should be done in C since SQL is too slow...
+
         SELECT CASE
                -- Using the role or entity id's is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -265,9 +273,9 @@ $$
                ELSE
                     ARRAY[r."_id"]::text[]
                END;
+***/
 $$
-LANGUAGE SQL STABLE STRICT
-COST 10000;
+LANGUAGE SQL;
 COMMENT ON FUNCTION person_role2set_nk("Person", "Role") IS
 'Returns the natural key of a Patient and associated Person. This function must be refined by the user to select a meaningful natural key.';
 
@@ -276,6 +284,9 @@ CREATE OR REPLACE FUNCTION organization_role2set_nk(e "Organization", r "Role")
 RETURNS text[]
 AS
 $$
+        SELECT ARRAY[e."id"::text];
+/***
+        The code below should be done in C since SQL is too slow...
         SELECT CASE
                -- Using the role or entity id's is preferred.
                WHEN e."id" IS NOT NULL OR r."id" IS NOT NULL THEN
@@ -296,9 +307,10 @@ $$
                ELSE
                     ARRAY[r."_id"]::text[]
                END;
+***/
 $$
-LANGUAGE SQL STABLE STRICT
-COST 10000;
+LANGUAGE SQL;
+
 
 COMMENT ON FUNCTION organization_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Organization and associated Role. This function must be refined by the user to select a meaningful natural key.';
@@ -733,15 +745,12 @@ COMMENT ON FUNCTION get_provider_sk("Person","Role") IS
 CREATE OR REPLACE FUNCTION get_organization_sk("Organization","Role")
 RETURNS dim_organization.id%TYPE
 AS $$
-    -- prevent inlining of orga_role2set_nk
-    WITH o AS (SELECT orga_role2set_nk($1,$2) AS set_nk)
-    SELECT id FROM dim_organization
-    WHERE dim_organization.set_nk = (SELECT set_nk FROM o OFFSET 0);
+/* 10000 calls 1300ms */ SELECT id FROM dim_organization WHERE set_nk = organization_role2set_nk($1,$2);
+/* 10000 calls 877 ms */ --SELECT id FROM dim_organization WHERE set_nk =  ARRAY[$2."id"::text];
 $$ LANGUAGE SQL STABLE
 COST 10000;
 COMMENT ON FUNCTION get_organization_sk("Organization","Role") IS
 'Lookup the organizations surrogate key.';
-
 
 CREATE OR REPLACE FUNCTION update_dim_time()
 RETURNS text
@@ -797,6 +806,7 @@ AS $$
 $$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_dim_time() IS
 'Updates the time dimension';
+
 
 CREATE OR REPLACE FUNCTION get_time_sk(ts)
 RETURNS dim_time.id%TYPE
@@ -876,9 +886,10 @@ AS $$
         AND   codesystem = codesystem($1)
    )
    , translated_concept AS (
-        SELECT get_concept_sk((target_code||':'||'2.16.840.1.113883.6.96')::cv) AS id
+        SELECT get_concept_sk((target_code||':'||target_codesystem)::cv) AS id
         FROM   terminology_mapping
         WHERE  source_code = code($1)
+        AND    source_codesystem = codesystem($1)
    )
    , new_concept AS (
         INSERT INTO dim_concept (id, code, codesystem, codesystemname, codesystemversion, displayname, ancestor, translation, qualifier)
@@ -971,9 +982,36 @@ RETURNS NULL ON NULL INPUT;
 COMMENT ON FUNCTION update_fact_observation_evn_pq() IS
    'Load and update the observation fact table.';
 
+/* Only call this on uany with _cd values */
+CREATE OR REPLACE FUNCTION uany_cd2cv(uany, int)
+RETURNS cv
+AS $$
+   SELECT (_jany($1) #>> ARRAY[$2::text, 'value'])::cv
+$$ LANGUAGE SQL
+;
+COMMENT ON FUNCTION uany_cd2cv(uany, int) IS
+   'Load and update the observation fact table.';
+
 CREATE OR REPLACE FUNCTION update_fact_observation_evn_cv()
 RETURNS bigint
 AS $$
+  -- first populate dim_concept with required codes, so we can join with dim_concept later.
+  SELECT count(get_concept_sk(value)) FROM
+         (SELECT DISTINCT (code).value FROM new_observation_evn_cd) a;
+
+  -- translated concepts
+  SELECT count(get_concept_sk((target_code||':'||target_codesystem)::cv)) FROM
+         (SELECT DISTINCT (code).value FROM new_observation_evn_cd) a
+         JOIN terminology_mapping ON source_code = code(value);
+
+  -- values
+  SELECT count(get_concept_sk(v)) FROM
+         (SELECT DISTINCT uany_cd2cv(value, 0) AS v FROM new_observation_evn_cd) a;
+
+  -- entity codes
+  SELECT count(get_concept_sk(code))
+         FROM (SELECT DISTINCT code FROM "Entity") a;
+
    WITH insert_query AS (
     INSERT INTO temp_fact_observation_evn_cv (
       id
@@ -992,46 +1030,56 @@ AS $$
     , timestamp
     )
     SELECT nextval('fact_observation_evn_cv_seq')
-        ,  obs.id                                                        as id
-        , get_patient_sk(p,r)                                             as pat_sk
-        , get_provider_sk(e_prov, r_prov)                                 as prov_sk
-        , get_organization_sk(e_orga, r_prov)                             as orga_sk
-        , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
-        , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-        , get_concept_sk(obs.code)                                        as concept_sk
-        , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
-        , value(originaltext(obs.code))                                   as concept_originaltext_value
-        , get_template_id_sk(obs."templateId")                            as template_id_sk
-        , get_concept_sk(e_prod.code)                                     as product_sk
-        , get_concept_sk(((_cany(value))::cd[])[1]::CV)                   as value_concept_sk
-        , obs._timestamp                                                  as timestamp
-        FROM new_observation_evn_cd      obs
-        LEFT JOIN ONLY "Participation" ptcp_pati
-                ON ptcp_pati.act = obs._id
-                AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
-                AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
-        LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
-        LEFT JOIN "Person" p                ON r.player = p._id
-        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
-                 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
-                 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
+         , obs.id                                           AS id
+         , dip.id                                           AS pat_sk
+         , dipr.id                                          AS prov_sk
+         , dio.id                                           AS orga_sk
+         , dtl.id                                           AS from_sk
+         , dtt.id                                           AS to_sk
+         , dic.id                                           AS concept_sk
+         , value(reference(originaltext(obs.code)))         AS concept_originaltext_reference
+         , value(originaltext(obs.code))                    AS concept_originaltext_value
+         , get_template_id_sk(obs."templateId")             AS template_id_sk
+         , dicp.id                                          AS product_sk
+         , dicv.id                                          AS value_concept_sk
+         , obs._timestamp                                   AS timestamp
+        FROM new_observation_evn_cd obs
+        JOIN      dim_concept_plus dic   ON dic.code = code((obs.code).value)
+                                         AND dic.codesystem = codesystem((obs.code).value)
+        JOIN      dim_concept_plus dicv  ON dicv.code = code(uany_cd2cv(obs.value, 0))
+                                         AND dicv.codesystem = codesystem(uany_cd2cv(obs.value, 0))
+        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN ("Participation" ptcp_pati
+                  JOIN "Patient" r               ON ptcp_pati.role     = r._id
+                  JOIN "Person" p                ON r.player           = p._id
+                  JOIN dim_patient dip           ON dip.set_nk         = person_patient2set_nk(p, r))
+                  ON ptcp_pati.act = obs._id
+                  AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
+                  AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
+        LEFT JOIN "Participation" ptcp_prov
+                  ON ptcp_prov.act      = obs._id
+                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                  AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
                      OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
                      OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
-        LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
-        LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
-        LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
-        LEFT JOIN ONLY "Participation" ptcp_prod ON ptcp_prod.act = obs._id
+                  LEFT JOIN "Role"          r_prov    ON r_prov._id         = ptcp_prov.role
+                  LEFT JOIN "Person"        e_prov  ON e_prov._id           = r_prov.player
+                  LEFT JOIN dim_provider dipr         ON dipr.set_nk        = person_role2set_nk(e_prov, r_prov)
+                  LEFT JOIN "Organization"  e_orga    ON e_orga._id         = r_prov.scoper
+                  LEFT JOIN dim_organization dio      ON dio.set_nk         = organization_role2set_nk(e_orga, r_prov)
+        LEFT JOIN ("Participation" ptcp_prod
+                  JOIN "Role"          r_prod    ON r_prod._id         = ptcp_prod.role
+                  JOIN "Entity"        e_prod    ON e_prod._id         = r_prod.player
+                  JOIN dim_concept dicp          ON dicp.code          = code((e_prod.code).value)
+                                                 AND dicp.codesystem   = codesystem((e_prod.code).value))
+                  ON ptcp_prod.act = obs._id
                   AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
                   AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
-        LEFT JOIN "Role"          r_prod    ON r_prod._id = ptcp_prod.role
-        LEFT JOIN "Entity"        e_prod    ON e_prod._id = r_prod.player
    returning id
   )
   SELECT count(*) from insert_query;
-$$ LANGUAGE SQL
-VOLATILE
-RETURNS NULL ON NULL INPUT;
-
+$$ LANGUAGE SQL;
 COMMENT ON FUNCTION update_fact_observation_evn_cv() IS
    'Load and update the observation fact table.';
 
@@ -1143,7 +1191,7 @@ BEGIN
 
         -- first update the time dimension
         messages := update_dim_time();
-        RAISE NOTICE 'update_dim_time: %', messages;
+        RAISE NOTICE 'update dim_time: %', messages;
         -- next update the template dimension
         PERFORM update_dim_template();
         -- first update dimensions that support type-2 changes

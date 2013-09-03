@@ -23,9 +23,10 @@ PGTUNE=$(BASEDIR)/pgtune
 PGCONN=$(shell expr 3 + `grep MHz /proc/cpuinfo | wc -l`)
 AXLEPWD=$(shell cat ../cda-generator/password.txt)
 
-MGRIDHDL=mgridhdl-1.0-linux-x64-installer.run
+MGRIDHDLVERSION=1.0dev
+MGRIDHDL=mgridhdl-$(MGRIDHDLVERSION)-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
-MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/1.0/$(MGRIDHDL)
+MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/$(MGRIDHDLVERSION)/$(MGRIDHDL)
 MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
 MGRIDMSG=mgridmsg-0.9-linux-x64-installer.run
@@ -59,7 +60,9 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
 	echo "shared_preload_libraries = 'pg_stat_statements'" >> $(PGDATA)/postgresql.conf
 	echo "pg_stat_statements.max = 1000" >> $(PGDATA)/postgresql.conf
-	echo "pg_stat_statements.track = top" >> $(PGDATA)/postgresql.conf
+	echo "pg_stat_statements.track = all" >> $(PGDATA)/postgresql.conf
+	echo "from_collapse_limit = 12" >> $(PGDATA)/postgresql.conf
+	echo "join_collapse_limit = 12" >> $(PGDATA)/postgresql.conf
 	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T DW -P Linux -c $(PGCONN) || rm -rf $(PGDATA)
 
 # Start cluster

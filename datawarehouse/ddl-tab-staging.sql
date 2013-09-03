@@ -17,6 +17,16 @@ CREATE SERVER dwh FOREIGN DATA WRAPPER dblink_fdw
 CREATE USER MAPPING FOR CURRENT_USER SERVER dwh;
 SELECT dblink_connect('dwh', 'dwh');
 
+/* Join with this table instead of dim_concept to also match mapped concepts. */
+CREATE OR REPLACE VIEW dim_concept_plus AS
+SELECT id, code, codesystem, codesystemversion
+FROM dim_concept dc
+UNION
+SELECT dc.id, tm.source_code, tm.source_codesystem, NULL /* need codesystemversion map */
+FROM dim_concept dc
+JOIN terminology_mapping tm
+ON dc.code = tm.target_code
+AND dc.codesystem = tm.target_codesystem;
 
 CREATE OR REPLACE VIEW new_observation_evn_pq AS
        SELECT *
@@ -61,10 +71,13 @@ CREATE INDEX ON fact_observation_evn_cv(timestamp);
 CREATE INDEX ON "Participation"(act);
 CREATE INDEX ON "Participation"(role);
 CREATE INDEX ON dim_patient(set_nk);
+CREATE INDEX ON dim_provider(set_nk);
+CREATE INDEX ON dim_organization(set_nk);
 CREATE INDEX ON "Role"(scoper);
 CREATE INDEX ON "Role"(player);
 CREATE INDEX ON "Participation"("sequenceNumber");
 CREATE INDEX ON "Participation"("typeCode");
 CREATE INDEX ON dim_template(template_id);
 CREATE INDEX ON dim_time(time);
+CREATE INDEX ON dim_concept(code, codesystem);
 
