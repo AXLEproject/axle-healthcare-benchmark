@@ -9,43 +9,43 @@
 CREATE OR REPLACE FUNCTION create_temp_tables()
 RETURNS void
 AS $$
-	-- create temporary tables
-	CREATE TEMP TABLE IF NOT EXISTS temp_fact_observation_evn_pq(
-	    id                              int           PRIMARY KEY
-	  , act_id                          text[]
-	  , patient_sk                      int
-	  , provider_sk                     int
-	  , organization_sk                 int
-	  , from_time_sk                    int
-	  , to_time_sk                      int
-	  , concept_sk                      int
-	  , concept_originaltext_reference  text
-	  , concept_originaltext_value      text
-	  , template_id_sk                  int
-	  , product_sk                      int
-	  , value_pq_unit                   text
-	  , value_pq_value                  numeric
-	  , value_pq_canonical_unit         text
-	  , value_pq_canonical_value        numeric
-	  , timestamp                       timestamptz
-	  );
+    -- create temporary tables
+    CREATE TEMP TABLE IF NOT EXISTS temp_fact_observation_evn_pq(
+       id                              int           PRIMARY KEY
+     , act_id                          text[]
+     , patient_sk                      int
+     , provider_sk                     int
+     , organization_sk                 int
+     , from_time_sk                    int
+     , to_time_sk                      int
+     , concept_sk                      int
+     , concept_originaltext_reference  text
+     , concept_originaltext_value      text
+     , template_id_sk                  int
+     , product_sk                      int
+     , value_pq_unit                   text
+     , value_pq_value                  numeric
+     , value_pq_canonical_unit         text
+     , value_pq_canonical_value        numeric
+     , timestamp                       timestamptz
+     );
 
-	  CREATE TEMP TABLE IF NOT EXISTS temp_fact_observation_evn_cv(
-	      id                              int           PRIMARY KEY
-	    , act_id                          text[]
-	    , patient_sk                      int
-	    , provider_sk                     int
-	    , organization_sk                 int
-	    , from_time_sk                    int
-	    , to_time_sk                      int
-	    , concept_sk                      int
-	    , concept_originaltext_reference  text
-	    , concept_originaltext_value      text
-	    , template_id_sk                  int
-	    , product_sk                      int
-	    , value_concept_sk                int
-	    , timestamp                       timestamptz
-	    );
+    CREATE TEMP TABLE IF NOT EXISTS temp_fact_observation_evn_cv(
+       id                              int           PRIMARY KEY
+     , act_id                          text[]
+     , patient_sk                      int
+     , provider_sk                     int
+     , organization_sk                 int
+     , from_time_sk                    int
+     , to_time_sk                      int
+     , concept_sk                      int
+     , concept_originaltext_reference  text
+     , concept_originaltext_value      text
+     , template_id_sk                  int
+     , product_sk                      int
+     , value_concept_sk                int
+     , timestamp                       timestamptz
+     );
 $$ LANGUAGE SQL;
 
 SELECT create_temp_tables();
@@ -941,43 +941,45 @@ AS $$
     , timestamp
     )
     SELECT nextval('fact_observation_evn_pq_seq')
-        ,  obs.id                                                         as id
-        , get_patient_sk(p,r)                                             as pat_sk
-        , get_provider_sk(e_prov, r_prov)                                 as prov_sk
-        , get_organization_sk(e_orga, r_prov)                             as orga_sk
-        , get_time_sk(lowvalue(convexhull((obs."effectiveTime").ivl)))    as from_sk
-        , get_time_sk(highvalue(convexhull((obs."effectiveTime").ivl)))   as to_sk
-        , get_concept_sk(obs.code)                                        as concept_sk
-        , value(reference(originaltext(obs.code)))                        as concept_originaltext_reference
-        , value(originaltext(obs.code))                                   as concept_originaltext_value
-        , get_template_id_sk(obs."templateId")                            as template_id_sk
-        , get_concept_sk(obs.code)                                        as product_sk
-        , unit(((_any(value))[1])::text::pq)                              as pqunit  -- unit of the PQ (text)
-        , value(((_any(value))[1])::text::pq)                             as numval  -- value of the PQ (numeric)
-        , unit(canonical(((_any(value))[1])::text::pq))                   as canunit -- canonical unit of the PQ (text)
-        , value(canonical(((_any(value))[1])::text::pq))                  as canval-- canonical value of the PQ
-        , obs._timestamp                                                  as timestamp
+        , obs.id                                                          AS id
+        , dip.id                                                          AS pat_sk
+        , dipr.id                                                         AS prov_sk
+        , dio.id                                                          AS orga_sk
+        , dtl.id                                                          AS from_sk
+        , dtt.id                                                          AS to_sk
+        , get_concept_sk(obs.code)                                        AS concept_sk
+        , value(reference(originaltext(obs.code)))                        AS concept_originaltext_reference
+        , value(originaltext(obs.code))                                   AS concept_originaltext_value
+        , get_template_id_sk(obs."templateId")                            AS template_id_sk
+        , get_concept_sk(obs.code)                                        AS product_sk
+        , unit(((_any(value))[1])::text::pq)                              AS pqunit
+        , value(((_any(value))[1])::text::pq)                             AS numval
+        , unit(canonical(((_any(value))[1])::text::pq))                   AS canunit
+        , value(canonical(((_any(value))[1])::text::pq))                  AS canval
+        , obs._timestamp                                                  AS timestamp
         FROM new_observation_evn_pq      obs
-        LEFT JOIN ONLY "Participation" ptcp_pati
-                ON ptcp_pati.act = obs._id
-                AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
-                AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type  
-        LEFT JOIN "Patient" r               ON ptcp_pati.role = r._id
-        LEFT JOIN "Person" p                ON r.player = p._id
-        LEFT JOIN ONLY "Participation" ptcp_prov ON ptcp_prov.act = obs._id
-                 AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
-                 AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
-        LEFT JOIN "Role"          r_prov    ON r_prov._id = ptcp_prov.role
-        LEFT JOIN "Person"        e_prov    ON e_prov._id = r_prov.player
-        LEFT JOIN "Organization"  e_orga    ON e_orga._id = r_prov.scoper
+        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN ("Participation" ptcp_pati
+                  JOIN "Patient" r               ON ptcp_pati.role     = r._id
+                  JOIN "Person" p                ON r.player           = p._id
+                  JOIN dim_patient dip           ON dip.set_nk         = person_patient2set_nk(p, r))
+                  ON ptcp_pati.act = obs._id
+                  AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
+                  AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
+        LEFT JOIN "Participation" ptcp_prov
+                  ON ptcp_prov.act      = obs._id
+                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                  AND ptcp_prov."typeCode" = 'AUT'::cv('ParticipationType')
+        LEFT JOIN "Role"          r_prov    ON r_prov._id         = ptcp_prov.role
+        LEFT JOIN "Person"        e_prov  ON e_prov._id           = r_prov.player
+        LEFT JOIN dim_provider dipr         ON dipr.set_nk        = person_role2set_nk(e_prov, r_prov)
+        LEFT JOIN "Organization"  e_orga    ON e_orga._id         = r_prov.scoper
+        LEFT JOIN dim_organization dio      ON dio.set_nk         = organization_role2set_nk(e_orga, r_prov)
    returning id
   )
   SELECT count(*) from insert_query;
-$$ LANGUAGE SQL
-VOLATILE
-RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL;
 
 COMMENT ON FUNCTION update_fact_observation_evn_pq() IS
    'Load and update the observation fact table.';
@@ -1057,17 +1059,6 @@ AS $$
                   ON ptcp_pati.act = obs._id
                   AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
                   AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
-        LEFT JOIN "Participation" ptcp_prov
-                  ON ptcp_prov.act      = obs._id
-                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
-                  AND (ptcp_prov."typeCode" << '_ParticipationAncillary'::cv('ParticipationType')
-                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType')
-                     OR  ptcp_prov."typeCode" << '_ParticipationInformationGenerator'::cv('ParticipationType'))
-                  LEFT JOIN "Role"          r_prov    ON r_prov._id         = ptcp_prov.role
-                  LEFT JOIN "Person"        e_prov  ON e_prov._id           = r_prov.player
-                  LEFT JOIN dim_provider dipr         ON dipr.set_nk        = person_role2set_nk(e_prov, r_prov)
-                  LEFT JOIN "Organization"  e_orga    ON e_orga._id         = r_prov.scoper
-                  LEFT JOIN dim_organization dio      ON dio.set_nk         = organization_role2set_nk(e_orga, r_prov)
         LEFT JOIN ("Participation" ptcp_prod
                   JOIN "Role"          r_prod    ON r_prod._id         = ptcp_prod.role
                   JOIN "Entity"        e_prod    ON e_prod._id         = r_prod.player
@@ -1076,6 +1067,15 @@ AS $$
                   ON ptcp_prod.act = obs._id
                   AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
                   AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
+        LEFT JOIN "Participation" ptcp_prov
+                  ON ptcp_prov.act      = obs._id
+                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                  AND ptcp_prov."typeCode" = 'AUT'::cv('ParticipationType')
+        LEFT JOIN "Role"          r_prov    ON r_prov._id         = ptcp_prov.role
+        LEFT JOIN "Person"        e_prov  ON e_prov._id           = r_prov.player
+        LEFT JOIN dim_provider dipr         ON dipr.set_nk        = person_role2set_nk(e_prov, r_prov)
+        LEFT JOIN "Organization"  e_orga    ON e_orga._id         = r_prov.scoper
+        LEFT JOIN dim_organization dio      ON dio.set_nk         = organization_role2set_nk(e_orga, r_prov)
    returning id
   )
   SELECT count(*) from insert_query;
@@ -1201,7 +1201,6 @@ BEGIN
         RAISE NOTICE'update_dim_provider: %', messages;
         messages := update_dim_organization();
         RAISE NOTICE'update_dim_organizations: %', messages;
-
         -- next update fact tables
         messages := update_fact_observation_evn_pq();
         RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
@@ -1225,13 +1224,13 @@ CREATE OR REPLACE FUNCTION copy_dwh_tables()
 RETURNS VOID
 AS $$
 BEGIN
-   COPY dim_concept                   TO '/tmp/dim_concept.csv'                  (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_concept_role              TO '/tmp/dim_concept_role.csv'             (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_time                      TO '/tmp/dim_time.csv'                     (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_patient                   TO '/tmp/dim_patient.csv'                  (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_provider                  TO '/tmp/dim_provider.csv'                 (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_organization              TO '/tmp/dim_organization.csv'             (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY dim_template                  TO '/tmp/dim_template.csv'                 (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv'      (FORMAT 'csv', DELIMITER ',', QUOTE '"');
-   COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv'      (FORMAT 'csv', DELIMITER ',', QUOTE '"');
+   COPY dim_concept                   TO '/tmp/dim_concept.csv'                  (FORMAT 'csv', DELIMITER ',' , NULL '');
+   COPY dim_concept_role              TO '/tmp/dim_concept_role.csv'             (FORMAT 'csv', DELIMITER ',' , NULL '');
+   COPY dim_time                      TO '/tmp/dim_time.csv'                     (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_patient                   TO '/tmp/dim_patient.csv'                  (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_provider                  TO '/tmp/dim_provider.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_organization              TO '/tmp/dim_organization.csv'             (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY dim_template                  TO '/tmp/dim_template.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
 END; $$ LANGUAGE plpgsql;
