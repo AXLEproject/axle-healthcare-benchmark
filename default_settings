@@ -1,0 +1,78 @@
+#
+# axle-healthcare-benchmark
+#
+# settings script
+#
+# Copyright (c) 2013, Portavita B.V.
+#
+
+#------------------------------------------------------------------------------
+# DIRECTORIES
+#------------------------------------------------------------------------------
+CDAGENERATOR=cda-generator
+CDAOUTPUT=$(CDAGENERATOR)/output
+BOOTSTRAPDIR=bootstrap
+DWHDIR=datawarehouse
+DATABASEDIR=database
+
+#------------------------------------------------------------------------------
+# CDA GENERATOR
+#------------------------------------------------------------------------------
+CDAGENCONF=$(CDAGENERATOR)/src/main/resources/application.conf
+
+# Number of documents to generate.
+NUMBEROFCDAS=1000
+
+
+#------------------------------------------------------------------------------
+# PREPARE POSTGRESQL DATABASE CLUSTER
+#------------------------------------------------------------------------------
+
+# PostgreSQL source repository
+PGGIT=git://git.postgresql.org/git/postgresql.git
+
+# PostgreSQL branch to checkout
+PGBRANCH=master
+
+# PGTune git repository
+PGTUNEGIT=https://github.com/gregs1104/pgtune.git
+
+# Options for PGTune
+PGTUNEMAXCONN=$(shell expr 10 + `grep MHz /proc/cpuinfo | wc -l`)
+PGTUNEDBTYPE=DW
+PGTUNESYSTEMTYPE=Linux
+
+# Add non default parameters for the postgresql.conf here
+define NONDEFAULTPOSTGRESQLCONF
+
+#------------------------------------------------------------------------------
+# Settings from default_settings NONDEFAULTPOSTGRESQLCONF
+#------------------------------------------------------------------------------
+
+shared_preload_libraries = 'pg_stat_statements'
+pg_stat_statements.max = 1000
+pg_stat_statements.track = all
+from_collapse_limit = 12
+join_collapse_limit = 12
+endef
+export NONDEFAULTPOSTGRESQLCONF
+
+#------------------------------------------------------------------------------
+# DATABASE SERVERS AND NAMES
+#------------------------------------------------------------------------------
+PSTHOST=localhost
+PSTPORT=5432
+PSTUSER=${USER}
+PSTDB=prestaging
+
+STHOST=localhost
+STPORT=5432
+STUSER=${USER}
+STDB=staging
+
+DWHHOST=127.0.0.1
+DWHPORT=5432
+DWHUSER=${USER}
+DWHDB=dwh
+
+

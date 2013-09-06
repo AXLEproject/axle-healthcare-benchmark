@@ -5,23 +5,16 @@
 #
 # Copyright (c) 2013, Portavita B.V.
 #
-.PHONY: all start stop psql login
+include ../default_settings
 
-# Name of database containing datawarehouse. Note: also configure in ../datawarehouse/Makefile
-DWH=dwh
+.PHONY: prepare start stop psql login
 
-PGGIT= git://git.postgresql.org/git/postgresql.git
-PGTUNEGIT= https://github.com/gregs1104/pgtune.git
-
-BASEDIR=$(shell pwd)/../database
-DATAWAREHOUSE=$(shell pwd)/../datawarehouse
+BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 PGSOURCE=$(BASEDIR)/postgresql
 PGSERVER=$(BASEDIR)/postgres
-PGBRANCH=master
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
-PGCONN=$(shell expr 3 + `grep MHz /proc/cpuinfo | wc -l`)
-AXLEPWD=$(shell cat ../cda-generator/password.txt)
+AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
 
 MGRIDHDLVERSION=1.0dev
 MGRIDHDL=mgridhdl-$(MGRIDHDLVERSION)-linux-x64-installer.run
@@ -33,7 +26,7 @@ MGRIDMSG=mgridmsg-0.9-linux-x64-installer.run
 MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
 MGRIDMSGURL=http://www.mgrid.net/system/files/downloads/msg/0.9/$(MGRIDMSG)
 
-all: start installhdl installmsg createdb
+prepare: start installhdl installmsg installhdl
 
 # Get PostgreSQL source code.
 # Note that only HEAD is fetched
@@ -58,12 +51,8 @@ $(PGTUNE):
 # Initialise cluster
 $(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
-	echo "shared_preload_libraries = 'pg_stat_statements'" >> $(PGDATA)/postgresql.conf
-	echo "pg_stat_statements.max = 1000" >> $(PGDATA)/postgresql.conf
-	echo "pg_stat_statements.track = all" >> $(PGDATA)/postgresql.conf
-	echo "from_collapse_limit = 12" >> $(PGDATA)/postgresql.conf
-	echo "join_collapse_limit = 12" >> $(PGDATA)/postgresql.conf
-	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T DW -P Linux -c $(PGCONN) || rm -rf $(PGDATA)
+	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T $(PGTUNEDBTYPE) -P $(PGTUNESYSTEMTYPE) -c $(PGTUNEMAXCONN) || rm -rf $(PGDATA)
+	@echo "$$NONDEFAULTPOSTGRESQLCONF" >> $(PGDATA)/postgresql.conf
 
 # Start cluster
 start: $(PGDATA)
@@ -82,10 +71,6 @@ $(MGRIDHDLFILE): login
 installhdl: $(MGRIDHDLFILE) $(PGSERVER)
 	$(MGRIDHDLFILE) --pg_config_path $(PGSERVER)/bin/pg_config --mode unattended --enable-components $(MGRIDHDLCOMPONENTS)
 
-# Create datawarehouse
-createdb: start installhdl
-	cd $(DATAWAREHOUSE) ; PATH=$(PGSERVER)/bin:$${PATH} make createdb
-
 # Download messaging SDK and install
 $(MGRIDMSGFILE): login
 	wget --load-cookies cookies.txt -O $(MGRIDMSGFILE) $(MGRIDMSGURL)
@@ -97,8 +82,8 @@ installmsg: $(MGRIDMSGFILE)
 	$(MGRIDMSGFILE) --mode unattended
 
 # Some other useful targets
-stop: $(PGDATA)
-	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast
+stop:
+	test -d $(PGDATA) && PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast || echo ""
 
 psql: start
 	PATH=$(PGSERVER)/bin:${PATH} ; psql dwh

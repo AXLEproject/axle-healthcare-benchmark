@@ -45,30 +45,20 @@ database is transformed using ETL, that is programmed as stored procedures.
 
 * Mail info@portavita.eu for the 'axle synthetic models' password and put it in
   `axle-healthcare-benchmark/cda-generator/password.txt`
-* Extract models with `cd axle-healthcare-benchmark/cda-generator ; bash initialize.sh`
 * Configure the CDA generator
-  `nano axle-healthcare-benchmark/cda-generator/src/main/resources/application.conf`
-  * Configure `outputDirectory` to a suitable directory
-  * Configure `numberOfCdas` to generate. (100,000 ~= 5GB datawarehouse)
-* Bootstrapping the datawarehouse:
- `cd axle-healthcare-benchmark/bootstrap; make all`
- * download the PostgreSQL git in ../database/postgresql
- * compile it, install it in ../database/postgres
- * initialise a cluster in ../database/data
- * download and install MGRID HDL and the appropriate data models.
- * download and install the MGRID Messaging SDK.
- * create 'staging' and 'dwh' databases.
+  `nano axle-healthcare-benchmark/default_settings`
+  * Configure `NUMBEROFCDAS` to generate.
+* `make prepare` will
+ * generate the CDA documents
+ * create a PostgreSQL cluster with staging and datawarehouse databases
+ * transform XML documents and load the datawarehouse
 * `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin:${PATH}' >> ~/.bashrc`
 * `source ~/.bashrc`
-
-# Generate and load data #
-* `cd axle-healthcare-benchmark/cda-generator; bash start.sh`
-* `cd axle-healthcare-benchmark/datawarehouse; make opaque ; make stage ; make transform ; make pgload`
 
 # Run queries #
 * `PAGER= psql -f queries/q01.sql dwh`
 * `PAGER=cat psql -f queries/q01.sql dwh`
 
 # Delete data #
-* rm -rf the output directory configured in `src/main/resources/application.conf`
-* `cd axle-healthcare-benchmark/bootstrap; make stop; rm -rf ../database`
+* `make clean`
+

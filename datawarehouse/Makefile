@@ -7,23 +7,10 @@
 #
 .PHONY: dropdb createdb all gpload pgload stage opaque transform
 
+include ../default_settings
+
 SHAREDIR=$(shell pg_config --sharedir)
 EXTENSIONDIR= $(SHAREDIR)/extension
-
-PSTHOST= localhost
-PSTPORT= 5432
-PSTUSER= ${USER}
-PSTDB= prestaging
-
-STHOST= localhost
-STPORT= 5432
-STUSER= ${USER}
-STDB= staging
-
-DWHHOST= 127.0.0.1
-DWHPORT= 5432
-DWHUSER= ${USER}
-DWHDB= dwh
 
 # create databases
 dropdb_prestaging:
@@ -32,7 +19,7 @@ dropdb_staging:
 	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) drop  $(DWHHOST) $(DWHPORT) $(DWHDB)
 dropdb_dwh:
 	./create_dwh.sh $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB) drop
-#\todo dropdb: dropdb_prestaging dropdb_staging dropdb_dwh
+#\todo prestaging layer
 dropdb: dropdb_staging dropdb_dwh
 
 createdb_prestaging:
@@ -41,7 +28,7 @@ createdb_staging:
 	./create_staging.sh $(STHOST) $(STPORT) $(STUSER) $(STDB) create  $(DWHHOST) $(DWHPORT) $(DWHDB)
 createdb_dwh:
 	./create_dwh.sh $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB) create
-#\todo createdb: createdb_prestaging createdb_dwh createdb_staging
+#\todo prestaging layer
 createdb: createdb_dwh createdb_staging
 
 all: createdb
@@ -92,5 +79,5 @@ pgload_dimensions: pgload_dim_concept pgload_dim_concept_role pgload_dim_organiz
 pgload_facts: pgload_fact_observation_evn_cv pgload_fact_observation_evn_pq
 
 pgload:
-	make -j pgload_dimensions
-	make -j pgload_facts
+	$(MAKE) -j pgload_dimensions
+	$(MAKE) -j pgload_facts
