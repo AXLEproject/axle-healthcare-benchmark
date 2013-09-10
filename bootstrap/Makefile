@@ -10,10 +10,6 @@ include ../default_settings
 .PHONY: prepare start stop psql login
 
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
-PGSOURCE=$(BASEDIR)/postgresql
-PGSERVER=$(BASEDIR)/postgres
-PGDATA=$(BASEDIR)/data
-PGTUNE=$(BASEDIR)/pgtune
 AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
 
 MGRIDHDLVERSION=1.0dev
@@ -38,7 +34,7 @@ $(PGSOURCE):
 
 # Compile PostgreSQL server
 $(PGSERVER): $(PGSOURCE)
-	cd $(PGSOURCE) ; ./configure --prefix=$(PGSERVER) --with-ossp-uuid && make clean && make -j4 && make install
+	cd $(PGSOURCE) ; ./configure --prefix=$(PGSERVER) --enable-debug --with-ossp-uuid && make clean && make -j4 && make install
 	cd $(PGSOURCE)/contrib ; make -j4 && make install
 	touch $@
 

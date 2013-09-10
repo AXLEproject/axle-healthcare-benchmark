@@ -19,6 +19,9 @@ yum install -y wget screen man-pages man htop
 yum install -y git gcc bison flex gdb
 yum install -y make readline-devel zlib-devel uuid-devel
 
+# packages for profiling
+yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
+
 # packages for the cda generator
 yum install -y java-1.7.0-openjdk-devel
 wget http://apache.cs.uu.nl/dist/maven/maven-2/2.2.1/binaries/apache-maven-2.2.1-bin.tar.gz

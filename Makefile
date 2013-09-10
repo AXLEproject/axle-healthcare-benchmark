@@ -6,8 +6,11 @@
 # Copyright (c) 2013, Portavita B.V.
 #
 include default_settings
+BASEDIR=$(shell pwd)/$(DATABASEDIR)
 
-.PHONY: prepare prepare_database prepare_generator
+QUERY=1
+
+.PHONY: prepare prepare_database prepare_generator etl stop run runone clean_database clean_generator clean
 
 all:
 	$(error Choose make prepare or make run)
@@ -28,13 +31,16 @@ etl:
 
 prepare: prepare_generator prepare_database etl
 
+stop:
+	$(MAKE) -C $(BOOTSTRAPDIR) stop || echo ""
+
 run:
 	echo "TODO"
 
+runone: stop
+	bash -x ./runone.sh $(QUERY) $(PGDATA) $(DWHDB) $(STDB) $(PERFDATADIR)
 
-
-clean_database:
-	$(MAKE) -C $(BOOTSTRAPDIR) stop || echo ""
+clean_database: stop
 	rm -rf $(DATABASEDIR)
 
 clean_generator:

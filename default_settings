@@ -13,7 +13,13 @@ CDAGENERATOR=cda-generator
 CDAOUTPUT=$(CDAGENERATOR)/output
 BOOTSTRAPDIR=bootstrap
 DWHDIR=datawarehouse
+# the following directories are created
+PERFDATADIR=perfdata
 DATABASEDIR=database
+PGSOURCE=$(BASEDIR)/postgresql
+PGSERVER=$(BASEDIR)/postgres
+PGDATA=$(BASEDIR)/data
+PGTUNE=$(BASEDIR)/pgtune
 
 #------------------------------------------------------------------------------
 # CDA GENERATOR

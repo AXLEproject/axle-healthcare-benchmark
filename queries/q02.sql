@@ -1,3 +1,7 @@
+-- DATABASE dwh
+
+SET search_path=atomic, public, "$user";
+
 -- Allergy list
 -- this query returns all coded observations that have
 -- a code that is subsumed by the generic concept

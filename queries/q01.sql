@@ -1,7 +1,11 @@
+-- DATABASE dwh
+
 /** The function latest_measurement takes a code (+ code system) and time interval
     as input and returns the latest measurement for the given code within the given
     time interval for each patient. The output is ordered by patient_id and effective_from
 */
+
+SET search_path=atomic, public, "$user";
 
 DROP TYPE IF EXISTS measurement CASCADE;
 CREATE TYPE measurement AS (
