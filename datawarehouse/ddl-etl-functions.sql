@@ -93,8 +93,7 @@ AS $$
                 value((delimiter(name[1]))[1]),
                 NULL
                 )::dimension_name) AS t(c);
-$$ LANGUAGE sql
-IMMUTABLE RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE sql;
 COMMENT ON FUNCTION bag_en2dimension_name(bag_en) IS
 'Transform RIM EntityName or RoleName to a dimension_name to be used in the DWHs dimension tables. This function must be refined by the user to select the desired name parts and assemble the fullname.';
 
@@ -114,7 +113,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION person_patient2dimension_name("Person", "Patient") IS
 'Returns a dimension_name to be used when updating a patient dimension.';
 
@@ -134,7 +133,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION person_role2dimension_name("Person", "Role") IS
 'Returns a dimension_name to be used when updating a provider dimension.';
 
@@ -154,7 +153,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION organization_role2text("Organization", "Role") IS
 'Returns the text to be used when updating the name attribute of an organization dimension.';
 
@@ -183,8 +182,7 @@ $$
              value((state(address[1]))[1]),
              value((country(address[1]))[1])
              )::dimension_address
-$$ LANGUAGE SQL IMMUTABLE
-RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL;
 COMMENT ON FUNCTION bag_ad2dimension_address(bag_ad) IS
 'Transform RIM EntityAddress or RoleAddress to a dimension_address to be used in the DWHs dimension tables. This function must be refined by the user to select the desired address parts.';
 
@@ -204,7 +202,7 @@ $$
                     NULL
                END;
 $$
-LANGUAGE SQL IMMUTABLE STRICT;
+LANGUAGE SQL;
 COMMENT ON FUNCTION organization_role2dimension_address("Organization", "Role") IS
 'Returns a dimension_address to be used when updating an organization dimension.';
 
@@ -341,8 +339,7 @@ $$
                     ARRAY[r."_id"]::text[]
                END;
 $$
-LANGUAGE SQL STABLE STRICT
-COST 10000;
+LANGUAGE SQL;
 COMMENT ON FUNCTION orga_role2set_nk("Organization", "Role") IS
 'Returns the natural key of a Role and associated Organiation. This function must be refined by the user to select a meaningful natural key.';
 
@@ -353,7 +350,7 @@ AS
 $$
         SELECT code(e."administrativeGenderCode")
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION person2gender("Person") IS
 'Returns the gender code for the person to be used in the patient dimension.';
 
@@ -391,7 +388,7 @@ $$
  ,    (SELECT person_patient2set_nk(e,r) as dpk) o
 ;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION assemble_dim_patient(e "Person", r "Patient") IS
 'Transforms Patient and Person attributes to dim_patient attributes.';
 
@@ -426,7 +423,7 @@ $$
  ,    (SELECT person_role2set_nk(e,r) as dpk) o
 ;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION assemble_dim_provider(e "Person", r "Role") IS
 'Transforms Role and Person attributes to dim_provider attributes.';
 
@@ -460,7 +457,7 @@ $$
  ,    (SELECT organization_role2set_nk(e,r) as dok) o
  ;
 $$
-LANGUAGE SQL IMMUTABLE;
+LANGUAGE SQL;
 COMMENT ON FUNCTION assemble_dim_organization(e "Organization", r "Role") IS
 'Transforms Role and Organization attributes to dim_organization attributes.';
 
@@ -814,7 +811,7 @@ AS $$
         SELECT id FROM dim_time
         WHERE time = date_trunc('minute', ($1)::timestamptz)
 ;
-$$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL
 ;
 COMMENT ON FUNCTION get_time_sk(ts) IS 'Lookup the time surrogate key.';
 
@@ -849,7 +846,7 @@ AS $$
     SELECT id FROM dim_template
     WHERE template_id = $1::text[]
 ;
-$$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL;
 COMMENT ON FUNCTION get_template_id_sk(ii[]) IS 'Gets the surrogate key for and existing template_id';
 
 -- make shell function so the next one will compile
@@ -872,7 +869,7 @@ $$
    WHERE b.cdid=internalid($2)
  ));
 $$
-LANGUAGE SQL IMMUTABLE STRICT
+LANGUAGE SQL
 COST 1500
 ;
 
@@ -903,8 +900,7 @@ AS $$
    select id from translated_concept
    UNION ALL
    select id from new_concept;
-$$ LANGUAGE SQL
-RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL;
 COMMENT ON FUNCTION get_concept_sk(cv) IS
 'Returns the id of the matching concept. If the concept is not yet present, a new one is made.';
 
@@ -912,8 +908,7 @@ CREATE OR REPLACE FUNCTION get_concept_sk(CD)
 RETURNS dim_concept.id%TYPE
 AS $$
    SELECT get_concept_sk(($1).value);
-$$ LANGUAGE SQL
-RETURNS NULL ON NULL INPUT;
+$$ LANGUAGE SQL;
 COMMENT ON FUNCTION get_concept_sk(CD) IS
 'Returns the id of the matching concept. If the concept is not yet present, a new one is made.';
 
@@ -952,14 +947,17 @@ AS $$
         , value(originaltext(obs.code))                                   AS concept_originaltext_value
         , get_template_id_sk(obs."templateId")                            AS template_id_sk
         , get_concept_sk(obs.code)                                        AS product_sk
-        , unit(((_any(value))[1])::text::pq)                              AS pqunit
-        , value(((_any(value))[1])::text::pq)                             AS numval
-        , unit(canonical(((_any(value))[1])::text::pq))                   AS canunit
-        , value(canonical(((_any(value))[1])::text::pq))                  AS canval
+        , unit(pqvalue)                                                   AS pqunit
+        , value(pqvalue)                                                  AS numval
+        , unit(canonical(pqvalue))                                        AS canunit
+        , value(canonical(pqvalue))                                       AS canval
         , obs._timestamp                                                  AS timestamp
-        FROM new_observation_evn_pq      obs
-        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
-        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
+        FROM (SELECT *,
+                     ((_any(value))[1])::text::pq    AS pqvalue,
+                     convexhull((obs."effectiveTime").ivl) AS cheffective
+             FROM new_observation_evn_pq obs OFFSET 0 /* prevent flatten subquery since uany_cd2cv is expensive */) obs
+        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(obs.cheffective)::timestamptz)
+        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(obs.cheffective)::timestamptz)
         LEFT JOIN ("Participation" ptcp_pati
                   JOIN "Patient" r               ON ptcp_pati.role     = r._id
                   JOIN "Person" p                ON r.player           = p._id
@@ -985,18 +983,21 @@ COMMENT ON FUNCTION update_fact_observation_evn_pq() IS
    'Load and update the observation fact table.';
 
 /* Only call this on uany with _cd values */
-CREATE OR REPLACE FUNCTION uany_cd2cv(uany, int)
+CREATE OR REPLACE FUNCTION uany_cd2cv(uany)
 RETURNS cv
 AS $$
-   SELECT (_jany($1) #>> ARRAY[$2::text, 'value'])::cv
-$$ LANGUAGE SQL
+   SELECT (_jany($1) #>> ARRAY['0', 'value'])::cv
+$$ LANGUAGE SQL IMMUTABLE
 ;
-COMMENT ON FUNCTION uany_cd2cv(uany, int) IS
-   'Load and update the observation fact table.';
+COMMENT ON FUNCTION uany_cd2cv(uany) IS
+   'Convert any with array of cd to the coded value of the first concept descriptor.';
+
 
 CREATE OR REPLACE FUNCTION update_fact_observation_evn_cv()
 RETURNS bigint
 AS $$
+  CREATE INDEX ON "Observation"(uany_cd2cv(value)) WHERE datatype(value) = '_cd';
+
   -- first populate dim_concept with required codes, so we can join with dim_concept later.
   SELECT count(get_concept_sk(value)) FROM
          (SELECT DISTINCT (code).value FROM new_observation_evn_cd) a;
@@ -1008,7 +1009,7 @@ AS $$
 
   -- values
   SELECT count(get_concept_sk(v)) FROM
-         (SELECT DISTINCT uany_cd2cv(value, 0) AS v FROM new_observation_evn_cd) a;
+         (SELECT DISTINCT uany_cd2cv(value) AS v FROM new_observation_evn_cd) a;
 
   -- entity codes
   SELECT count(get_concept_sk(code))
@@ -1045,11 +1046,11 @@ AS $$
          , dicp.id                                          AS product_sk
          , dicv.id                                          AS value_concept_sk
          , obs._timestamp                                   AS timestamp
-        FROM new_observation_evn_cd obs
+        FROM (SELECT *, uany_cd2cv(value) AS cvvalue FROM new_observation_evn_cd OFFSET 0 /* prevent flatten subquery since uany_cd2cv is expensive */) obs
         JOIN      dim_concept_plus dic   ON dic.code = code((obs.code).value)
                                          AND dic.codesystem = codesystem((obs.code).value)
-        JOIN      dim_concept_plus dicv  ON dicv.code = code(uany_cd2cv(obs.value, 0))
-                                         AND dicv.codesystem = codesystem(uany_cd2cv(obs.value, 0))
+        JOIN      dim_concept_plus dicv  ON dicv.code = code(obs.cvvalue)
+                                         AND dicv.codesystem = codesystem(obs.cvvalue)
         LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
         LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl))::timestamptz)
         LEFT JOIN ("Participation" ptcp_pati

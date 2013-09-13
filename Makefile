@@ -38,7 +38,7 @@ run:
 	echo "TODO"
 
 runone: stop
-	bash -x ./runone.sh $(QUERY) $(PGDATA) $(DWHDB) $(STDB) $(PERFDATADIR)
+	bash ./runone.sh $(QUERY) $(PGDATA) $(DWHDB) $(STDB) $(PERFDATADIR)
 
 clean_database: stop
 	rm -rf $(DATABASEDIR)
