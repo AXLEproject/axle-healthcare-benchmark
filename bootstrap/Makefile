@@ -28,9 +28,7 @@ prepare: start installhdl installmsg installhdl
 # Note that only HEAD is fetched
 $(PGSOURCE):
 	mkdir -p $(BASEDIR)
-	cd $(BASEDIR) ; git clone --depth 1 $(PGGIT)
-	cd $(PGSOURCE) ; git checkout $(PGBRANCH)
-	touch $@
+	cd $(BASEDIR) ; wget $(PGSRCURL) ; tar jxf $(PGSRCTAR) ; ln -s postgresql-$(PGRELEASE)/ postgresql
 
 # Compile PostgreSQL server
 $(PGSERVER): $(PGSOURCE)

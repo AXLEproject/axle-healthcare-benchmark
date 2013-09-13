@@ -34,11 +34,10 @@ NUMBEROFCDAS=1000
 # PREPARE POSTGRESQL DATABASE CLUSTER
 #------------------------------------------------------------------------------
 
-# PostgreSQL source repository
-PGGIT=git://git.postgresql.org/git/postgresql.git
-
-# PostgreSQL branch to checkout
-PGBRANCH=master
+# PostgreSQL source
+PGRELEASE=9.3.0
+PGSRCTAR=postgresql-$(PGRELEASE).tar.bz2
+PGSRCURL=http://ftp.postgresql.org/pub/source/v$(PGRELEASE)/$(PGSRCTAR)
 
 # PGTune git repository
 PGTUNEGIT=https://github.com/gregs1104/pgtune.git
