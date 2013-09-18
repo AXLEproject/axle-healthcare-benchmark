@@ -46,6 +46,21 @@ AS $$
      , value_concept_sk                int
      , timestamp                       timestamptz
      );
+
+    CREATE TEMP TABLE IF NOT EXISTS temp_fact_act_evn (
+       id                              int           PRIMARY KEY
+     , act_id                          text[]
+     , patient_sk                      int
+     , provider_sk                     int
+     , organization_sk                 int
+     , from_time_sk                    int
+     , to_time_sk                      int
+     , concept_sk                      int
+     , concept_originaltext_reference  text
+     , concept_originaltext_value      text
+     , template_id_sk                  int
+     , timestamp                       timestamptz
+     );
 $$ LANGUAGE SQL;
 
 SELECT create_temp_tables();
@@ -759,9 +774,11 @@ AS $$
         , date_trunc('minute', highvalue(convexhull((obs."effectiveTime").ivl)))
         ])::timestamptz AS t
         FROM (
-             SELECT * FROM new_observation_evn_pq
+             SELECT "effectiveTime" FROM new_observation_evn_pq
              UNION ALL
-             SELECT * FROM new_observation_evn_cd
+             SELECT "effectiveTime" FROM new_observation_evn_cd
+             UNION ALL
+             SELECT "effectiveTime" FROM new_act_evn
         ) obs
    ),
    new_times AS (
@@ -831,9 +848,11 @@ AS $$
    , obs."templateId"[8]
    , obs."templateId"[9]
    FROM (
-        SELECT * FROM new_observation_evn_pq
+        SELECT "templateId" FROM new_observation_evn_pq
         UNION ALL
-        SELECT * FROM new_observation_evn_cd
+        SELECT "templateId" FROM new_observation_evn_cd
+        UNION ALL
+        SELECT "templateId" FROM new_act_evn
    ) obs
    WHERE obs."templateId" IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM dim_template WHERE template_id = obs."templateId"::text[])
@@ -1085,6 +1104,82 @@ COMMENT ON FUNCTION update_fact_observation_evn_cv() IS
    'Load and update the observation fact table.';
 
 
+CREATE OR REPLACE FUNCTION update_fact_act_evn()
+RETURNS bigint
+AS $$
+  -- first populate dim_concept with required codes, so we can join with dim_concept later.
+  SELECT count(get_concept_sk(value)) FROM
+         (SELECT DISTINCT (code).value FROM new_act_evn) a;
+
+  -- entity codes
+  SELECT count(get_concept_sk(code))
+         FROM (SELECT DISTINCT code FROM "Entity") a;
+
+   WITH insert_query AS (
+    INSERT INTO temp_fact_act_evn (
+      id
+    , act_id
+    , patient_sk
+    , provider_sk
+    , organization_sk
+    , from_time_sk
+    , to_time_sk
+    , concept_sk
+    , concept_originaltext_reference
+    , concept_originaltext_value
+    , template_id_sk
+    , timestamp
+    )
+    SELECT nextval('fact_act_evn_seq')
+         , act.id                                           AS id
+         , dip.id                                           AS pat_sk
+         , dipr.id                                          AS prov_sk
+         , dio.id                                           AS orga_sk
+         , dtl.id                                           AS from_sk
+         , dtt.id                                           AS to_sk
+         , dic.id                                           AS concept_sk
+         , value(reference(originaltext(act.code)))         AS concept_originaltext_reference
+         , value(originaltext(act.code))                    AS concept_originaltext_value
+         , get_template_id_sk(act."templateId")             AS template_id_sk
+         , act._timestamp                                   AS timestamp
+        FROM (SELECT * FROM new_act_evn OFFSET 0 ) act
+        JOIN      dim_concept_plus dic   ON dic.code = code((act.code).value)
+                                         AND dic.codesystem = codesystem((act.code).value)
+        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((act."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((act."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN ("Participation" ptcp_pati
+                  JOIN "Patient" r               ON ptcp_pati.role     = r._id
+                  JOIN "Person" p                ON r.player           = p._id
+                  JOIN dim_patient dip           ON dip.set_nk         = person_patient2set_nk(p, r))
+                  ON ptcp_pati.act = act._id
+                  AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
+                  AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
+        LEFT JOIN ("Participation" ptcp_prod
+                  JOIN "Role"          r_prod    ON r_prod._id         = ptcp_prod.role
+                  JOIN "Entity"        e_prod    ON e_prod._id         = r_prod.player
+                  JOIN dim_concept dicp          ON dicp.code          = code((e_prod.code).value)
+                                                 AND dicp.codesystem   = codesystem((e_prod.code).value))
+                  ON ptcp_prod.act = act._id
+                  AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
+                  AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
+        LEFT JOIN "Participation" ptcp_prov
+                  ON ptcp_prov.act      = act._id
+                  AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
+                  AND ptcp_prov."typeCode" = 'AUT'::cv('ParticipationType')
+        LEFT JOIN "Role"          r_prov    ON r_prov._id         = ptcp_prov.role
+        LEFT JOIN "Person"        e_prov  ON e_prov._id           = r_prov.player
+        LEFT JOIN dim_provider dipr         ON dipr.set_nk        = person_role2set_nk(e_prov, r_prov)
+        LEFT JOIN "Organization"  e_orga    ON e_orga._id         = r_prov.scoper
+        LEFT JOIN dim_organization dio      ON dio.set_nk         = organization_role2set_nk(e_orga, r_prov)
+   returning id
+  )
+  SELECT count(*) from insert_query;
+$$ LANGUAGE SQL;
+COMMENT ON FUNCTION update_fact_act_evn() IS
+   'Load and update the act fact table.';
+
+
+
 --select a[1] from (SELECT distinct_ancestors('2.16.840.1.113883.6.96')) as a(a) order by a[1];
 
 CREATE OR REPLACE FUNCTION setup_view_snomed_tree()
@@ -1199,17 +1294,19 @@ BEGIN
         messages :=  update_dim_patient();
         RAISE NOTICE 'update_dim_patient: %', messages;
         messages := update_dim_provider();
-        RAISE NOTICE'update_dim_provider: %', messages;
+        RAISE NOTICE 'update_dim_provider: %', messages;
         messages := update_dim_organization();
-        RAISE NOTICE'update_dim_organizations: %', messages;
+        RAISE NOTICE 'update_dim_organizations: %', messages;
         -- next update fact tables
         messages := update_fact_observation_evn_pq();
-        RAISE NOTICE'update_fact_observation_evn_pq: %', messages;
+        RAISE NOTICE 'update_fact_observation_evn_pq: %', messages;
         messages := update_fact_observation_evn_cv();
-        RAISE NOTICE'update_fact_observation_evn_cv: %', messages;
+        RAISE NOTICE 'update_fact_observation_evn_cv: %', messages;
         -- not implemented:
         -- messages := update_fact_observation_evn_text();
         -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
+        messages := update_fact_act_evn();
+        RAISE NOTICE 'update_fact_act_evn: %', messages;
         RAISE NOTICE 'setting up snomed tree & views';
 --        PERFORM  setup_view_snomed_tree();
         RAISE NOTICE 'setting up template views';
@@ -1234,4 +1331,5 @@ BEGIN
    COPY dim_template                  TO '/tmp/dim_template.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
    COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
    COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_act_evn             TO '/tmp/fact_act_evn.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
 END; $$ LANGUAGE plpgsql;

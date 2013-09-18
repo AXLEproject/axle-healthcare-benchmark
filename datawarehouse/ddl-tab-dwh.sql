@@ -278,6 +278,25 @@ CREATE OR REPLACE VIEW fact_observation_evn AS
 COMMENT ON VIEW fact_observation_evn IS
 'A view that combines the individual fact tables. Used for easy querying of e.g. the last timestamp for streaming ETL.';
 
+DROP SEQUENCE IF EXISTS fact_act_evn_seq;
+CREATE SEQUENCE fact_act_evn_seq;
+
+DROP TABLE IF EXISTS fact_act_evn;
+CREATE TABLE fact_act_evn(
+  id                              int           PRIMARY KEY
+, act_id                          text[]
+, patient_sk                      int           REFERENCES dim_patient(id)
+, provider_sk                     int           REFERENCES dim_provider(id)
+, organization_sk                 int           REFERENCES dim_organization(id)
+, from_time_sk                    int           REFERENCES dim_time(id)
+, to_time_sk                      int           REFERENCES dim_time(id)
+, concept_sk                      int           REFERENCES dim_concept(id)
+, concept_originaltext_reference  text
+, concept_originaltext_value      text
+, template_id_sk                  int           REFERENCES dim_template(id)
+, timestamp                       timestamptz
+);
+
 /*
  * On PostgreSQL > 9.1 databases, loading data in the datawarehouse is done
  * with file_fdw.

@@ -54,6 +54,7 @@ gpload:
 	gpload -f load_dim_time.yaml
 	gpload -f load_fact_observation_evn_cv.yaml
 	gpload -f load_fact_observation_evn_pq.yaml
+	gpload -f load_fact_act_evn.yaml
 
 pgload_dim_concept:
 	./pgload load_dim_concept.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
@@ -73,10 +74,11 @@ pgload_fact_observation_evn_cv:
 	./pgload load_fact_observation_evn_cv.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
 pgload_fact_observation_evn_pq:
 	./pgload load_fact_observation_evn_pq.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
-
+pgload_fact_act_evn:
+	./pgload load_fact_act_evn.yaml $(DWHHOST) $(DWHPORT) $(DWHUSER) $(DWHDB)
 pgload_dimensions: pgload_dim_concept pgload_dim_concept_role pgload_dim_organization pgload_dim_patient pgload_dim_provider pgload_dim_template pgload_dim_time
 
-pgload_facts: pgload_fact_observation_evn_cv pgload_fact_observation_evn_pq
+pgload_facts: pgload_fact_observation_evn_cv pgload_fact_observation_evn_pq pgload_fact_act_evn
 
 pgload:
 	$(MAKE) -j pgload_dimensions
