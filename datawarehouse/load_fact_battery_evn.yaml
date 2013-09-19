@@ -1,0 +1,14 @@
+VERSION: 1.0.0.1
+DATABASE: dwh
+PORT: 6543
+GPLOAD:
+        INPUT:
+                - SOURCE:
+                        FILE:
+                              - /tmp/fact_battery_evn.csv
+                - FORMAT: CSV
+                - QUOTE: '"'
+                - DELIMITER: ','
+        OUTPUT:
+                - TABLE: fact_battery_evn
+                - MODE: INSERT
