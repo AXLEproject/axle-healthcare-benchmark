@@ -1154,14 +1154,6 @@ AS $$
                   ON ptcp_pati.act = act._id
                   AND ptcp_pati."typeCode" = 'RCT'::CV('ParticipationType')
                   AND COALESCE(ptcp_pati."sequenceNumber", 1) = 1       -- we want the first participation of the RCT type
-        LEFT JOIN ("Participation" ptcp_prod
-                  JOIN "Role"          r_prod    ON r_prod._id         = ptcp_prod.role
-                  JOIN "Entity"        e_prod    ON e_prod._id         = r_prod.player
-                  JOIN dim_concept dicp          ON dicp.code          = code((e_prod.code).value)
-                                                 AND dicp.codesystem   = codesystem((e_prod.code).value))
-                  ON ptcp_prod.act = act._id
-                  AND ptcp_prod."typeCode" = 'CSM'::CV('ParticipationType')
-                  AND COALESCE(ptcp_prod."sequenceNumber",1) = 1
         LEFT JOIN "Participation" ptcp_prov
                   ON ptcp_prov.act      = act._id
                   AND COALESCE(ptcp_prov."sequenceNumber", 1) = 1
