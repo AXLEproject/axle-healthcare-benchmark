@@ -1142,11 +1142,11 @@ AS $$
          , value(originaltext(act.code))                    AS concept_originaltext_value
          , get_template_id_sk(act."templateId")             AS template_id_sk
          , act._timestamp                                   AS timestamp
-        FROM (SELECT * FROM new_battery_evn) act
+        FROM (SELECT convexhull(("effectiveTime").ivl) AS effectivetime, * FROM new_battery_evn OFFSET 0 ) AS act
         JOIN      dim_concept_plus dic   ON dic.code = code((act.code).value)
                                          AND dic.codesystem = codesystem((act.code).value)
-        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((act."effectiveTime").ivl))::timestamptz)
-        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(convexhull((act."effectiveTime").ivl))::timestamptz)
+        LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(act.effectivetime))
+        LEFT JOIN dim_time dtt           ON dtt.time = date_trunc('minute', highvalue(act.effectivetime))
         LEFT JOIN ("Participation" ptcp_pati
                   JOIN "Patient" r               ON ptcp_pati.role     = r._id
                   JOIN "Person" p                ON r.player           = p._id
