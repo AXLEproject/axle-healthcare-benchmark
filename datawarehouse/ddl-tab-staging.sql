@@ -60,7 +60,7 @@ CREATE OR REPLACE VIEW new_observation_evn_cd AS
 COMMENT ON VIEW new_observation_evn_cd is
 'To facilitate streaming ETL: contains the Observations with the EVN moodcode and containing a CD value that have a timestamp greater than the newest record in the fact_observation_evn_cv table';
 
-CREATE OR REPLACE VIEW new_act_evn AS
+CREATE OR REPLACE VIEW new_battery_evn AS
        SELECT *
        FROM   "Act"
        WHERE "classCode" = 'BATTERY'::CV('ActClass')
@@ -68,7 +68,7 @@ CREATE OR REPLACE VIEW new_act_evn AS
        AND _timestamp > (
            SELECT max_timestamp
            FROM dblink( 'dwh'
-                      , 'SELECT COALESCE((SELECT max(timestamp) FROM fact_act_evn), ''1-1-1970''::timestamptz)'
+                      , 'SELECT COALESCE((SELECT max(timestamp) FROM fact_battery_evn), ''1-1-1970''::timestamptz)'
                       ) AS t(max_timestamp timestamptz)
        )
 ;

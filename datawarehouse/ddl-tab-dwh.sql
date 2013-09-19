@@ -278,11 +278,11 @@ CREATE OR REPLACE VIEW fact_observation_evn AS
 COMMENT ON VIEW fact_observation_evn IS
 'A view that combines the individual fact tables. Used for easy querying of e.g. the last timestamp for streaming ETL.';
 
-DROP SEQUENCE IF EXISTS fact_act_evn_seq;
-CREATE SEQUENCE fact_act_evn_seq;
+DROP SEQUENCE IF EXISTS fact_battery_evn_seq;
+CREATE SEQUENCE fact_battery_evn_seq;
 
-DROP TABLE IF EXISTS fact_act_evn;
-CREATE TABLE fact_act_evn(
+DROP TABLE IF EXISTS fact_battery_evn;
+CREATE TABLE fact_battery_evn(
   id                              int           PRIMARY KEY
 , act_id                          text[]
 , patient_sk                      int           REFERENCES dim_patient(id)

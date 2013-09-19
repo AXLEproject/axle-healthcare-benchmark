@@ -47,7 +47,7 @@ AS $$
      , timestamp                       timestamptz
      );
 
-    CREATE TEMP TABLE IF NOT EXISTS temp_fact_act_evn (
+    CREATE TEMP TABLE IF NOT EXISTS temp_fact_battery_evn (
        id                              int           PRIMARY KEY
      , act_id                          text[]
      , patient_sk                      int
@@ -778,7 +778,7 @@ AS $$
              UNION ALL
              SELECT "effectiveTime" FROM new_observation_evn_cd
              UNION ALL
-             SELECT "effectiveTime" FROM new_act_evn
+             SELECT "effectiveTime" FROM new_battery_evn
         ) obs
    ),
    new_times AS (
@@ -852,7 +852,7 @@ AS $$
         UNION ALL
         SELECT "templateId" FROM new_observation_evn_cd
         UNION ALL
-        SELECT "templateId" FROM new_act_evn
+        SELECT "templateId" FROM new_battery_evn
    ) obs
    WHERE obs."templateId" IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM dim_template WHERE template_id = obs."templateId"::text[])
@@ -1104,19 +1104,19 @@ COMMENT ON FUNCTION update_fact_observation_evn_cv() IS
    'Load and update the observation fact table.';
 
 
-CREATE OR REPLACE FUNCTION update_fact_act_evn()
+CREATE OR REPLACE FUNCTION update_fact_battery_evn()
 RETURNS bigint
 AS $$
   -- first populate dim_concept with required codes, so we can join with dim_concept later.
   SELECT count(get_concept_sk(value)) FROM
-         (SELECT DISTINCT (code).value FROM new_act_evn) a;
+         (SELECT DISTINCT (code).value FROM new_battery_evn) a;
 
   -- entity codes
   SELECT count(get_concept_sk(code))
          FROM (SELECT DISTINCT code FROM "Entity") a;
 
    WITH insert_query AS (
-    INSERT INTO temp_fact_act_evn (
+    INSERT INTO temp_fact_battery_evn (
       id
     , act_id
     , patient_sk
@@ -1130,7 +1130,7 @@ AS $$
     , template_id_sk
     , timestamp
     )
-    SELECT nextval('fact_act_evn_seq')
+    SELECT nextval('fact_battery_evn_seq')
          , act.id                                           AS id
          , dip.id                                           AS pat_sk
          , dipr.id                                          AS prov_sk
@@ -1142,7 +1142,7 @@ AS $$
          , value(originaltext(act.code))                    AS concept_originaltext_value
          , get_template_id_sk(act."templateId")             AS template_id_sk
          , act._timestamp                                   AS timestamp
-        FROM (SELECT * FROM new_act_evn OFFSET 0 ) act
+        FROM (SELECT * FROM new_battery_evn) act
         JOIN      dim_concept_plus dic   ON dic.code = code((act.code).value)
                                          AND dic.codesystem = codesystem((act.code).value)
         LEFT JOIN dim_time dtl           ON dtl.time = date_trunc('minute', lowvalue(convexhull((act."effectiveTime").ivl))::timestamptz)
@@ -1175,7 +1175,7 @@ AS $$
   )
   SELECT count(*) from insert_query;
 $$ LANGUAGE SQL;
-COMMENT ON FUNCTION update_fact_act_evn() IS
+COMMENT ON FUNCTION update_fact_battery_evn() IS
    'Load and update the act fact table.';
 
 
@@ -1305,8 +1305,8 @@ BEGIN
         -- not implemented:
         -- messages := update_fact_observation_evn_text();
         -- RAISE NOTICE'update_fact_observation_evn_text: %', messages;
-        messages := update_fact_act_evn();
-        RAISE NOTICE 'update_fact_act_evn: %', messages;
+        messages := update_fact_battery_evn();
+        RAISE NOTICE 'update_fact_battery_evn: %', messages;
         RAISE NOTICE 'setting up snomed tree & views';
 --        PERFORM  setup_view_snomed_tree();
         RAISE NOTICE 'setting up template views';
@@ -1331,5 +1331,5 @@ BEGIN
    COPY dim_template                  TO '/tmp/dim_template.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
    COPY temp_fact_observation_evn_pq  TO '/tmp/fact_observation_evn_pq.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
    COPY temp_fact_observation_evn_cv  TO '/tmp/fact_observation_evn_cv.csv'      (FORMAT 'csv', DELIMITER ',', NULL '');
-   COPY temp_fact_act_evn             TO '/tmp/fact_act_evn.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
+   COPY temp_fact_battery_evn         TO '/tmp/fact_battery_evn.csv'                 (FORMAT 'csv', DELIMITER ',', NULL '');
 END; $$ LANGUAGE plpgsql;
