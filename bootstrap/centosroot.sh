@@ -48,3 +48,6 @@ yum install -y python-lxml parallel
 # packages for ETL
 yum install -y python-pip python-yaml
 pip install shyaml
+
+# packages for sensors restserver
+yum install -y python-psycopg2

@@ -32,7 +32,7 @@ $(PGSOURCE):
 
 # Compile PostgreSQL server
 $(PGSERVER): $(PGSOURCE)
-	cd $(PGSOURCE) ; ./configure --prefix=$(PGSERVER) --enable-debug --with-ossp-uuid && make clean && make -j4 && make install
+	cd $(PGSOURCE) ; ./configure --prefix=$(PGSERVER) --enable-debug --with-ossp-uuid --with-python && make clean && make -j4 && make install
 	cd $(PGSOURCE)/contrib ; make -j4 && make install
 	touch $@
 

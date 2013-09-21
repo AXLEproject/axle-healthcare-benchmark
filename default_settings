@@ -20,6 +20,7 @@ PGSOURCE=$(BASEDIR)/postgresql
 PGSERVER=$(BASEDIR)/postgres
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
+PLSH=$(BASEDIR)/plsh
 
 #------------------------------------------------------------------------------
 # CDA GENERATOR
@@ -46,6 +47,9 @@ PGTUNEGIT=https://github.com/gregs1104/pgtune.git
 PGTUNEMAXCONN=$(shell expr 10 + `grep MHz /proc/cpuinfo | wc -l`)
 PGTUNEDBTYPE=DW
 PGTUNESYSTEMTYPE=Linux
+
+# plsh GIT repo
+PLSHGIT=http://github.com/petere/plsh
 
 # Add non default parameters for the postgresql.conf here
 define NONDEFAULTPOSTGRESQLCONF
