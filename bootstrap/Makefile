@@ -42,8 +42,15 @@ $(PGTUNE):
 	cd $(BASEDIR) ; git clone --depth 1 $(PGTUNEGIT)
 	touch $@
 
+# Get plsh and install
+$(PLSH):
+	mkdir -p $(BASEDIR)
+	cd $(BASEDIR) ; git clone --depth 1 $(PLSHGIT)
+	cd $(BASEDIR)/plsh && make USE_PGXS=1 install
+	touch $@
+
 # Initialise cluster
-$(PGDATA): $(PGSERVER) $(PGTUNE)
+$(PGDATA): $(PGSERVER) $(PGTUNE) $(PLSH)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
 	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T $(PGTUNEDBTYPE) -P $(PGTUNESYSTEMTYPE) -c $(PGTUNEMAXCONN) || rm -rf $(PGDATA)
 	@echo "$$NONDEFAULTPOSTGRESQLCONF" >> $(PGDATA)/postgresql.conf
