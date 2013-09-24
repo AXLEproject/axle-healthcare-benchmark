@@ -52,10 +52,16 @@ case "${ACTION}" in
 
         # Dimension tables and fact tables are created in schema atomic
         pgcommand $DBNAME "CREATE SCHEMA atomic"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=atomic, public, \"\$user\";"
+
+        # Period-to-date views are created in schema period_to_date
+        pgcommand $DBNAME "CREATE SCHEMA period_to_date"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=atomic, period_to_date, public, \"\$user\";"
 
         echo ".. Creating DWH tables"
         pgcommandfromfile $DBNAME ddl-tab-dwh.sql
+
+        echo ".. Create period_to_date tables"
+        pgcommandfromfile $DBNAME ddl-view-period-to-date.sql
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
