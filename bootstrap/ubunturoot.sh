@@ -27,8 +27,15 @@ apt-get install -y zeroinstall-injector
 0alias parallel http://git.savannah.gnu.org/cgit/parallel.git/plain/packager/0install/parallel.xml
 add-apt-repository -y ppa:fkrull/deadsnakes
 apt-get update
-apt-get install python2.6 python2.6-dev python-lxml
+apt-get install -y python2.6 python2.6-dev python-lxml
 
 # packages for ETL
 apt-get install -y python-yaml python-pip
 pip install shyaml
+
+# packages for profiling
+full_version=$(uname -r)
+flavour_abi=${full_version#*-}
+flavour=${flavour_abi#*-}
+version=${full_version%-$flavour}
+apt-get install -y linux-tools-common linux-tools-${version} graphviz pgagent libxslt1-dev evince
