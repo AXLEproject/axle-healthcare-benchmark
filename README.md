@@ -56,8 +56,7 @@ database is transformed using ETL, that is programmed as stored procedures.
 * `source ~/.bashrc`
 
 # Run queries #
-* `PAGER= psql -f queries/q01.sql dwh`
-* `PAGER=cat psql -f queries/q01.sql dwh`
+* make runone QUERY=1
 
 # Delete data #
 * `make clean`
