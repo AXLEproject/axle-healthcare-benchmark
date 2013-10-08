@@ -25,6 +25,10 @@ apt-get install -y maven2
 # packages for the message parser
 apt-get install -y zeroinstall-injector
 0alias parallel http://git.savannah.gnu.org/cgit/parallel.git/plain/packager/0install/parallel.xml
+add-apt-repository -y ppa:fkrull/deadsnakes
+apt-get update
+apt-get install python2.6 python2.6-dev python-lxml
 
 # packages for ETL
-echo need python yaml
+apt-get install -y python-yaml python-pip
+pip install shyaml
