@@ -56,7 +56,7 @@ database is transformed using ETL, that is programmed as stored procedures.
 * `source ~/.bashrc`
 
 # Run queries #
-* make runone QUERY=1
+* `make runone QUERY=1`
 
 # Delete data #
 * `make clean`
