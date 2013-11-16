@@ -50,4 +50,4 @@ yum install -y python-pip python-yaml
 pip install shyaml
 
 # packages for sensors restserver
-yum install -y python-psycopg2
+yum install -y python-psycopg2 python-devel

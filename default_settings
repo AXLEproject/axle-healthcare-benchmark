@@ -49,7 +49,7 @@ PGTUNEDBTYPE=DW
 PGTUNESYSTEMTYPE=Linux
 
 # plsh GIT repo
-PLSHGIT=http://github.com/petere/plsh
+PLSHGIT=https://github.com/petere/plsh
 
 # Add non default parameters for the postgresql.conf here
 define NONDEFAULTPOSTGRESQLCONF
