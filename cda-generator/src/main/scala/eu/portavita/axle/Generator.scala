@@ -11,7 +11,7 @@ import akka.actor.actorRef2Scala
 import eu.portavita.axle.generators.ExaminationGenerator
 import eu.portavita.axle.generators.OrganizationGenerator
 import eu.portavita.axle.generators.PatientGenerator
-import eu.portavita.axle.messages.OrganizationRequest
+import eu.portavita.axle.messages.CareGroupRequest
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.terminology.LocalTerminologyCache
@@ -63,14 +63,14 @@ object Generator extends App {
 	system.log.info("Loaded organization mode.")
 
 	private val organizationGenerator = system.actorOf(
-		Props(new OrganizationGenerator(organizationModel)),
+		Props(new OrganizationGenerator(organizationModel, outputDirectory)),
 		name = "organizationGenerator")
 	system.log.info("Created organization generator.")
 
 	// Start generating organizations.
 	system.log.info("Starting to generate data.")
 	for (i <- 1 to config.getInt("nrOfOrganizations")) {
-		organizationGenerator ! OrganizationRequest
+		organizationGenerator ! CareGroupRequest
 	}
 
 

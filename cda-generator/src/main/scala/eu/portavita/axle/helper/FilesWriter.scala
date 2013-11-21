@@ -15,8 +15,7 @@ class FilesWriter() {
 	/**
 	 * Helper instance for creating new file names.
 	 */
-	private val helper = new OutputHelper(
-		Generator.outputDirectory, "xml")
+	private val helper = new OutputHelper(Generator.outputDirectory, "xml")
 
 	/**
 	 * Writes the given document to the next file.

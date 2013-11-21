@@ -3,11 +3,11 @@
  */
 package eu.portavita.axle.helper
 
-import org.hl7.v3.POCDMT000040ClinicalDocument
 import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.generators.ExaminationDataProvider
 import eu.portavita.concept.Examination
 import eu.portavita.axle.Generator
+import org.hl7.v3.POCDMT000040ClinicalDocument
 
 /**
  * This actor receives requests to build clinical documents for examinations, and sends those clinical

@@ -15,9 +15,9 @@ object PersonName {
 	 */
 	def generate: PersonName = {
 		new PersonName(
-			firstName = RandomHelper.string(4, 8),
-			lastName = RandomHelper.string(6, 14),
-			prefix = if (Random.nextBoolean) RandomHelper.string(2, 4) else ""
+			firstName = RandomHelper.string(RandomHelper.startingWithCapital, min=4, max=8),
+			lastName = RandomHelper.string(RandomHelper.startingWithCapital, min=6, max=14),
+			prefix = if (Random.nextBoolean) RandomHelper.string(RandomHelper.lowercase, min=2, max=4) else ""
 		)
 	}
 }

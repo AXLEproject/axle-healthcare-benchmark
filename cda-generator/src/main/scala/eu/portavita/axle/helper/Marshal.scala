@@ -6,7 +6,6 @@ import javax.xml.bind.JAXBContext
 import org.hl7.v3.POCDMT000040ClinicalDocument
 import javax.xml.bind.Marshaller
 import java.io.StringWriter
-import org.hl7.v3.POCDMT000040ClinicalDocument
 
 /**
  * This actor receives clinical documents as POJO, marshals them, and sends the marshalled documents

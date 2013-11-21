@@ -7,4 +7,4 @@ import eu.portavita.axle.generatable.Organization
 
 sealed trait OrganizationMessage
 
-case class OrganizationRequest
+case class TopLevelOrganizationRequest
