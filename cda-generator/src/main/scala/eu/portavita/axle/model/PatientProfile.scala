@@ -39,7 +39,7 @@ class PatientProfile(
 	 * @return
 	 */
 	def sampleExaminations(patient: Patient): Map[Int, Map[String, Int]] = {
-		val ageAtEnd = DateTimes.age(patient.birthDate)
+		val ageAtEnd = DateTimes.age(patient.person.birthDate)
 		val ageAtStart = ageAtEnd - DateTimes.age(patient.careProvisionStart)
 		(for (age <- ageAtStart to ageAtEnd)
 			yield (age, sampleExaminations(age))) toMap

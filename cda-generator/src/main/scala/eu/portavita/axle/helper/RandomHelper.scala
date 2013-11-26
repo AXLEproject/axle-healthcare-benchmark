@@ -9,18 +9,20 @@ object RandomHelper {
 	val alphabetLowerCase = "abcdefghijklmnopqrstuvwxyz"
 	val alphabetUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	val alphabetAllCase = alphabetLowerCase + alphabetUpperCase
+	val alphabetNumeric = "1234567890"
 
 	/**
 	 * Returns random string of alphanumeric characters of given length.
 	 * @return
 	 */
-	def alphanumeric (length: Int): String =
-		Random.alphanumeric take length mkString
+	def alphanumeric (length: Int): String = Random.alphanumeric take length mkString
+
 
 	def randomString(alphabet: String)(length: Int): String = {
 		Stream.continually(Random.nextInt(alphabet.size)).map(alphabet).take(length).mkString
 	}
 
+	def numeric (length: Int): String = randomString(alphabetNumeric)(length)
 	def lowercase (length: Int): String = randomString(alphabetLowerCase)(length)
 	def uppercase (length: Int): String = randomString(alphabetUpperCase)(length)
 	def startingWithCapital (length: Int): String = randomString(alphabetUpperCase)(1) + randomString(alphabetLowerCase)(length - 1)

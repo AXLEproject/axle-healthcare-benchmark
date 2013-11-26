@@ -5,6 +5,10 @@ package eu.portavita.axle.generatable
 
 import java.util.Date
 import java.text.SimpleDateFormat
+import eu.portavita.axle.helper.RandomHelper
+import scala.util.Random
+import eu.portavita.axle.helper.DateTimes
+import eu.portavita.databus.data.model.PortavitaPerson
 
 /**
  * Represents a person.
@@ -14,9 +18,25 @@ import java.text.SimpleDateFormat
  * @param birthDate Birth date of the person.
  */
 class Person(
-	val entityId: Int,
+	val entityId: Long,
 	val name: PersonName,
-	val birthDate: Date) {
+	val birthDate: Date,
+	val birthPlace: String,
+	val bsn: String,
+	val genderCode: String) {
+
+	def toPortavitaPerson: PortavitaPerson = {
+	    val portavitaPerson = new PortavitaPerson
+	    portavitaPerson.setEntityId(entityId)
+	    portavitaPerson.setAdministrativeGenderCode(genderCode)
+	    portavitaPerson.setBirthPlace(birthPlace)
+	    portavitaPerson.setBirthTime(birthDate)
+	    portavitaPerson.setBsn(bsn)
+	    portavitaPerson.setFamilyName(name.familyName)
+	    portavitaPerson.setGivenName(name.givenName)
+	    portavitaPerson.setFamilyNamePrefix(name.prefix)
+	    portavitaPerson
+	}
 
 	override def toString = {
 		val s = StringBuilder.newBuilder
@@ -24,5 +44,22 @@ class Person(
 		s.append("Patient " + name +
 			", birth date = " + formatter.format(birthDate) + "\n")
 		s.toString
+	}
+}
+
+object Person {
+	def sample: Person = {
+		val daysOld = RandomHelper.between(10 * 365, 100 * 365)
+		sample(daysOld)
+	}
+
+	def sample(daysOld: Int): Person = {
+		val id = EntityId.next
+		val name = PersonName.sample
+		val birthDate = DateTimes.getRelativeDate((-1 * daysOld).toInt)
+		val birthPlace = RandomHelper.startingWithCapital(RandomHelper.between(6, 14))
+		val bsn = RandomHelper.numeric(9)
+		val gender = if (Random.nextBoolean()) "M" else "F"
+		new Person(id, name, birthDate, birthPlace, bsn, gender)
 	}
 }

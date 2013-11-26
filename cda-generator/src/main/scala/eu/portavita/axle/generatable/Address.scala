@@ -4,6 +4,7 @@ import java.util.Date
 import scala.util.Random
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.helper.DateTimes
+import eu.portavita.databus.data.model.PortavitaAddress
 
 class Address(
 		val code: String,
@@ -16,6 +17,17 @@ class Address(
 		val streetAddr2: String
 		) {
 
+	def toPortavitaAddress: PortavitaAddress = {
+		val portavitaAddress = new PortavitaAddress
+		portavitaAddress.setCode(code)
+		portavitaAddress.setCityDescription(city)
+		portavitaAddress.setStreetAddress1(streetAddr1)
+		portavitaAddress.setStreetAddress2(streetAddr2)
+		portavitaAddress.setValidFrom(validFrom)
+		portavitaAddress.setValidTo(validTo)
+		portavitaAddress.setZipCode(zipCode)
+		portavitaAddress
+	}
 }
 
 object Address {

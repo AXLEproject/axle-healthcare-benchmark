@@ -36,9 +36,7 @@ class ExaminationDataProvider extends IExaminationDataProvider {
 	 * @param patient Patient of the examination.
 	 * @param examination Examination data.
 	 */
-	def add(
-		patient: eu.portavita.axle.generatable.Patient,
-		examination: Examination) = {
+	def add(patient: eu.portavita.axle.generatable.Patient, examination: Examination) = {
 		examinationQueue.enqueue(examination)
 		patientQueue.enqueue(patient.toHl7Patient)
 		val participants = new ArrayList[Participant]

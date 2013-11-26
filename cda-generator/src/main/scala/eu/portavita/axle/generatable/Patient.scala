@@ -5,10 +5,13 @@ package eu.portavita.axle.generatable
 
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import scala.util.Random
-import eu.portavita.axle.model.PatientProfile
+
 import eu.portavita.axle.helper.DateTimes
-import eu.portavita.concept.CareProvision
+import eu.portavita.axle.helper.RandomHelper
+import eu.portavita.axle.model.PatientProfile
+import eu.portavita.databus.data.model.PortavitaPatient
 
 /**
  * Represents a patient.
@@ -20,11 +23,13 @@ import eu.portavita.concept.CareProvision
  * @param careProvisionStart Date of start of care provision.
  */
 class Patient(
+    val person: Person,
+    val roleId: Long,
 	val organization: Organization,
-	override val entityId: Int,
-	override val name: PersonName,
-	override val birthDate: Date,
-	val careProvisionStart: Date) extends Person(entityId, name, birthDate) {
+	val fromTime: Date,
+	val toTime: Date,
+	val polisNumber: String,
+	val careProvisionStart: Date) {
 
 	val careProvisionId = Random.nextInt
 
@@ -35,13 +40,23 @@ class Patient(
 	 */
 	def toHl7Patient: eu.portavita.concept.CareProvision = {
 		val patient = new eu.portavita.concept.Role
-		patient.playerId = entityId.toString
+		patient.playerId = person.entityId.toString
 		patient.scoperId = organization.id.toString
 		val careProvision = new eu.portavita.concept.CareProvision
 		careProvision.patient = patient
 		careProvision.code = "17074200"
 		careProvision.id = careProvisionId.toString
 		careProvision
+	}
+
+	def toPortavitaPatient: PortavitaPatient = {
+		val patient = new PortavitaPatient
+		patient.setRoleId(roleId)
+		patient.setFromTime(fromTime)
+		patient.setToTime(toTime)
+		patient.setOrganizationEntityId(organization.id)
+	    patient.setPortavitaPerson(person.toPortavitaPerson)
+		patient
 	}
 
 	override def toString = {
@@ -62,10 +77,12 @@ object Patient {
 		val daysOld = ageAndPcpr.get("DAYS_OLD_NOW").get.asInstanceOf[NumericObservation].value
 		val daysOldAtStartPcpr = ageAndPcpr.get("DAYS_OLD_AT_START").get.asInstanceOf[NumericObservation].value
 
-		val entityId = Random.nextInt
-		val name: PersonName = PersonName.generate;
+		val person = Person.sample(daysOld.toInt)
+		val roleId = RoleId.next
 		val birthDate = DateTimes.getRelativeDate((-1 * daysOld).toInt)
 		val pcprStart = DateTimes.getRelativeDate(daysOldAtStartPcpr.toInt, birthDate)
-		new Patient(organization, entityId, name, birthDate, pcprStart)
+		val fromTime = pcprStart
+		val polisNumber = RandomHelper.alphanumeric(10)
+		new Patient(person, roleId, organization, fromTime, null, polisNumber, pcprStart)
 	}
 }
