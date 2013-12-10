@@ -25,15 +25,16 @@ import eu.portavita.terminology.HierarchyNode
  * @param code Act code of the examination.
  * @param observations Map of act codes onto observations.
  */
-class Examination(val code: String, val observations: Map[String, Observation]) {
+class Examination(
+		val patient: Patient,
+		val code: String,
+		val date: Date,
+		val observations: Map[String, Observation],
+		val practitioner: Practitioner) {
 
 	// Guess the code system of the act code of this examination.
 	/** Code system of act code. */
 	lazy val codeSystem = CodeSystem.guess(code)
-
-	// Start w/o a date for the prom (awww).
-	/** Performance date of examination. */
-	var date: Option[Date] = None
 
 	// Start with random id for observations.
 	private var lastId: Int = Random.nextInt
@@ -46,15 +47,6 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 	private def nextId: Int = {
 		lastId += 1
 		lastId
-	}
-
-	/**
-	 * Sets the date of the examination.
-	 *
-	 * @param date
-	 */
-	def setDate(date: Date) = {
-		this.date = Option(date)
 	}
 
 	/**
@@ -87,7 +79,7 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 			val act = optionalAct.get
 		} yield {
 			act.id = nextId
-			act.effectiveFromTime = date.getOrElse(new Date)
+			act.effectiveFromTime = date
 			acts.put(code, act)
 		}
 		acts
@@ -124,7 +116,7 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 					organizer.classCode = "ORGANIZER"
 					organizer.code = code
 					organizer.codeSystem = CodeSystem.guess(code)
-					organizer.effectiveFromTime = date.getOrElse(new Date)
+					organizer.effectiveFromTime = date
 					organizer
 				}
 			)
@@ -163,10 +155,8 @@ class Examination(val code: String, val observations: Map[String, Observation]) 
 		if (hasValues) {
 			val s = StringBuilder.newBuilder
 			s.append("Examination (code=" + code + ")")
-			if (date.isDefined) {
-				val formatter = new SimpleDateFormat("dd-MM-yyyy")
-				s.append("on " + formatter.format(date.get))
-			}
+			val formatter = new SimpleDateFormat("dd-MM-yyyy")
+			s.append("on " + formatter.format(date))
 			s.append("\n")
 			for ((code, observation) <- observations if observation.hasValue) {
 				s.append("\t" + observation + "\n")
