@@ -57,4 +57,6 @@ object RandomHelper {
 		if (min == max) min
 		else min + Random.nextInt(max - min)
 	}
+
+	def randomElement[T](list: List[T]): T = list(Random.nextInt(list.length))
 }
