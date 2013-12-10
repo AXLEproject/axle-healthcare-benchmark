@@ -8,6 +8,7 @@ import scala.annotation.tailrec
 import java.util.UUID
 import eu.portavita.axle.Generator
 import scala.actors.threadpool.AtomicInteger
+import eu.portavita.axle.GeneratorConfig
 
 /**
  * Utility object for generating unique filenames.
@@ -16,17 +17,17 @@ object OutputHelper {
 
 	// Logger
 	private val log = Generator.system.log
-	private val messagePer = Generator.config.getInt("messagePer")
+	private val messagePer = GeneratorConfig.config.getInt("messagePer")
 
 	// Unique prefix for all filenames.
 	val filePrefix = UUID.randomUUID().toString()
 
-	private val partitions = Generator.config.getInt("partitions")
+	private val partitions = GeneratorConfig.config.getInt("partitions")
 	private var fileNumber: AtomicInteger = new AtomicInteger(0)
 	private var directoryNumber: AtomicInteger = new AtomicInteger(0)
 
 	// Whether there is a maximum number of CDAs to generate
-	private val hasMaximumNumber = Generator.cdasToGenerate > 0
+	private val hasMaximumNumber = GeneratorConfig.cdasToGenerate > 0
 
 	/**
 	 * Draws the next directory number.
@@ -45,10 +46,10 @@ object OutputHelper {
 
 		// Generate a log message every once in a while
 		if (nextNumber % messagePer == 0)
-			log.info("Generated %d CDAs.".format(fileNumber))
+			log.info("Generated %d CDAs.".format(nextNumber))
 
 		// Stop application if there is a max number of CDAs to generate which has been exceeded
-		if (hasMaximumNumber && nextNumber > Generator.cdasToGenerate) {
+		if (hasMaximumNumber && nextNumber > GeneratorConfig.cdasToGenerate) {
 			log.info("Generated all CDAs that I needed to generate")
 			Generator.system.shutdown
 		}

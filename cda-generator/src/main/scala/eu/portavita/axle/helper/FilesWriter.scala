@@ -6,6 +6,7 @@ package eu.portavita.axle.helper
 import java.io.FileWriter
 import eu.portavita.axle.Generator
 import java.io.File
+import eu.portavita.axle.GeneratorConfig
 
 /**
  * Utility class for writing marshalled clinical documents to file.
@@ -15,7 +16,7 @@ class FilesWriter() {
 	/**
 	 * Helper instance for creating new file names.
 	 */
-	private val helper = new OutputHelper(Generator.outputDirectory, "xml")
+	private val helper = new OutputHelper(GeneratorConfig.outputDirectory, "xml")
 
 	/**
 	 * Writes the given document to the next file.
