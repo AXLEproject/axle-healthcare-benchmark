@@ -15,6 +15,7 @@ import org.hl7.v3.ON
 import org.hl7.v3.POCDMT000040AssignedCustodian
 import org.hl7.v3.POCDMT000040ClinicalDocument
 import org.hl7.v3.POCDMT000040ClinicalDocument
+import org.hl7.v3.POCDMT000040ClinicalDocument
 import org.hl7.v3.POCDMT000040Custodian
 import org.hl7.v3.POCDMT000040CustodianOrganization
 
@@ -23,6 +24,7 @@ import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
+import akka.actor.actorRef2Scala
 import eu.portavita.axle.Generator
 import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.bayesiannetwork.BayesianNetwork
@@ -32,14 +34,13 @@ import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Observation
 import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.helper.ExaminationDocumentBuilder
-import eu.portavita.axle.helper.FilesWriter
-import eu.portavita.axle.helper.FilesWriter
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.messages.ExaminationRequest
+import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.HierarchyNode
@@ -66,8 +67,7 @@ class ExaminationGenerator(
 	val builder = new eu.portavita.builder.ExaminationDocumentBuilder(GeneratorConfig.terminology, provider)
 
 	private val marshaller = Generator.cdaJaxbContext.createMarshaller()
-
-	private val writer = new FilesWriter()
+	private val publisher = new RabbitMessageQueue
 
 	/**
 	 * The hierarchy of this examination as stored by Portavita.
@@ -81,7 +81,8 @@ class ExaminationGenerator(
 		case request @ ExaminationRequest(_,_) =>
 			val examination = sampleNonEmptyExamination(request)
 			val document = buildDocument(examination)
-			writer.write(MarshalHelper.marshal(document, marshaller))
+			val marshalledDocument = MarshalHelper.marshal(document, marshaller)
+			publisher.publish(marshalledDocument, "source.generator.type.hl7v3.examination.insert")
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)

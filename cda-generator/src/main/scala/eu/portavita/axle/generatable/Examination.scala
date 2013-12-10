@@ -36,19 +36,6 @@ class Examination(
 	/** Code system of act code. */
 	lazy val codeSystem = CodeSystem.guess(code)
 
-	// Start with random id for observations.
-	private var lastId: Int = Random.nextInt
-
-	/**
-	 * Returns the next id for observations.
-	 *
-	 * @return
-	 */
-	private def nextId: Int = {
-		lastId += 1
-		lastId
-	}
-
 	/**
 	 * Returns whether any observation in this examination has a value.
 	 *
@@ -78,7 +65,7 @@ class Examination(
 			val optionalAct = observation.toHl7Act if (optionalAct.isDefined)
 			val act = optionalAct.get
 		} yield {
-			act.id = nextId
+			act.id = ActId.next
 			act.effectiveFromTime = date
 			acts.put(code, act)
 		}
@@ -111,7 +98,7 @@ class Examination(
 			resultActs.getOrElseUpdate(code, {
 					// No act found, create new organizer.
 					val organizer = new Act
-					organizer.id = nextId
+					organizer.id = ActId.next
 					organizer.moodCode = "EVN"
 					organizer.classCode = "ORGANIZER"
 					organizer.code = code

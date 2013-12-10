@@ -3,8 +3,6 @@
  */
 package eu.portavita.axle.generators
 
-import java.io.File
-
 import scala.util.Random
 
 import akka.actor.Actor
@@ -12,13 +10,17 @@ import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
 import eu.portavita.axle.Generator
 import eu.portavita.axle.generatable.Organization
-import eu.portavita.axle.helper.FilesWriter
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.messages.PatientRequest
+import eu.portavita.axle.messages.PatientRequest
+import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
+import eu.portavita.axle.model.OrganizationModel
+import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
 import eu.portavita.databus.messagebuilder.builders.PractitionerBuilder
+
 
 class OrganizationGenerator(
 	val model: OrganizationModel,
@@ -27,6 +29,7 @@ class OrganizationGenerator(
 	private val marshaller = Generator.fhirJaxbContext.createMarshaller()
 
 	lazy private val patientGeneratorActor = context.actorFor("/user/patientGenerator")
+	private val publisher = new RabbitMessageQueue
 
 	def receive = {
 		case TopLevelOrganizationRequest =>
@@ -64,29 +67,23 @@ class OrganizationGenerator(
 	 * @param organization
 	 */
 	private def store(organization: Organization) {
-		val directoryPath = outputDirectory + organization.directoryName
-
 		val builder = new OrganizationBuilder
 		builder.setMessageInput(organization.toPortavitaOrganization)
 		builder.build()
 		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 
-		val fileName = organization.name + ".xml"
-		FilesWriter.write(directoryPath, fileName, document)
-
+		publisher.publish(document, "source.generator.type.fhir.organization.insert")
 		storePractitioners(organization)
 	}
 
 	private def storePractitioners(organization: Organization) {
 		val builder = new PractitionerBuilder
-		val directoryPath = outputDirectory + organization.directoryName + File.separator + "practitioners"
 
 		for (practitioner <- organization.practitioners) {
 			builder.setMessageInput(practitioner.toPortavitaEmployee)
 			builder.build()
 			val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
-			val fileName = "practitioner-" + practitioner.roleId + ".xml"
-			FilesWriter.write(directoryPath, fileName, document)
+			publisher.publish(document, "source.generator.type.fhir.practitioner.insert")
 		}
 	}
 }

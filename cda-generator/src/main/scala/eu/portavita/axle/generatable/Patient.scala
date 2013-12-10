@@ -44,7 +44,7 @@ class Patient(
 		patient.scoperId = organization.id.toString
 		val careProvision = new eu.portavita.concept.CareProvision
 		careProvision.patient = patient
-		careProvision.code = "17074200"
+		careProvision.code = "170742000"
 		careProvision.id = careProvisionId.toString
 		careProvision
 	}

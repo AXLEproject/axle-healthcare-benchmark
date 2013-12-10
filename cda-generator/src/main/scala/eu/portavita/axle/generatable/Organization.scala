@@ -82,10 +82,9 @@ object Organization {
 	def sample(partOf: Option[Organization]): Organization = {
 		val id = EntityId.next
 		val agb = Random.nextInt(99999999)
-		val name = RandomHelper.string(8, 24)
+		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
 		val startDate = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld))
 		val code = organizationCodes(Random.nextInt(organizationCodes.length))
-		val nrOfPractitioners = RandomHelper.between(5, 50)
 		val practitioners = for (i <- 0 to nrOfPractitioners) yield Practitioner.sample(id)
 		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), partOf, practitioners.toList)
 	}

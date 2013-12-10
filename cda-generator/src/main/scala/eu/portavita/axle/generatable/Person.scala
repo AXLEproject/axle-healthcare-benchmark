@@ -9,6 +9,8 @@ import eu.portavita.axle.helper.RandomHelper
 import scala.util.Random
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.databus.data.model.PortavitaPerson
+import eu.portavita.databus.data.model.PortavitaAddress
+import java.util.Arrays
 
 /**
  * Represents a person.
@@ -23,7 +25,8 @@ class Person(
 	val birthDate: Date,
 	val birthPlace: String,
 	val bsn: String,
-	val genderCode: String) {
+	val genderCode: String,
+	val address: Address) {
 
 	def toPortavitaPerson: PortavitaPerson = {
 	    val portavitaPerson = new PortavitaPerson
@@ -35,6 +38,7 @@ class Person(
 	    portavitaPerson.setFamilyName(name.familyName)
 	    portavitaPerson.setGivenName(name.givenName)
 	    portavitaPerson.setFamilyNamePrefix(name.prefix)
+	    portavitaPerson.setAddresses(Arrays.asList(address.toPortavitaAddress))
 	    portavitaPerson
 	}
 
@@ -60,6 +64,7 @@ object Person {
 		val birthPlace = RandomHelper.startingWithCapital(RandomHelper.between(6, 14))
 		val bsn = RandomHelper.numeric(9)
 		val gender = if (Random.nextBoolean()) "M" else "F"
-		new Person(id, name, birthDate, birthPlace, bsn, gender)
+		val address = Address.sample("H")
+		new Person(id, name, birthDate, birthPlace, bsn, gender, address)
 	}
 }

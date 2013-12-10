@@ -1,9 +1,11 @@
 package eu.portavita.axle.generatable
 
 import java.util.Date
+
 import scala.util.Random
-import eu.portavita.axle.helper.RandomHelper
+
 import eu.portavita.axle.helper.DateTimes
+import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.databus.data.model.PortavitaAddress
 
 class Address(
@@ -39,7 +41,7 @@ object Address {
 				city = RandomHelper.string(RandomHelper.startingWithCapital, min=6, max=16),
 				zipCode = "%4d".format(Random.nextInt(9999)) + RandomHelper.uppercase(2),
 				country = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=16),
-				validFrom = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld)),
+				validFrom = DateTimes.getRelativeDate(-RandomHelper.between(minimalDaysOld, maximalDaysOld)),
 				validTo = null,
 				streetAddr1 = RandomHelper.string(RandomHelper.startingWithCapital, min=10, max=24) + " " + Random.nextInt(1000),
 				streetAddr2 = "")
