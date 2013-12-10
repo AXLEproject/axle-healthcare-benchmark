@@ -11,15 +11,16 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
+import eu.portavita.axle.Generator
 import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.FilesWriter
+import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.model.PatientProfile
-import eu.portavita.databus.messagebuilder.JaxbHelper
 import eu.portavita.databus.messagebuilder.builders.PatientBuilder
 
 class PatientGenerator (
@@ -28,6 +29,8 @@ class PatientGenerator (
 ) extends Actor with ActorLogging {
 
 	private val milisecondsPerDay = 1000 * 60 * 60 * 24
+
+	private val marshaller = Generator.fhirJaxbContext.createMarshaller()
 
 	def receive = {
 		case PatientRequest(organization) =>
@@ -70,7 +73,7 @@ class PatientGenerator (
 		val builder = new PatientBuilder
 		builder.setMessageInput(patient.toPortavitaPatient)
 		builder.build()
-		val document = JaxbHelper.marshal(builder.getMessageContent())
+		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 		val fileName = "patient-" + patient.roleId + ".xml"
 		FilesWriter.write(directoryPath, fileName, document)
 	}

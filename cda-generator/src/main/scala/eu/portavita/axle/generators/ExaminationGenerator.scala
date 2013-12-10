@@ -4,32 +4,45 @@
 package eu.portavita.axle.generators
 
 import java.io.File
+import java.util.Date
+
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
+
+import org.hl7.v3.II
+import org.hl7.v3.ON
+import org.hl7.v3.POCDMT000040AssignedCustodian
+import org.hl7.v3.POCDMT000040ClinicalDocument
+import org.hl7.v3.POCDMT000040ClinicalDocument
+import org.hl7.v3.POCDMT000040Custodian
+import org.hl7.v3.POCDMT000040CustodianOrganization
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import eu.portavita.axle.Generator
+import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.bayesiannetwork.BayesianNetwork
 import eu.portavita.axle.bayesiannetwork.DiscreteBayesianNetworkReader
 import eu.portavita.axle.bayesiannetwork.NumericBayesianNetworkReader
 import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Observation
+import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.helper.ExaminationDocumentBuilder
 import eu.portavita.axle.helper.FilesWriter
-import eu.portavita.axle.helper.Marshal
+import eu.portavita.axle.helper.FilesWriter
+import eu.portavita.axle.helper.MarshalHelper
+import eu.portavita.axle.helper.RandomHelper
+import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.messages.ExaminationRequest
+import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.terminology.CodeSystem
-import org.hl7.v3.POCDMT000040ClinicalDocument
-import org.hl7.v3.POCDMT000040AssignedCustodian
-import org.hl7.v3.POCDMT000040Custodian
-import org.hl7.v3.ON
-import org.hl7.v3.POCDMT000040CustodianOrganization
-import org.hl7.v3.II
+import eu.portavita.terminology.CodeSystem
+import eu.portavita.terminology.HierarchyNode
 
 /**
  * Generates random examinations and saves the CDA to disk.
@@ -49,32 +62,26 @@ class ExaminationGenerator(
 	// Code system of the examination's code
 	val codeSystem = CodeSystem.guess(code)
 
-	private val documentBuilder = new ExaminationDocumentBuilder()
-	private val marshaller = new Marshal()
+	val provider = new ExaminationDataProvider
+	val builder = new eu.portavita.builder.ExaminationDocumentBuilder(GeneratorConfig.terminology, provider)
+
+	private val marshaller = Generator.cdaJaxbContext.createMarshaller()
+
 	private val writer = new FilesWriter()
 
 	/**
 	 * The hierarchy of this examination as stored by Portavita.
 	 */
-	private lazy val hierarchy = Generator.terminology.getHierarchy(codeSystem, code)
+	private lazy val hierarchy: HierarchyNode = GeneratorConfig.terminology.getHierarchy(codeSystem, code)
 
 	/**
 	 * Receives and processes a message from another actor.
 	 */
 	def receive = {
-		case ExaminationRequest(patient, date) =>
-			val examination = sampleNonEmptyExamination
-			examination.date = Some(date)
-
-			// Examination must have values
-			assert(examination.hasValues)
-
-			val hl7Examination = examination.buildHierarchy(hierarchy)
-			val document = documentBuilder.create(patient, hl7Examination)
-			document.setCustodian(custodian)
-
-			writer.write(marshaller.create(document))
-
+		case request @ ExaminationRequest(_,_) =>
+			val examination = sampleNonEmptyExamination(request)
+			val document = buildDocument(examination)
+			writer.write(MarshalHelper.marshal(document, marshaller))
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
@@ -97,17 +104,17 @@ class ExaminationGenerator(
 	}
 
 	@tailrec
-	final def sampleNonEmptyExamination: Examination = {
-		val exam = sample
+	final def sampleNonEmptyExamination(request: ExaminationRequest): Examination = {
+		val exam = sample(request)
 		if (exam.hasValues) exam
-		else sampleNonEmptyExamination
+		else sampleNonEmptyExamination(request)
 	}
 
 	/**
 	 * Returns a new random examination.
 	 * @return
 	 */
-	private def sample: Examination = {
+	private def sample(request: ExaminationRequest): Examination = {
 
 		val discreteObservations =
 			if (discreteBayesianNetwork.isDefined) discreteBayesianNetwork.get.sample
@@ -126,7 +133,14 @@ class ExaminationGenerator(
 
 			} else Map()
 
-		new Examination(code, discreteObservations ++ filteredNumericObservations)
+		val practitioner = RandomHelper.randomElement(request.patient.organization.practitioners)
+		new Examination(request.patient, code, request.date, discreteObservations ++ filteredNumericObservations, practitioner)
+	}
+
+	private def buildDocument(examination: Examination): POCDMT000040ClinicalDocument = {
+		val hl7Examination = examination.buildHierarchy(hierarchy)
+		val id = provider.add(examination, hl7Examination)
+		builder.create(id)
 	}
 }
 

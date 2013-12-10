@@ -13,6 +13,7 @@ import eu.portavita.concept.Participant
 import eu.portavita.dataProvider.IExaminationDataProvider
 import eu.portavita.concept.Role
 import scala.util.Random
+import eu.portavita.axle.generatable.Practitioner
 
 /**
  * Represents a queue of examination data. Data is appended to the queue and can be popped by an examination document
@@ -20,43 +21,48 @@ import scala.util.Random
  */
 class ExaminationDataProvider extends IExaminationDataProvider {
 
-	// Create queue of examinations.
 	val examinationQueue = mutable.Queue[Examination]()
-
-	// Create queue of patients.
 	val patientQueue = mutable.Queue[CareProvision]()
-	var id = 0
-
-	// Create queue of participant lists.
 	val participantQueue = mutable.Queue[List[Participant]]()
 
+	var id = 0
+
 	/**
-	 * Appends an examination to the queue.
-	 *
-	 * @param patient Patient of the examination.
-	 * @param examination Examination data.
+	 * Appends an examination, patient and participants to the queue.
 	 */
-	def add(patient: eu.portavita.axle.generatable.Patient, examination: Examination) = {
-		examinationQueue.enqueue(examination)
-		patientQueue.enqueue(patient.toHl7Patient)
-		val participants = new ArrayList[Participant]
-		def createParticipant(typeCode : String) : Participant = {
-			val participant = new Participant
-			participant.fromDate = new Date
-			participant.typeCode = typeCode
-			val participantRole = new Role
-			participantRole.playerId = Random.nextInt.toString
-			participantRole.scoperId = patient.organization.id.toString
-			participant.role = participantRole
-			participant
-		}
-		participants.add(createParticipant("AUT"))
-		participants.add(createParticipant("ENT"))
-		participants.add(createParticipant("LA"))
-		participants.add(createParticipant("PRF"))
-		participantQueue.enqueue(participants)
+	def add(generatedExamination: eu.portavita.axle.generatable.Examination, hl7Examination: Examination) = {
+		examinationQueue.enqueue(hl7Examination)
+		patientQueue.enqueue(generatedExamination.patient.toHl7Patient)
+		participantQueue.enqueue(createParticipants(generatedExamination))
 		id = id + 1
 		id
+	}
+
+	private def createParticipants(generatedExamination: eu.portavita.axle.generatable.Examination): ArrayList[Participant] = {
+		val participants = new ArrayList[Participant]
+
+		def createRole(practitioner: Practitioner): Role = {
+			val participantRole = new Role
+			// TODO: add role id!
+			participantRole.playerId = practitioner.person.entityId.toString()
+			participantRole.scoperId = practitioner.organizationEntityId.toString()
+			participantRole
+		}
+
+		def createParticipant(typeCode: String, practitioner: Practitioner): Participant = {
+			val participant = new Participant
+			participant.fromDate = generatedExamination.date
+			participant.typeCode = typeCode
+			participant.role = createRole(practitioner)
+			participant
+		}
+
+		participants.add(createParticipant("AUT", generatedExamination.practitioner))
+		participants.add(createParticipant("ENT", generatedExamination.practitioner))
+		participants.add(createParticipant("LA", generatedExamination.practitioner))
+		participants.add(createParticipant("PRF", generatedExamination.practitioner))
+
+		participants
 	}
 
 	/**

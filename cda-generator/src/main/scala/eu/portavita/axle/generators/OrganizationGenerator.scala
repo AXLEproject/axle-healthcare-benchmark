@@ -10,18 +10,23 @@ import scala.util.Random
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
+import eu.portavita.axle.Generator
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.helper.FilesWriter
+import eu.portavita.axle.helper.MarshalHelper
+import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.messages.TopLevelOrganizationRequest
+import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
-import eu.portavita.databus.messagebuilder.JaxbHelper
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
 import eu.portavita.databus.messagebuilder.builders.PractitionerBuilder
 
 class OrganizationGenerator(
 	val model: OrganizationModel,
 	val outputDirectory: String) extends Actor with ActorLogging {
+
+	private val marshaller = Generator.fhirJaxbContext.createMarshaller()
 
 	lazy private val patientGeneratorActor = context.actorFor("/user/patientGenerator")
 
@@ -66,7 +71,7 @@ class OrganizationGenerator(
 		val builder = new OrganizationBuilder
 		builder.setMessageInput(organization.toPortavitaOrganization)
 		builder.build()
-		val document = JaxbHelper.marshal(builder.getMessageContent())
+		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 
 		val fileName = organization.name + ".xml"
 		FilesWriter.write(directoryPath, fileName, document)
@@ -81,7 +86,7 @@ class OrganizationGenerator(
 		for (practitioner <- organization.practitioners) {
 			builder.setMessageInput(practitioner.toPortavitaEmployee)
 			builder.build()
-			val document = JaxbHelper.marshal(builder.getMessageContent())
+			val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 			val fileName = "practitioner-" + practitioner.roleId + ".xml"
 			FilesWriter.write(directoryPath, fileName, document)
 		}
