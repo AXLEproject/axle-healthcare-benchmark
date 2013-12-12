@@ -4,9 +4,7 @@
 package eu.portavita.axle.generators
 
 import java.io.File
-
 import scala.util.Random
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -22,6 +20,7 @@ import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.databus.messagebuilder.builders.PatientBuilder
+import eu.portavita.databus.messagebuilder.builders.JaxbHelper
 
 class PatientGenerator (
 	examinationGenerators: Map[String, ActorRef],

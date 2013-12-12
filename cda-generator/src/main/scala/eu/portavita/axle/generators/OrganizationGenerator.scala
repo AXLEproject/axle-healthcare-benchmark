@@ -15,8 +15,6 @@ import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.helper.FilesWriter
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.messages.PatientRequest
-import eu.portavita.axle.messages.PatientRequest
-import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
