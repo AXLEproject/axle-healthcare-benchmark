@@ -14,6 +14,7 @@ import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.generatable.Patient
 import eu.portavita.axle.generatable.Patient
+import eu.portavita.axle.generatable.Treatment
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.MarshalHelper
@@ -22,6 +23,7 @@ import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.PatientBuilder
+import eu.portavita.databus.messagebuilder.builders.TreatmentBuilder
 
 class PatientGenerator (
 	examinationGenerators: Map[String, ActorRef],
@@ -70,10 +72,27 @@ class PatientGenerator (
 	}
 
 	private def publish(patient: Patient) {
+		publisher.publish(marshalPatient(patient), "source.generator.type.fhir.patient.insert")
+		for (treatment <- patient.treatments) {
+			publisher.publish(marshalTreatment(treatment, patient), "source.generator.type.hl7v3.treatment.insert")
+		}
+	}
+
+	private def marshalPatient(patient: Patient): String = {
 		val builder = new PatientBuilder
 		builder.setMessageInput(patient.toPortavitaPatient)
 		builder.build()
-		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
-		publisher.publish(document, "source.generator.type.fhir.patient.insert")
+		MarshalHelper.marshal(builder.getMessageContent(), marshaller)
+	}
+
+	private def marshalTreatment(treatment: Treatment, subject: Patient): String = {
+		val builder = new TreatmentBuilder
+		val subjectParticipation = subject.toParticipation(treatment.id, treatment.from, treatment.to)
+		val performerParticipation = treatment.principalPractitioner.toParticipation(treatment.id, treatment.from, treatment.to)
+		val authorParticipation = treatment.principalPractitioner.toParticipation(treatment.id, treatment.from, treatment.to, typeCode = "AUT")
+		val portavitaTreatment = treatment.toPortavitaTreatment(subjectParticipation, performerParticipation, authorParticipation)
+		builder.setMessageInput(portavitaTreatment)
+		builder.build()
+		MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 	}
 }

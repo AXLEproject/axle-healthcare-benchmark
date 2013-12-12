@@ -32,7 +32,7 @@ class ExaminationDataProvider extends IExaminationDataProvider {
 	 */
 	def add(generatedExamination: eu.portavita.axle.generatable.Examination, hl7Examination: Examination) = {
 		examinationQueue.enqueue(hl7Examination)
-		patientQueue.enqueue(generatedExamination.patient.toHl7Patient)
+		patientQueue.enqueue(generatedExamination.patient.toHl7CareProvision)
 		participantQueue.enqueue(createParticipants(generatedExamination))
 		id = id + 1
 		id

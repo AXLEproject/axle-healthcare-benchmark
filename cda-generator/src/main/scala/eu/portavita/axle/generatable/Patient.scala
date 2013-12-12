@@ -5,13 +5,12 @@ package eu.portavita.axle.generatable
 
 import java.text.SimpleDateFormat
 import java.util.Date
-
 import scala.util.Random
-
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.databus.data.model.PortavitaPatient
+import eu.portavita.databus.data.model.Participation
 
 /**
  * Represents a patient.
@@ -29,6 +28,7 @@ class Patient(
 	val fromTime: Date,
 	val toTime: Date,
 	val polisNumber: String,
+	val treatments: List[Treatment],
 	val careProvisionStart: Date) {
 
 	val careProvisionId = Random.nextInt
@@ -38,7 +38,7 @@ class Patient(
 	 *
 	 * @return
 	 */
-	def toHl7Patient: eu.portavita.concept.CareProvision = {
+	def toHl7CareProvision: eu.portavita.concept.CareProvision = {
 		val patient = new eu.portavita.concept.Role
 		patient.playerId = person.entityId.toString
 		patient.scoperId = organization.id.toString
@@ -57,6 +57,16 @@ class Patient(
 		patient.setOrganizationEntityId(organization.id)
 	    patient.setPortavitaPerson(person.toPortavitaPerson)
 		patient
+	}
+
+	def toParticipation(actId: Long, from: Date, to: Date, typeCode: String = "SBJ"): Participation = {
+		val participation = new Participation()
+		participation.setActId(actId)
+		participation.setFromTime(from)
+		participation.setToTime(to)
+		participation.setRoleId(roleId)
+		participation.setTypeCode(typeCode)
+		participation
 	}
 
 	override def toString = {
@@ -80,9 +90,12 @@ object Patient {
 		val person = Person.sample(daysOld.toInt)
 		val roleId = RoleId.next
 		val birthDate = DateTimes.getRelativeDate((-1 * daysOld).toInt)
+		val polisNumber = RandomHelper.alphanumeric(10)
 		val pcprStart = DateTimes.getRelativeDate(daysOldAtStartPcpr.toInt, birthDate)
 		val fromTime = pcprStart
-		val polisNumber = RandomHelper.alphanumeric(10)
-		new Patient(person, roleId, organization, fromTime, null, polisNumber, pcprStart)
+		val principalPractitioner = RandomHelper.randomElement(organization.practitioners)
+		val treatments = List(Treatment.sample(from = pcprStart, principalPractitioner = principalPractitioner))
+
+		new Patient(person, roleId, organization, fromTime, null, polisNumber, treatments, pcprStart)
 	}
 }

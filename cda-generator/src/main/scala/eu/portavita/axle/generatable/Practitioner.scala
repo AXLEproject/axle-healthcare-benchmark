@@ -8,6 +8,7 @@ import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.databus.data.model.PortavitaPractitioner
 import eu.portavita.databus.data.model.PortavitaPerson
+import eu.portavita.databus.data.model.Participation
 
 /**
  * Represents a health care practitioner.
@@ -19,15 +20,25 @@ class Practitioner(
 	val toTime: Date,
 	val organizationEntityId: Long) {
 
-  def toPortavitaEmployee: PortavitaPractitioner = {
-    val practitioner = new PortavitaPractitioner
-    practitioner.setRoleId(roleId)
-    practitioner.setFromTime(fromTime)
-    practitioner.setToTime(toTime)
-    practitioner.setOrganizationEntityId(organizationEntityId)
-    practitioner.setPortavitaPerson(person.toPortavitaPerson)
-    practitioner
-  }
+	def toPortavitaEmployee: PortavitaPractitioner = {
+		val practitioner = new PortavitaPractitioner
+		practitioner.setRoleId(roleId)
+		practitioner.setFromTime(fromTime)
+		practitioner.setToTime(toTime)
+		practitioner.setOrganizationEntityId(organizationEntityId)
+		practitioner.setPortavitaPerson(person.toPortavitaPerson)
+		practitioner
+	}
+
+	def toParticipation(actId: Long, from: Date, to: Date = null, typeCode: String = "PRF"): Participation = {
+		val participation = new Participation()
+		participation.setActId(actId)
+		participation.setFromTime(from)
+		participation.setToTime(to)
+		participation.setRoleId(roleId)
+		participation.setTypeCode(typeCode)
+		participation
+	}
 }
 
 object Practitioner {
