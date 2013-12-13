@@ -4,7 +4,6 @@
 package eu.portavita.axle.generators
 
 import scala.util.Random
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
@@ -12,21 +11,21 @@ import eu.portavita.axle.Generator
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.messages.PatientRequest
-import eu.portavita.axle.messages.PatientRequest
 import eu.portavita.axle.messages.TopLevelOrganizationRequest
-import eu.portavita.axle.messages.TopLevelOrganizationRequest
-import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
 import eu.portavita.databus.messagebuilder.builders.PractitionerBuilder
+import eu.portavita.axle.GeneratorConfig
+import javax.xml.bind.Marshaller
 
 
 class OrganizationGenerator(
 	val model: OrganizationModel,
 	val outputDirectory: String) extends Actor with ActorLogging {
 
-	private val marshaller = Generator.fhirJaxbContext.createMarshaller()
+	private val marshaller = GeneratorConfig.fhirJaxbContext.createMarshaller()
+	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
 
 	lazy private val patientGeneratorActor = context.actorFor("/user/patientGenerator")
 	private val publisher = new RabbitMessageQueue
@@ -72,7 +71,7 @@ class OrganizationGenerator(
 		builder.build()
 		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
 
-		publisher.publish(document, "source.generator.type.fhir.organization.insert")
+		publisher.publish(document, "generator.fhir.organization")
 		storePractitioners(organization)
 	}
 
@@ -83,7 +82,7 @@ class OrganizationGenerator(
 			builder.setMessageInput(practitioner.toPortavitaEmployee)
 			builder.build()
 			val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
-			publisher.publish(document, "source.generator.type.fhir.practitioner.insert")
+			publisher.publish(document, "generator.fhir.practitioner")
 		}
 	}
 }

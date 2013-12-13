@@ -6,7 +6,7 @@ import javax.xml.bind.Marshaller
 
 object MarshalHelper {
 
-	def marshal(message: Object, marshaller: Marshaller): String = {
+	def marshal(message: IMessageContent, marshaller: Marshaller): String = {
 		val output = new StringWriter()
 		marshaller.marshal(message, output)
 		output.toString()

@@ -3,12 +3,10 @@
  */
 package eu.portavita.axle.generatable
 
-import scala.util.Random
-import eu.portavita.terminology.CodeSystem
 import java.util.Date
-import eu.portavita.concept.Act
-import eu.portavita.axle.Generator
+
 import eu.portavita.axle.GeneratorConfig
+import eu.portavita.databus.data.model.PortavitaAct
 
 /**
  * Represents a single observation event.
@@ -34,7 +32,7 @@ abstract class Observation {
 	 *
 	 * @return Java object version of this observation
 	 */
-	def toHl7Act: Option[eu.portavita.concept.Act]
+	def toHl7Act(date: Date): Option[PortavitaAct]
 }
 
 /**
@@ -47,19 +45,22 @@ case class NumericObservation(val code: String, val value: Double, val unit: Str
 	override def getCode = code
 	override def hasValue = true
 
-	override def toHl7Act: Option[eu.portavita.concept.Act] = {
-		val act = new Act
-		act.code = code
-		act.codeSystem = CodeSystem.guess(act.code)
-		act.classCode = "OBS"
-		act.moodCode = "EVN"
-		act.value = value.toString
-		act.numericValue1 = value.toString
-		act.unit = unit
-
-		if ("INT".equals(GeneratorConfig.terminology.getConcept(act.codeSystem, act.code).getValueType())) {
-			act.numericValue1 = Math.round(value).toString
-			act.value = act.numericValue1
+	override def toHl7Act(date: Date): Option[PortavitaAct] = {
+		val act = new PortavitaAct
+		act.setId(ActId.next)
+		act.setCode(code)
+		act.setClassCode("OBS")
+		act.setMoodCode("EVN")
+		act.setFromTime(date)
+		act.setUnit(unit)
+		act.setStatusCode("completed")
+		if ("INT".equals(GeneratorConfig.valueTypeProvider.get(code))) {
+			val roundedValue = Math.round(value)
+			act.setValue(roundedValue.toString())
+			act.setNumericValue1(roundedValue)
+		} else {
+			act.setValue(value.toString())
+			act.setNumericValue1(value)
 		}
 
 		Some(act)
@@ -82,15 +83,17 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 	 */
 	override def hasValue = value.nonEmpty && !value.equals("TRUE")
 
-	override def toHl7Act: Option[eu.portavita.concept.Act] = {
+	override def toHl7Act(date: Date): Option[PortavitaAct] = {
 		if (!hasValue) return None
 
-		val act = new Act
-		act.code = code
-		act.codeSystem = CodeSystem.guess(act.code)
-		act.classCode = "OBS"
-		act.moodCode = "EVN"
-		act.value = value
+		val act = new PortavitaAct
+		act.setId(ActId.next)
+		act.setCode(code)
+		act.setClassCode("OBS")
+		act.setMoodCode("EVN")
+		act.setFromTime(date)
+		act.setValue(value)
+		act.setStatusCode("completed")
 
 		Some(act)
 	}

@@ -1,8 +1,15 @@
 package eu.portavita.axle
 
 import com.typesafe.config.ConfigFactory
-import eu.portavita.terminology.LocalTerminologyCache
+import eu.portavita.axle.helper.TerminologyDisplayNameProvider
+import eu.portavita.axle.helper.TerminologyValueTypeProvider
 import eu.portavita.axle.publisher.RabbitMessageQueueConfig
+import eu.portavita.databus.messagebuilder.builders.CdaJaxbContext
+import eu.portavita.databus.messagebuilder.builders.FhirJaxbContext
+import eu.portavita.databus.messagebuilder.cda.CdaValueBuilder
+import eu.portavita.databus.messagebuilder.cda.UcumTransformer
+import eu.portavita.terminology.LocalTerminologyCache
+import eu.portavita.axle.helper.CdaValueBuilderHelper
 
 object GeneratorConfig {
 	val config = ConfigFactory.load()
@@ -14,16 +21,23 @@ object GeneratorConfig {
 	/** The terminology cache. */
 	val terminology = new LocalTerminologyCache(terminologyDirectory)
 	val unitMap = readUnitMap(terminologyDirectory + "/units.csv")
+	val valueTypeProvider = CdaValueBuilderHelper.getDisplayNameProvider
+
+	val cdaJaxbContext = new CdaJaxbContext
+	val fhirJaxbContext = new FhirJaxbContext
 
 	val nrOfOrganizations = config.getInt("nrOfOrganizations")
 	val cdasToGenerate = config.getLong("numberOfCdas")
 
 	val rabbitConfig = new RabbitMessageQueueConfig(
-		host         = config.getString("rabbit.host"),
+		username = config.getString("rabbit.username"),
+		password = config.getString("rabbit.password"),
+		host = config.getString("rabbit.host"),
+		virtualHost = config.getString("rabbit.virtualhost"),
 		exchangeName = config.getString("rabbit.exchangeName"),
 		exchangeType = config.getString("rabbit.exchangeType"),
-		durable      = config.getBoolean("rabbit.durable"),
-		autoDelete   = config.getBoolean("rabbit.autoDelete"))
+		durable = config.getBoolean("rabbit.durable"),
+		autoDelete = config.getBoolean("rabbit.autoDelete"))
 
 	/**
 	 * Reads a map from act code onto used unit from the given file.

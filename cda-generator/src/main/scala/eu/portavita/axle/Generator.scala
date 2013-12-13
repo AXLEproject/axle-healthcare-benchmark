@@ -12,8 +12,7 @@ import eu.portavita.axle.generators.PatientGenerator
 import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.model.PatientProfile
-import eu.portavita.databus.messagebuilder.builders.CdaJaxbContext
-import eu.portavita.databus.messagebuilder.builders.FhirJaxbContext
+import eu.portavita.axle.publisher.RabbitMessageQueue
 
 /**
  * Application that generates random CDA documents.
@@ -26,9 +25,6 @@ object Generator extends App {
 
 	/** Create actor system. */
 	implicit val system = ActorSystem("CdaGenerator", GeneratorConfig.config)
-
-	val cdaJaxbContext = new CdaJaxbContext
-	val fhirJaxbContext = new FhirJaxbContext
 
 	// Create examination generator actors for all models in directory.
 	private val examinationGenerators = ExaminationGenerator.getGeneratorActors(GeneratorConfig.modelsDirectory, system)

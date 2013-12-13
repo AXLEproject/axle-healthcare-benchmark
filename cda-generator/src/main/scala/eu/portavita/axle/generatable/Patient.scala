@@ -10,7 +10,7 @@ import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.databus.data.model.PortavitaPatient
-import eu.portavita.databus.data.model.Participation
+import eu.portavita.databus.data.model.PortavitaParticipation
 
 /**
  * Represents a patient.
@@ -22,8 +22,8 @@ import eu.portavita.databus.data.model.Participation
  * @param careProvisionStart Date of start of care provision.
  */
 class Patient(
-    val person: Person,
-    val roleId: Long,
+	val person: Person,
+	val roleId: Long,
 	val organization: Organization,
 	val fromTime: Date,
 	val toTime: Date,
@@ -33,34 +33,18 @@ class Patient(
 
 	val careProvisionId = Random.nextInt
 
-	/**
-	 * Returns a Java object for this patient.
-	 *
-	 * @return
-	 */
-	def toHl7CareProvision: eu.portavita.concept.CareProvision = {
-		val patient = new eu.portavita.concept.Role
-		patient.playerId = person.entityId.toString
-		patient.scoperId = organization.id.toString
-		val careProvision = new eu.portavita.concept.CareProvision
-		careProvision.patient = patient
-		careProvision.code = "170742000"
-		careProvision.id = careProvisionId.toString
-		careProvision
-	}
-
 	def toPortavitaPatient: PortavitaPatient = {
 		val patient = new PortavitaPatient
 		patient.setRoleId(roleId)
 		patient.setFromTime(fromTime)
 		patient.setToTime(toTime)
 		patient.setOrganizationEntityId(organization.id)
-	    patient.setPortavitaPerson(person.toPortavitaPerson)
+		patient.setPortavitaPerson(person.toPortavitaPerson)
 		patient
 	}
 
-	def toParticipation(actId: Long, from: Date, to: Date, typeCode: String = "SBJ"): Participation = {
-		val participation = new Participation()
+	def toParticipation(actId: Long, from: Date, to: Date, typeCode: String = "SBJ"): PortavitaParticipation = {
+		val participation = new PortavitaParticipation()
 		participation.setActId(actId)
 		participation.setFromTime(from)
 		participation.setToTime(to)

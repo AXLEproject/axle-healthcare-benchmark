@@ -4,46 +4,36 @@
 package eu.portavita.axle.generators
 
 import java.io.File
-import java.util.Date
-
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
-
-import org.hl7.v3.II
-import org.hl7.v3.ON
-import org.hl7.v3.POCDMT000040AssignedCustodian
-import org.hl7.v3.POCDMT000040ClinicalDocument
-import org.hl7.v3.POCDMT000040ClinicalDocument
-import org.hl7.v3.POCDMT000040ClinicalDocument
-import org.hl7.v3.POCDMT000040Custodian
-import org.hl7.v3.POCDMT000040CustodianOrganization
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.actor.actorRef2Scala
-import eu.portavita.axle.Generator
 import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.bayesiannetwork.BayesianNetwork
 import eu.portavita.axle.bayesiannetwork.DiscreteBayesianNetworkReader
 import eu.portavita.axle.bayesiannetwork.NumericBayesianNetworkReader
 import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Observation
-import eu.portavita.axle.generatable.Patient
-import eu.portavita.axle.helper.ExaminationDocumentBuilder
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.json.AsMap
-import eu.portavita.axle.json.AsMap
-import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.terminology.CodeSystem
-import eu.portavita.terminology.CodeSystem
+import javax.xml.bind.Marshaller
 import eu.portavita.terminology.HierarchyNode
+import eu.portavita.databus.messagebuilder.messagecontents.ExaminationMessageContent
+import eu.portavita.databus.messagebuilder.builders.ExaminationBuilder
+import eu.portavita.axle.helper.TerminologyValueTypeProvider
+import eu.portavita.axle.helper.TerminologyDisplayNameProvider
+import eu.portavita.axle.helper.TerminologyValueTypeProvider
+import eu.portavita.databus.messagebuilder.cda.CdaValueBuilder
+import eu.portavita.databus.messagebuilder.cda.UcumTransformer
+import eu.portavita.axle.helper.CdaValueBuilderHelper
 
 /**
  * Generates random examinations and saves the CDA to disk.
@@ -57,16 +47,16 @@ class ExaminationGenerator(
 	val code: String,
 	val discreteBayesianNetwork: Option[BayesianNetwork] = None,
 	val numericBayesianNetwork: Option[BayesianNetwork] = None,
-	val missingValuesBayesianNetwork: Option[BayesianNetwork] = None
-) extends Actor with ActorLogging {
+	val missingValuesBayesianNetwork: Option[BayesianNetwork] = None) extends Actor with ActorLogging {
 
-	// Code system of the examination's code
 	val codeSystem = CodeSystem.guess(code)
+	private val routingKey = "generator.hl7v3.examination"
 
-	val provider = new ExaminationDataProvider
-	val builder = new eu.portavita.builder.ExaminationDocumentBuilder(GeneratorConfig.terminology, provider)
+	private val (cdaValueBuilder, displayNameProvider) = CdaValueBuilderHelper.get
+	private val examinationBuilder = new ExaminationBuilder(cdaValueBuilder, displayNameProvider)
 
-	private val marshaller = Generator.cdaJaxbContext.createMarshaller()
+	private val marshaller = GeneratorConfig.cdaJaxbContext.createMarshaller()
+	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
 	private val publisher = new RabbitMessageQueue
 
 	/**
@@ -78,30 +68,14 @@ class ExaminationGenerator(
 	 * Receives and processes a message from another actor.
 	 */
 	def receive = {
-		case request @ ExaminationRequest(_,_) =>
+		case request @ ExaminationRequest(_, _) =>
 			val examination = sampleNonEmptyExamination(request)
-			val document = buildDocument(examination)
-			val marshalledDocument = MarshalHelper.marshal(document, marshaller)
-			publisher.publish(marshalledDocument, "source.generator.type.hl7v3.examination.insert")
+			val message = buildExaminationMessage(examination)
+			val marshalledMessage = MarshalHelper.marshal(message, marshaller)
+			publisher.publish(marshalledMessage, routingKey)
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
-	}
-
-	lazy val custodian = {
-		val custodian = new POCDMT000040Custodian()
-		val assignedCustodian = new POCDMT000040AssignedCustodian()
-		val custodianOrganization = new POCDMT000040CustodianOrganization()
-		val name = new ON()
-		name.getContent().add("AXLE CDA Generator")
-		custodianOrganization.setName(name)
-		val id = new II()
-		id.setExtension("0")
-		id.setRoot("2.16.840.1.113883.2.4.3.31.3.2")
-		custodianOrganization.getId().add(id)
-		assignedCustodian.setRepresentedCustodianOrganization(custodianOrganization)
-		custodian.setAssignedCustodian(assignedCustodian)
-		custodian
 	}
 
 	@tailrec
@@ -117,35 +91,36 @@ class ExaminationGenerator(
 	 */
 	private def sample(request: ExaminationRequest): Examination = {
 
-		val discreteObservations =
-			if (discreteBayesianNetwork.isDefined) discreteBayesianNetwork.get.sample
-			else Map[String, Observation]()
+		def sampleNetwork(net: Option[BayesianNetwork]): Map[String, Observation] = net match {
+			case Some(network) => network.sample
+			case None => Map.empty[String, Observation]
+		}
 
-		val allNumericObservations =
-			if (numericBayesianNetwork.isDefined) numericBayesianNetwork.get.sample
-			else Map[String, Observation]()
-
-		val filteredNumericObservations =
-			if (missingValuesBayesianNetwork.isDefined) {
-				val mv = missingValuesBayesianNetwork.get.sample
-
+		val discreteObservations = sampleNetwork(discreteBayesianNetwork)
+		val allNumericObservations = sampleNetwork(numericBayesianNetwork)
+		val filteredNumericObservations = missingValuesBayesianNetwork match {
+			case Some(net) =>
+				val mv = net.sample
 				for ((code, missing) <- mv if missing.hasValue)
 					yield code -> allNumericObservations.get(code).get
-
-			} else Map()
+			case None => Map()
+		}
 
 		val practitioner = RandomHelper.randomElement(request.patient.organization.practitioners)
 		new Examination(request.patient, code, request.date, discreteObservations ++ filteredNumericObservations, practitioner)
 	}
 
-	private def buildDocument(examination: Examination): POCDMT000040ClinicalDocument = {
-		val hl7Examination = examination.buildHierarchy(hierarchy)
-		val id = provider.add(examination, hl7Examination)
-		builder.create(id)
+	private def buildExaminationMessage(examination: Examination): ExaminationMessageContent = {
+		val hl7Examination = examination.build(hierarchy)
+		examinationBuilder.setMessageInput(hl7Examination)
+		examinationBuilder.build()
+		examinationBuilder.getMessageContent()
 	}
 }
 
 object ExaminationGenerator {
+	val jsonFileNameRegex = "^([^\\.]+)\\.json$".r
+
 	/**
 	 * Returns a map of examination codes onto references to actors that generate examinations of that type.
 	 * Namely, for each model in the given directory, an examination generator actor
@@ -179,14 +154,13 @@ object ExaminationGenerator {
 		val examinationDirectory = new java.io.File(directory + File.separator + "examinations")
 		val jsonFiles = examinationDirectory.listFiles.filter(_.getName.endsWith(".json"))
 
-		val jsonFileNameRegex = "^([^\\.]+)\\.json$".r
-		for (file <- jsonFiles;
+		for (
+			file <- jsonFiles;
 			jsonFileNameRegex(examinationName) = file.getName()
 		) yield {
 			(examinationName, file)
 		}
 	}
-
 
 	/**
 	 * Returns actor references within the given actor system from the given json string
@@ -245,8 +219,7 @@ object ExaminationGenerator {
 							numericBayesianNetwork = numericNetwork,
 							missingValuesBayesianNetwork = missingValuesNetwork))
 						.withDispatcher("my-dispatcher"),
-					name = examinationCode)
-				)
+					name = examinationCode))
 			} else {
 				None
 			}

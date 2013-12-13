@@ -17,8 +17,8 @@ class PersonName(val givenName: String, val familyName: String, val prefix: Stri
 	def hasPrefix = prefix.length > 0
 
 	override def toString = {
-		if (hasPrefix) givenName + " " + prefix + " " + familyName
-		else givenName + " " + familyName
+		if (hasPrefix) "%s %s %s".format(givenName, prefix, familyName)
+		else "%s %s".format(givenName, familyName)
 	}
 }
 

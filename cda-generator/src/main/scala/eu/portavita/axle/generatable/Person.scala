@@ -39,6 +39,7 @@ class Person(
 	    portavitaPerson.setGivenName(name.givenName)
 	    portavitaPerson.setFamilyNamePrefix(name.prefix)
 	    portavitaPerson.setAddresses(Arrays.asList(address.toPortavitaAddress))
+	    portavitaPerson.setName(name.toString())
 	    portavitaPerson
 	}
 

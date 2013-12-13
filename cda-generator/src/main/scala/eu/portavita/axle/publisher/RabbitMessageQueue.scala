@@ -7,52 +7,71 @@ import org.slf4j.LoggerFactory
 
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
+import com.rabbitmq.client.MessageProperties
 
 import eu.portavita.axle.Generator
 import eu.portavita.axle.GeneratorConfig
 
-
 class RabbitMessageQueue {
 	val log = LoggerFactory.getLogger(getClass())
+	val config = GeneratorConfig.rabbitConfig
+	val factory = new ConnectionFactory
 
-    val factory = new ConnectionFactory
-    factory.setHost(GeneratorConfig.rabbitConfig.host)
-    var channel = initChannel
+	var channel: Channel = initChannel
 
-    private def initChannel: Channel = {
-        val connection = factory.newConnection()
-        val channel = connection.createChannel
+	def publish(message: String, routingKey: String) {
+		try {
+			channel.basicPublish(config.exchangeName, routingKey, MessageProperties.TEXT_PLAIN, message.getBytes())
+		} catch {
+			case e: Exception =>
+				log.warn("Could not publish, reconnecting.")
+				channel = initChannel
+				publish(message, routingKey)
+		}
+	}
 
-        def declareExchange(channel: Channel) {
-            val arguments = new HashMap[String, Object]()
-            val config = GeneratorConfig.rabbitConfig
-            channel.exchangeDeclare(config.exchangeName, config.exchangeType, config.durable, config.autoDelete, false, arguments)
-        }
+	private def initChannel: Channel = {
+		val channel = createChannel
+		initExchange(channel)
+	}
 
-        def ensureExistenceOfExchange(channel: Channel) {
-            try {
-                declareExchange(channel)
-            } catch {
-                case e: IOException =>
-                    log.error("Channel is closed! Shutting program down.")
-                    Generator.system.shutdown()
-            }
-        }
+	private def createChannel: Channel = {
+		close
+		initializeFactory
+		val connection = factory.newConnection()
+		connection.createChannel
+	}
 
-        ensureExistenceOfExchange(channel)
+	private def initExchange(channel: Channel): Channel = {
+		try {
+			channel.exchangeDeclarePassive(config.exchangeName)
+			channel
+		} catch {
+			case e: IOException =>
+				val newChannel = createChannel
+				initExchangeActively(newChannel)
+				newChannel
+		}
+	}
 
-        channel
-    }
+	private def initExchangeActively(channel: Channel) {
+		val arguments = new HashMap[String, Object]()
+		channel.exchangeDeclare(config.exchangeName, config.exchangeType, config.durable, config.autoDelete, false, arguments)
+	}
 
-    def publish (message: String, routingKey: String) {
-        try {
-            channel.basicPublish(GeneratorConfig.rabbitConfig.exchangeName, routingKey, null, message.getBytes())
-        } catch {
-            case e: Exception =>
-                log.warn("Could not publish, reconnecting.")
-                channel = initChannel
-                publish(message, routingKey)
-        }
+	private def initializeFactory {
+		factory.setUsername(config.username)
+		factory.setPassword(config.password)
+		factory.setHost(config.host)
+		factory.setVirtualHost(config.virtualHost)
+	}
+
+	def close {
+		try {
+			if (channel != null && channel.isOpen()) channel.close()
+		} catch {
+			case e: IOException => log.warn("Can't close RabbitMQ channel.", e);
+		}
 	}
 
 }

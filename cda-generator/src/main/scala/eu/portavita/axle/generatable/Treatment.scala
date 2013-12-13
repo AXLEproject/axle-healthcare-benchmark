@@ -1,34 +1,43 @@
 package eu.portavita.axle.generatable
 
-import java.util.Date
-import eu.portavita.axle.helper.DateTimes
-import eu.portavita.axle.helper.RandomHelper
-import eu.portavita.databus.data.model.PortavitaTreatment
-import eu.portavita.databus.data.model.Participation
 import java.util.Arrays
+import java.util.Date
+
+import eu.portavita.axle.helper.RandomHelper
+import eu.portavita.databus.data.model.PortavitaParticipation
+import eu.portavita.databus.data.model.PortavitaTreatment
+import eu.portavita.databus.data.model.PortavitaTreatmentOfExamination
 
 class Treatment(
-		val id: Long,
-		val from: Date,
-		val to: Date,
-		val code: String,
-		val completed: Boolean,
-		val treatmentPlan: TreatmentPlan,
-		val principalPractitioner: Practitioner
-		) {
+	val id: Long,
+	val from: Date,
+	val to: Date,
+	val code: String,
+	val completed: Boolean,
+	val treatmentPlan: TreatmentPlan,
+	val principalPractitioner: Practitioner) {
 
-	def toPortavitaTreatment(subject: Participation, performer: Participation, author: Participation): PortavitaTreatment = {
-		val t = new PortavitaTreatment()
-		t.setActId(id)
-		t.setClassCode("PCPR")
-		t.setMoodCode("EVN")
-		t.setCode(code)
-		t.setFromTime(from)
-		t.setToTime(to)
-		t.setCarePlanActId(treatmentPlan.id)
-		t.setParticipants(Arrays.asList[Participation](subject, performer, author))
-		if (completed) t.setStatusCode("completed") else t.setStatusCode("active")
-		t
+	def toPortavitaTreatment(subject: PortavitaParticipation, performer: PortavitaParticipation, author: PortavitaParticipation): PortavitaTreatment = {
+		val treatment = new PortavitaTreatment()
+		treatment.setActId(id)
+		treatment.setClassCode("PCPR")
+		treatment.setMoodCode("EVN")
+		treatment.setCode(code)
+		treatment.setFromTime(from)
+		treatment.setToTime(to)
+		treatment.setTreatmentPlanActId(treatmentPlan.id)
+		treatment.setParticipants(Arrays.asList[PortavitaParticipation](subject, performer, author))
+		if (completed) treatment.setStatusCode("completed") else treatment.setStatusCode("active")
+		treatment.setTreatmentPlan(treatmentPlan.toPortavitaTreatmentPlan)
+		treatment
+	}
+
+	def toPortavitaTreatmentOfExamination(examinationActId: Long): PortavitaTreatmentOfExamination = {
+		val treatmentOfExamination = new PortavitaTreatmentOfExamination
+		treatmentOfExamination.setTreatmentActId(id)
+		treatmentOfExamination.setTreatmentCode(code)
+		treatmentOfExamination.setExaminationActId(examinationActId)
+		treatmentOfExamination
 	}
 }
 
@@ -39,7 +48,7 @@ object Treatment {
 		val id = ActId.next
 		val code = RandomHelper.randomElement(treatmentCodes)
 		val completed = false
-		val treatmentPlan = TreatmentPlan.sample
+		val treatmentPlan = TreatmentPlan.sample(code, from, to, completed)
 		new Treatment(id, from, to, code, completed, treatmentPlan, principalPractitioner)
 	}
 }

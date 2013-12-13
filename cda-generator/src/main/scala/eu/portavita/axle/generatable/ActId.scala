@@ -1,6 +1,7 @@
 package eu.portavita.axle.generatable
 
-import scala.actors.threadpool.AtomicInteger
+import java.util.concurrent.atomic.AtomicInteger
+
 
 object ActId {
 	private val id = new AtomicInteger(0)
