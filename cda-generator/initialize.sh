@@ -16,7 +16,7 @@ EOF
 }
 
 passwordPath="password.txt"
-while getopts "hp" opt; do
+while getopts ":hp:" opt; do
 	case $opt in
 	h)
 		usage
