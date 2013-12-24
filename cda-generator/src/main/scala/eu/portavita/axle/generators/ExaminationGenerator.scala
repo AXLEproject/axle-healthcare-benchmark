@@ -4,28 +4,31 @@
 package eu.portavita.axle.generators
 
 import java.io.File
-
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import eu.portavita.axle.Generator
-import eu.portavita.axle.helper.ExaminationDocumentBuilder
-import eu.portavita.axle.helper.FilesWriter
-import eu.portavita.axle.helper.Marshal
 import eu.portavita.axle.bayesiannetwork.BayesianNetwork
 import eu.portavita.axle.bayesiannetwork.DiscreteBayesianNetworkReader
 import eu.portavita.axle.bayesiannetwork.NumericBayesianNetworkReader
 import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Observation
+import eu.portavita.axle.helper.ExaminationDocumentBuilder
+import eu.portavita.axle.helper.FilesWriter
+import eu.portavita.axle.helper.Marshal
 import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.messages.ExaminationRequest
 import eu.portavita.terminology.CodeSystem
+import org.hl7.v3.POCDMT000040ClinicalDocument
+import org.hl7.v3.POCDMT000040AssignedCustodian
+import org.hl7.v3.POCDMT000040Custodian
+import org.hl7.v3.ON
+import org.hl7.v3.POCDMT000040CustodianOrganization
 
 /**
  * Generates random examinations and saves the CDA to disk.
@@ -67,12 +70,25 @@ class ExaminationGenerator(
 
 			val hl7Examination = examination.buildHierarchy(hierarchy)
 			val document = documentBuilder.create(patient, hl7Examination)
+			document.setCustodian(custodian)
 
 			writer.write(marshaller.create(document))
 
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
+	}
+
+	lazy val custodian = {
+		val custodian = new POCDMT000040Custodian()
+		val assignedCustodian = new POCDMT000040AssignedCustodian()
+		val custodianOrganization = new POCDMT000040CustodianOrganization()
+		val name = new ON()
+		name.getContent().add("AXLE CDA Generator")
+		custodianOrganization.setName(name)
+		assignedCustodian.setRepresentedCustodianOrganization(custodianOrganization)
+		custodian.setAssignedCustodian(assignedCustodian)
+		custodian
 	}
 
 	@tailrec
