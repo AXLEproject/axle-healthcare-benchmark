@@ -29,6 +29,7 @@ import org.hl7.v3.POCDMT000040AssignedCustodian
 import org.hl7.v3.POCDMT000040Custodian
 import org.hl7.v3.ON
 import org.hl7.v3.POCDMT000040CustodianOrganization
+import org.hl7.v3.II
 
 /**
  * Generates random examinations and saves the CDA to disk.
@@ -86,6 +87,10 @@ class ExaminationGenerator(
 		val name = new ON()
 		name.getContent().add("AXLE CDA Generator")
 		custodianOrganization.setName(name)
+		val id = new II()
+		id.setExtension("0")
+		id.setRoot("2.16.840.1.113883.2.4.3.31.3.2")
+		custodianOrganization.getId().add(id)
 		assignedCustodian.setRepresentedCustodianOrganization(custodianOrganization)
 		custodian.setAssignedCustodian(assignedCustodian)
 		custodian
