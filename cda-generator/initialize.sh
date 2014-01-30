@@ -42,7 +42,6 @@ openssl enc -d -aes-256-cbc -salt -in encrypted/models.tar.gz.enc -pass file:"$p
 
 # Decrypt libraries
 mkdir "lib/"
-openssl enc -d -aes-256-cbc -salt -in encrypted/cda-builder-1.0-SNAPSHOT.jar.enc -out lib/cda-builder-1.0-SNAPSHOT.jar -pass file:"$passwordPath"
-openssl enc -d -aes-256-cbc -salt -in encrypted/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -out lib/cda-marshaller-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
 openssl enc -d -aes-256-cbc -salt -in encrypted/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -out lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
+openssl enc -d -aes-256-cbc -salt -in encrypted/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -out lib/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
 
