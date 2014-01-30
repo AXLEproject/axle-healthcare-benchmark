@@ -4,12 +4,16 @@
 package eu.portavita.axle.generators
 
 import java.io.File
+import java.util.Date
+
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
+import akka.actor.ActorSelection.toScala
 import akka.actor.ActorSystem
 import akka.actor.Props
 import eu.portavita.axle.GeneratorConfig
@@ -18,78 +22,65 @@ import eu.portavita.axle.bayesiannetwork.DiscreteBayesianNetworkReader
 import eu.portavita.axle.bayesiannetwork.NumericBayesianNetworkReader
 import eu.portavita.axle.generatable.Examination
 import eu.portavita.axle.generatable.Observation
+import eu.portavita.axle.generatable.Patient
+import eu.portavita.axle.helper.CdaValueBuilderHelper
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.json.AsMap
-import eu.portavita.axle.messages.ExaminationRequest
+import eu.portavita.axle.publisher.PublishHelper
 import eu.portavita.axle.publisher.RabbitMessageQueue
-import eu.portavita.terminology.CodeSystem
-import javax.xml.bind.Marshaller
-import eu.portavita.terminology.HierarchyNode
-import eu.portavita.databus.messagebuilder.messagecontents.ExaminationMessageContent
 import eu.portavita.databus.messagebuilder.builders.ExaminationBuilder
-import eu.portavita.axle.helper.TerminologyValueTypeProvider
-import eu.portavita.axle.helper.TerminologyDisplayNameProvider
-import eu.portavita.axle.helper.TerminologyValueTypeProvider
-import eu.portavita.databus.messagebuilder.cda.CdaValueBuilder
-import eu.portavita.databus.messagebuilder.cda.UcumTransformer
-import eu.portavita.axle.helper.CdaValueBuilderHelper
+import eu.portavita.databus.messagebuilder.messagecontents.ExaminationMessageContent
+import eu.portavita.terminology.CodeSystem
+import eu.portavita.terminology.HierarchyNode
+import javax.xml.bind.Marshaller
+
+sealed trait ExaminationMessage
+case class ExaminationGenerationRequest(val patient: Patient, val performanceDates: IndexedSeq[Date]) extends ExaminationMessage
 
 /**
- * Generates random examinations and saves the CDA to disk.
- *
- * Actor that upon receiving examination requests generates a new random
- * examination, builds a CDA, and saves the CDA to disk.
- *
- * @param code
+ * Generates random examinations, serializes them to CDA, and sends the CDAs to the publisher actor.
  */
 class ExaminationGenerator(
 	val code: String,
+	val codeSystem: CodeSystem,
+	val hierarchy: HierarchyNode,
 	val discreteBayesianNetwork: Option[BayesianNetwork] = None,
 	val numericBayesianNetwork: Option[BayesianNetwork] = None,
 	val missingValuesBayesianNetwork: Option[BayesianNetwork] = None) extends Actor with ActorLogging {
 
-	val codeSystem = CodeSystem.guess(code)
-	private val routingKey = "generator.hl7v3.examination"
-
-	private val (cdaValueBuilder, displayNameProvider) = CdaValueBuilderHelper.get
-	private val examinationBuilder = new ExaminationBuilder(cdaValueBuilder, displayNameProvider)
-
-	private val marshaller = GeneratorConfig.cdaJaxbContext.createMarshaller()
-	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
-	private val publisher = new RabbitMessageQueue
-
-	/**
-	 * The hierarchy of this examination as stored by Portavita.
-	 */
-	private lazy val hierarchy: HierarchyNode = GeneratorConfig.terminology.getHierarchy(codeSystem, code)
+	private val queue = new ExaminationPublisher
 
 	/**
 	 * Receives and processes a message from another actor.
 	 */
 	def receive = {
-		case request @ ExaminationRequest(_, _) =>
-			val examination = sampleNonEmptyExamination(request)
-			val message = buildExaminationMessage(examination)
-			val marshalledMessage = MarshalHelper.marshal(message, marshaller)
-			publisher.publish(marshalledMessage, routingKey)
+		case request @ ExaminationGenerationRequest(patient, performanceDates) =>
+			for (performanceDate <- performanceDates) generate(patient, performanceDate)
+			val inPipeline = InPipeline.examinationRequests.finishRequest
+//			if (inPipeline % 500 == 0) log.info("Finished an examination, now %d examination requests in pipeline".format(inPipeline))
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
 	}
 
+	private def generate(patient: Patient, performanceDate: Date) {
+		val examination = sampleNonEmptyExamination(patient, performanceDate)
+		queue.publish(examination)
+	}
+
 	@tailrec
-	final def sampleNonEmptyExamination(request: ExaminationRequest): Examination = {
-		val exam = sample(request)
+	final def sampleNonEmptyExamination(patient: Patient, performanceDate: Date): Examination = {
+		val exam = sample(patient, performanceDate)
 		if (exam.hasValues) exam
-		else sampleNonEmptyExamination(request)
+		else sampleNonEmptyExamination(patient, performanceDate)
 	}
 
 	/**
 	 * Returns a new random examination.
 	 * @return
 	 */
-	private def sample(request: ExaminationRequest): Examination = {
+	private def sample(patient: Patient, performanceDate: Date): Examination = {
 
 		def sampleNetwork(net: Option[BayesianNetwork]): Map[String, Observation] = net match {
 			case Some(network) => network.sample
@@ -106,15 +97,36 @@ class ExaminationGenerator(
 			case None => Map()
 		}
 
-		val practitioner = RandomHelper.randomElement(request.patient.organization.practitioners)
-		new Examination(request.patient, code, request.date, discreteObservations ++ filteredNumericObservations, practitioner)
+		val practitioner = RandomHelper.randomElement(patient.organization.practitioners)
+		new Examination(patient, code, performanceDate, discreteObservations ++ filteredNumericObservations, practitioner)
 	}
 
-	private def buildExaminationMessage(examination: Examination): ExaminationMessageContent = {
-		val hl7Examination = examination.build(hierarchy)
-		examinationBuilder.setMessageInput(hl7Examination)
-		examinationBuilder.build()
-		examinationBuilder.getMessageContent()
+	class ExaminationPublisher {
+		private val publisher = new PublishHelper(context.actorSelection("/user/publisher"))
+
+		private val examinationBuilder: ExaminationBuilder = {
+			val (cdaValueBuilder, displayNameProvider) = CdaValueBuilderHelper.get
+			new ExaminationBuilder(cdaValueBuilder, displayNameProvider)
+		}
+
+		private val marshaller: Marshaller = {
+			val m = GeneratorConfig.cdaJaxbContext.createMarshaller()
+			m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
+			m
+		}
+
+		def publish(examination: Examination) {
+			val message = buildExaminationMessage(examination)
+			val marshalledMessage = MarshalHelper.marshal(message, marshaller)
+			publisher.publish(marshalledMessage, RabbitMessageQueue.examinationRoutingKey)
+		}
+
+		private def buildExaminationMessage(examination: Examination): ExaminationMessageContent = {
+			val hl7Examination = examination.build(hierarchy)
+			examinationBuilder.setMessageInput(hl7Examination)
+			examinationBuilder.build()
+			examinationBuilder.getMessageContent()
+		}
 	}
 }
 
@@ -210,11 +222,14 @@ object ExaminationGenerator {
 
 			// Create generator actor if there is either a discrete nor numeric network defined
 			if (discreteNetwork.isDefined || (numericNetwork.isDefined && missingValuesNetwork.isDefined)) {
+				val codeSystem = CodeSystem.guess(examinationCode)
 				// Create examination generator actor based on the model
 				Some(system.actorOf(
 					Props(
 						new ExaminationGenerator(
 							examinationCode,
+							codeSystem,
+							GeneratorConfig.terminology.getHierarchy(codeSystem, examinationCode),
 							discreteBayesianNetwork = discreteNetwork,
 							numericBayesianNetwork = numericNetwork,
 							missingValuesBayesianNetwork = missingValuesNetwork))

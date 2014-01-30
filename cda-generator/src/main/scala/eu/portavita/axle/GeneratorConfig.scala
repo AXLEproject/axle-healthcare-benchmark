@@ -10,6 +10,7 @@ import eu.portavita.databus.messagebuilder.cda.CdaValueBuilder
 import eu.portavita.databus.messagebuilder.cda.UcumTransformer
 import eu.portavita.terminology.LocalTerminologyCache
 import eu.portavita.axle.helper.CdaValueBuilderHelper
+import eu.portavita.axle.generators.PipelineConfig
 
 object GeneratorConfig {
 	val config = ConfigFactory.load()
@@ -38,6 +39,12 @@ object GeneratorConfig {
 		exchangeType = config.getString("rabbit.exchangeType"),
 		durable = config.getBoolean("rabbit.durable"),
 		autoDelete = config.getBoolean("rabbit.autoDelete"))
+
+	val pipelineConfig = new PipelineConfig(
+		maxPublishRequests = config.getInt("maxInPipeline.publishRequests"),
+		maxOrganizations = config.getInt("maxInPipeline.organizations"),
+		maxPatients = config.getInt("maxInPipeline.patients"),
+		maxExaminations = config.getInt("maxInPipeline.examinations"))
 
 	/**
 	 * Reads a map from act code onto used unit from the given file.

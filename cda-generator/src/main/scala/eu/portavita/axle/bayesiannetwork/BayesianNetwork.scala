@@ -5,7 +5,6 @@ package eu.portavita.axle.bayesiannetwork
 
 import akka.actor.Actor
 import akka.event.Logging
-import eu.portavita.axle.messages.ExaminationRequest
 import collection.mutable
 import eu.portavita.axle.generatable.DiscreteObservation
 import scala.util.parsing.json.JSON

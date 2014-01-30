@@ -5,14 +5,13 @@ package eu.portavita.axle
 
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.actor.actorRef2Scala
+import eu.portavita.axle.generators.BigBang
 import eu.portavita.axle.generators.ExaminationGenerator
 import eu.portavita.axle.generators.OrganizationGenerator
 import eu.portavita.axle.generators.PatientGenerator
-import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.model.PatientProfile
-import eu.portavita.axle.publisher.RabbitMessageQueue
+import eu.portavita.axle.publisher.RabbitMessageQueueActor
 
 /**
  * Application that generates random CDA documents.
@@ -25,6 +24,9 @@ object Generator extends App {
 
 	/** Create actor system. */
 	implicit val system = ActorSystem("CdaGenerator", GeneratorConfig.config)
+
+	private val publisher = system.actorOf(Props(new RabbitMessageQueueActor), name = "publisher")
+	system.log.info("Created Rabbit MQ publisher actor")
 
 	// Create examination generator actors for all models in directory.
 	private val examinationGenerators = ExaminationGenerator.getGeneratorActors(GeneratorConfig.modelsDirectory, system)
@@ -44,13 +46,11 @@ object Generator extends App {
 	system.log.info("Loaded organization mode.")
 
 	private val organizationGenerator = system.actorOf(
-		Props(new OrganizationGenerator(organizationModel, GeneratorConfig.outputDirectory)),
+		Props(new OrganizationGenerator(organizationModel)),
 		name = "organizationGenerator")
 	system.log.info("Created organization generator.")
 
-	// Start generating organizations.
-	system.log.info("Starting to generate data.")
-	for (i <- 1 to GeneratorConfig.nrOfOrganizations) {
-		organizationGenerator ! TopLevelOrganizationRequest
-	}
+	private val bigBang = system.actorOf(Props(new BigBang), name = "bigbang")
+	system.log.info("Created big bang.")
+
 }

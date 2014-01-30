@@ -4,86 +4,101 @@
 package eu.portavita.axle.generators
 
 import scala.util.Random
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
-import akka.actor.actorRef2Scala
-import eu.portavita.axle.Generator
+import akka.actor.ActorSelection.toScala
+import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.helper.MarshalHelper
-import eu.portavita.axle.messages.PatientRequest
-import eu.portavita.axle.messages.TopLevelOrganizationRequest
 import eu.portavita.axle.model.OrganizationModel
+import eu.portavita.axle.publisher.PublishHelper
 import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
 import eu.portavita.databus.messagebuilder.builders.PractitionerBuilder
-import eu.portavita.axle.GeneratorConfig
 import javax.xml.bind.Marshaller
 
+sealed trait OrganizationMessage
+case class TopLevelOrganizationRequest extends OrganizationMessage
 
-class OrganizationGenerator(
-	val model: OrganizationModel,
-	val outputDirectory: String) extends Actor with ActorLogging {
+class OrganizationGenerator(val model: OrganizationModel) extends Actor with ActorLogging {
 
-	private val marshaller = GeneratorConfig.fhirJaxbContext.createMarshaller()
-	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
+	lazy private val patientGeneratorActor = context.actorSelection("/user/patientGenerator")
 
-	lazy private val patientGeneratorActor = context.actorFor("/user/patientGenerator")
-	private val publisher = new RabbitMessageQueue
+	private val queue = new OrganizationPublisher
 
 	def receive = {
 		case TopLevelOrganizationRequest =>
-			val careGroupOrganizations = generateTopLevelOrganization()
+			System.err.println("TOP LEVEL ORGANIZATION REQUEST")
+			generateTopLevelOrganization()
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
 	}
 
 	private def generateTopLevelOrganization() {
-		val organization = Organization.sample(None)
-		store(organization)
+		val organization = generateAndStoreOrganization(None)
+		val numberOfSubOrganizations = Random.nextInt(50) + 10
+		generateSubOrganizations(organization, numberOfSubOrganizations)
+	}
+
+	private def generateSubOrganizations(partOf: Organization, numberOfSubOrganizations: Int) {
+		for (i <- 0 to numberOfSubOrganizations) {
+			val organization = generateAndStoreOrganization(Some(partOf))
+			val numberOfSubSubOrganizations = Random.nextInt(5)
+			generateSubSubOrganizations(organization, numberOfSubSubOrganizations)
+		}
+	}
+
+	private def generateSubSubOrganizations(partOf: Organization, numberOfSubSubOrganizations: Int) {
+		for (i <- 0 to numberOfSubSubOrganizations) generateAndStoreOrganization(Some(partOf))
+	}
+
+	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
+		InPipeline.waitUntilReady
+		val organization = Organization.sample(partOf)
+		queue.publish(organization)
 		generatePatients(organization)
-		for (i <- 0 to Random.nextInt(100) + 25) generateSubOrganization(organization)
+		organization
 	}
 
-	private def generateSubOrganization(partOf: Organization) {
-		val organization = Organization.sample(Some(partOf))
-		store(organization)
-		generatePatients(organization)
-		generateSubSubOrganizations(organization)
-	}
-
-	private def generateSubSubOrganizations(partOf: Organization) {
-		for (i <- 0 to Random.nextInt(10)) store(Organization.sample(Some(partOf)))
-	}
-
-	private def generatePatients(organization: Organization) {
+	private def generatePatients(organization: Organization): Int = {
 		val nrOfPatients = model.sampleNrOfPatients
-		for (i <- 1 to nrOfPatients) patientGeneratorActor ! PatientRequest(organization)
+		patientGeneratorActor ! PatientRequest(organization, nrOfPatients)
+		val inPipeline = InPipeline.patientRequests.newRequest
+		if (inPipeline % 50 == 0) log.info("Requested a new patient, now %d patient requests in pipeline".format(inPipeline))
+		nrOfPatients
 	}
 
-	/**
-	 * Saves the marshalled version of given organization to disk.
-	 * @param organization
-	 */
-	private def store(organization: Organization) {
-		val builder = new OrganizationBuilder
-		builder.setMessageInput(organization.toPortavitaOrganization)
-		builder.build()
-		val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
+	class OrganizationPublisher {
+		private val publisher = new PublishHelper(context.actorSelection("/user/publisher"))
 
-		publisher.publish(document, "generator.fhir.organization")
-		storePractitioners(organization)
-	}
+		private val organizationBuilder = new OrganizationBuilder
+		private val practitionerBuilder = new PractitionerBuilder
 
-	private def storePractitioners(organization: Organization) {
-		val builder = new PractitionerBuilder
+		private val marshaller = GeneratorConfig.fhirJaxbContext.createMarshaller()
+		marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
 
-		for (practitioner <- organization.practitioners) {
-			builder.setMessageInput(practitioner.toPortavitaEmployee)
-			builder.build()
-			val document = MarshalHelper.marshal(builder.getMessageContent(), marshaller)
-			publisher.publish(document, "generator.fhir.practitioner")
+		/**
+		 * Publishes the marshalled version of given organization.
+		 * @param organization
+		 */
+		def publish(organization: Organization) {
+			organizationBuilder.setMessageInput(organization.toPortavitaOrganization)
+			organizationBuilder.build()
+			val document = MarshalHelper.marshal(organizationBuilder.getMessageContent(), marshaller)
+
+			publisher.publish(document, RabbitMessageQueue.organizationRoutingKey)
+			publishPractitioners(organization)
+		}
+
+		private def publishPractitioners(organization: Organization) {
+			for (practitioner <- organization.practitioners) {
+				practitionerBuilder.setMessageInput(practitioner.toPortavitaEmployee)
+				practitionerBuilder.build()
+				val document = MarshalHelper.marshal(practitionerBuilder.getMessageContent(), marshaller)
+				publisher.publish(document, RabbitMessageQueue.practitionerRoutingKey)
+			}
 		}
 	}
 }
-
