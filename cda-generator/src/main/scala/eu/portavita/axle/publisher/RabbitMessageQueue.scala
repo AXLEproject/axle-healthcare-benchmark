@@ -15,7 +15,6 @@ import eu.portavita.axle.GeneratorConfig
 class RabbitMessageQueue {
 	val log = LoggerFactory.getLogger(getClass())
 	val config = GeneratorConfig.rabbitConfig
-	val factory = new ConnectionFactory
 
 	var channel: Channel = initChannel
 
@@ -37,8 +36,7 @@ class RabbitMessageQueue {
 
 	private def createChannel: Channel = {
 		close
-		initializeFactory
-		val connection = factory.newConnection()
+		val connection = RabbitConnectionFactory.newConnection
 		connection.createChannel
 	}
 
@@ -59,13 +57,6 @@ class RabbitMessageQueue {
 		channel.exchangeDeclare(config.exchangeName, config.exchangeType, config.durable, config.autoDelete, false, arguments)
 	}
 
-	private def initializeFactory {
-		factory.setUsername(config.username)
-		factory.setPassword(config.password)
-		factory.setHost(config.host)
-		factory.setVirtualHost(config.virtualHost)
-	}
-
 	def close {
 		try {
 			if (channel != null && channel.isOpen()) channel.close()
@@ -74,4 +65,12 @@ class RabbitMessageQueue {
 		}
 	}
 
+}
+
+object RabbitMessageQueue {
+	val organizationRoutingKey = "generator.fhir.organization"
+	val practitionerRoutingKey = "generator.fhir.practitioner"
+	val patientRoutingKey = "generator.fhir.patient"
+	val treatmentRoutingKey = "generator.hl7v3.treatment"
+	val examinationRoutingKey = "generator.hl7v3.examination"
 }

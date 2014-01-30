@@ -27,7 +27,7 @@ class Treatment(
 		treatment.setToTime(to)
 		treatment.setTreatmentPlanActId(treatmentPlan.id)
 		treatment.setParticipants(Arrays.asList[PortavitaParticipation](subject, performer, author))
-		if (completed) treatment.setStatusCode("completed") else treatment.setStatusCode("active")
+		treatment.setStatusCode(if (completed) "completed" else "active")
 		treatment.setTreatmentPlan(treatmentPlan.toPortavitaTreatmentPlan)
 		treatment
 	}
