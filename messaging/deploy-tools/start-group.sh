@@ -21,14 +21,10 @@ INSTANCETYPE="${INSTANCETYPE:-m1.large}"
 KEYPAIRNAME="axle"
 KEYPAIR="/home/${USER}/.aws/axle.pem"
 
-# 2x40 GB SSD + 4vCPU + 7.5GB RAM
-BROKERTYPE="c3.xlarge"
-# 2x40 GB SSD + 4vCPU + 7.5GB RAM
-INGRESSTYPE="c3.xlarge"
-# 4x420 GB + 8vCPU + 7GB RAM
-XFMTYPE="c1.xlarge"
-# 2x40 GB SSD + 4vCPU + 7.5GB RAM
-LOADTYPE="c3.xlarge"
+BROKERTYPE="t1.micro"
+INGRESSTYPE="t1.micro"
+XFMTYPE="t1.micro"
+LOADTYPE="t1.micro"
 DWHTYPE="t1.micro"
 
 # Error handlers
@@ -40,37 +36,33 @@ _error() {
 
 test "x$EC2_URL" = "x" && _error "source AWS credentials file first"
 
-echo "Creating group ${GROUPNAME}"
-
-RES=`euca-create-group ${GROUPNAME} -d "Security group for AXLE Messaging"` \
-  || _error "Could not create security group ${GROUPNAME}"
-
-echo ...
-echo $RES
-echo ...
-
 echo "Starting group ${GROUPNAME}"
+
+# NOTE the instance name is used to determine the name of the setup script,
+# you should use the format "TYPE-ID" where TYPE is one of {broker, ingress, 
+# xfm, loader} and ID is an arbitrary identifier (e.g., a number).
+# Example: broker-1
 
 echo "Start broker first (we need to propagate its IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} broker1 0.0.0.0 \
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "0.0.0.0" \
     || _error "Could not start the broker, stop further processing"
 
 BROKERIP=`euca-describe-instances --filter instance-id=broker1 | tr '\n' ' ' | awk '{print $7}'`
 
 echo "Broker running on ip ${BROKERIP}"
 
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${INGRESSTYPE} ${GROUPNAME} ingress1 ${BROKERIP} &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${XFMTYPE} ${GROUPNAME} xfm1 ${BROKERIP} &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${XFMTYPE} ${GROUPNAME} xfm2 ${BROKERIP} &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${LOADTYPE} ${GROUPNAME} loader1 ${BROKERIP} &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${LOADTYPE} ${GROUPNAME} loader2 ${BROKERIP} &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP} &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP} &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP} &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP} &
 
 FAIL=0
 for job in `jobs -p`

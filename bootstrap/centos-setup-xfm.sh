@@ -6,10 +6,30 @@
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
 
+if [ $# -ne 1 ];
+then
+  echo "Usage: $0 <broker-ip>"
+  exit 127
+fi
+
+BROKERIP=$1
+MESSAGING_DIR=/home/ec2-user/mgrid-messaging-0.9
+
 yum install -y python-pip python-lxml
 
 pip install importlib kombu
 
 tar -xvf axle-healthcare-benchmark/messaging/mgrid-messaging-0.9.tar.gz
 
-cd mgrid-messaging-0.9 && python integration/rabbitmq/transformer.py
+cat > /etc/init/axle-xfm.conf <<EOF
+description "AXLE Messaging Transformer"
+start on runlevel [2345]
+stop on runlevel [016]
+respawn
+
+script
+  cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERIP
+end script
+EOF
+
+initctl start axle-xfm

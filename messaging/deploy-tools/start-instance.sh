@@ -28,6 +28,8 @@ GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERIP=$9
 
+TEMP_REPO="ssh://vagrant@217.21.198.42:2222/home/vagrant/Development/axle-healthcare-benchmark"
+
 #exit code
 WARN=0
 
@@ -88,17 +90,18 @@ scp -i ${KEYPAIR} axle_tmp_rsa ${AMIUSERNAME}@${IP}:~/.ssh/id_rsa || _error "Cou
 # incorrect terminal settings
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 sudo yum install -y git
-git clone --branch topic/fawork/messaging ssh://vagrant@axle-healthcare-benchmark:2222/home/vagrant/Development/axle-healthcare-benchmark
+git clone $TEMP_REPO
 exit
 EOF
 
 # Need to copy the password before bootstrapping, since the axle / cdagenpwd is necessary
 # to download the HDL installer
-scp -i ${KEYPAIR} axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || error "Could not copy axle generator password"
+#scp -i ${KEYPAIR} axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || error "Could not copy axle generator password"
 
+# choose the setup script based on the instance name
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
-ssh -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
-./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP}
+ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP}
 EOF
 
 exit $WARN

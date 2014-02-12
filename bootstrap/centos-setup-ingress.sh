@@ -24,7 +24,7 @@ yum install -y java-1.7.0-openjdk
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
 cd $MESSAGING_DIR && sbt clean compile stage \
-  && _error "Could not build ingress messaging software"
+  || _error "Could not build ingress messaging software"
 
 cat > /etc/init/axle-ingress.conf <<EOF
 description "AXLE Messaging Ingress"
@@ -33,8 +33,8 @@ stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && sudo -u ec2-user sh -c "./target/start -Dconfig.rabbitmq.host=$BROKERIP net.mgrid.tranzoom.ingress.IngressApplication 2>&1 > axle-ingress.log"
+  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERIP net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress
 end script
 EOF
 
-initctl restart axle-ingress
+initctl start axle-ingress
