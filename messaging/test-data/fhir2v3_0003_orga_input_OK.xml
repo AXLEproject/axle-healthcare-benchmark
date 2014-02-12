@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Organization xmlns:ns2="http://www.w3.org/1999/xhtml" xmlns="http://hl7.org/fhir">
+    <identifier>
+        <use value="official"/>
+        <system value="urn:oid:2.16.840.1.113883.2.4.3.31"/>
+        <value value="650"/>
+        <period>
+            <start value="2010-10-10T00:00:00"/>
+        </period>
+    </identifier>
+    <identifier>
+        <use value="usual"/>
+        <system value="urn:oid:2.16.840.1.113883.2.4.6.1"/>
+        <value value="0111111"/>
+        <period>
+            <start value="2010-10-10T00:00:00"/>
+        </period>
+    </identifier>
+    <name value="Doctor Deke"/>
+    <type>
+        <coding>
+            <system value="urn:oid:2.16.840.1.113883.2.4.3.31"/>
+            <code value="GPS"/>
+            <display value="General Practitioner Surgery"/>
+        </coding>
+    </type>
+    <telecom>
+        <system value="phone"/>
+        <value value="030-1234567"/>
+        <use value="work"/>
+        <period>
+            <start value="2000-01-01T00:00:00"/>
+        </period>
+    </telecom>
+    <address>
+        <line value="Oostenburgervoorstraat 100"/>
+        <city value="Amsterdam"/>
+        <zip value="1018MR"/>
+        <country value="Nederland"/>
+        <period>
+            <start value="2005-06-24T11:34:54"/>
+        </period>
+    </address>
+    <partOf>
+        <extension url="http://portavita.eu/fhir/Identifier">
+          <valueIdentifier>
+            <system value="urn:oid:2.16.840.1.113883.2.4.3.31.1" />
+            <value value="456" />
+          </valueIdentifier>
+        </extension>
+        <reference value="Organization/456"/>
+    </partOf>
+    <active value="true"/>
+</Organization>
+

@@ -1,0 +1,1 @@
+ccloader: target/start -Dlog4j.configuration=log4j-test.xml -Dconfig.rabbitmq.host=10.78.40.171 net.mgrid.tranzoom.ccloader.LoaderApplication 

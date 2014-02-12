@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="urn:mgrid-net:tranzoom" targetNamespace="urn:mgrid-net:tranzoom" elementFormDefault="qualified">
+  <xs:element name="error" type="Error">
+  </xs:element>
+  <xs:complexType name="Error">
+        <xs:sequence>
+          <xs:element name="type" minOccurs="1" maxOccurs="1" type="xs:string">
+          </xs:element>
+          <xs:element name="reason" minOccurs="1" maxOccurs="1" type="xs:string">
+          </xs:element>
+          <xs:element name="source" minOccurs="1" maxOccurs="1" type="xs:string">
+          </xs:element>
+        </xs:sequence>
+  </xs:complexType>
+</xs:schema>

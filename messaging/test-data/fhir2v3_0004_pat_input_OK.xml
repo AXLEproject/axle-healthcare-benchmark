@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Payload of the HTTP POST to http://mgrid.net/fhir/Patient This means that a new patient has been added to Portavita with the following details. -->
+<Patient xmlns:ns2="http://www.w3.org/1999/xhtml" xmlns="http://hl7.org/fhir" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://hl7.org/fhir xsd/patient.xsd">
+	<identifier>
+		<!-- The Portavita role ID. -->
+		<use value="official" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.1" />
+		<value value="19889115" />
+	</identifier>
+	<identifier>
+		<!-- The Portavita entity ID. -->
+		<use value="secondary" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.2" />
+		<value value="1629601" />
+	</identifier>
+	<identifier>
+		<!-- The patient's BSN. -->
+		<use value="usual" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.6.3" />
+		<value value="010001128" />
+	</identifier>
+	<identifier>
+		<!-- The patient number as used in the HIS. -->
+		<use value="usual" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.TODO.1" />
+		<value value="PV16296012637" />
+	</identifier>
+	<identifier>
+		<!-- The polis number of the patient. The assigner is the reference to the entity of the insurance company. -->
+		<use value="usual" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.2.TODO.2" />
+		<value value="P19889125" />
+		<period>
+			<start value="2010-05-21T00:00:00" />
+		</period>
+		<assigner>
+			<extension url="http://portavita.eu/fhir/Identifier">
+              <valueIdentifier>
+                <system value="urn:oid:2.16.840.1.113883.2.4.3.31.1" />
+                <value value="27085" />
+              </valueIdentifier>
+            </extension>
+            <reference value="Organization/27085" />
+		</assigner>
+	</identifier>
+	<name>
+		<use value="usual" />
+		<text value="Slobsmeed - Schooltschuur, D" />
+		<family value="Slobsmeed - Schooltschuur" />
+		<given value="Deliah" />
+	</name>
+	<name>
+		<use value="maiden" />
+		<family value="Schooltschuur" />
+	</name>
+	<telecom>
+		<system value="email" />
+		<value value="deliah@versatel.nl" />
+		<use value="home" />
+	</telecom>
+	<telecom>
+		<system value="phone" />
+		<value value="0123-456789" />
+		<use value="home" />
+	</telecom>
+	<telecom>
+		<system value="phone" />
+		<value value="06-12345789" />
+		<use value="mobile" />
+	</telecom>
+	<gender>
+		<coding>
+			<system value="http://hl7.org/fhir/v3/AdministrativeGender" />
+			<code value="F" />
+		</coding>
+	</gender>
+	<birthDate value="1951-09-09T00:00:00" />
+	<deceasedBoolean value="false" />
+	<address>
+		<line value="Zijlweg 601-182" />
+		<city value="HAARLEM" />
+		<zip value="1234AB" />
+		<period>
+			<start value="2013-05-21T00:00:00" />
+		</period>
+	</address>
+	<careProvider>
+		<extension url="http://portavita.eu/fhir/Identifier">
+          <valueIdentifier>
+            <system value="urn:oid:2.16.840.1.113883.2.4.3.31.1" />
+            <value value="19889123" />
+          </valueIdentifier>
+        </extension>
+		<!-- Two extensions here: The first one denotes that this care provider is a general practitioner. The second one denotes the time from which the care
+			provider started treating for this patient. -->
+		<extension url="http://portavita.eu/fhir/CareProviderRole">
+			<valueString value="GP" />
+		</extension>
+		<extension url="http://portavita.eu/fhir/CareProviderFromTime">
+			<valueDateTime value="2013-05-21T00:00:00" />
+		</extension>
+		<reference value="Provider/19889123" />
+	</careProvider>
+	<managingOrganization>
+		<extension url="http://portavita.eu/fhir/Identifier">
+          <valueIdentifier>
+            <system value="urn:oid:2.16.840.1.113883.2.4.3.31.2" />
+            <value value="2637" />
+          </valueIdentifier>
+        </extension>
+        <reference value="Organization/2637" />
+	</managingOrganization>
+</Patient>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Payload of the HTTP POST to http://mgrid.net/fhir/Practitioner This means that a new employee (has role_id) has been added to Portavita. 
+	with the following details. JWK 27-11-2013. -->
+<Practitioner xmlns:ns2="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://hl7.org/fhir" xsi:schemaLocation="http://hl7.org/fhir xsd/practitioner.xsd">
+	<identifier>
+		<!--the identifier most trusted for the identification. In Portavita that would be role_id -->
+		<use value="official" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.3" /><!-- 0..1 The namespace for the role id identifier -->
+		<value value="192105" />
+		<!-- <period> 0..1 Period Time period when id was valid for use, is left out because is send by Organisation message -->
+	</identifier>
+	<identifier>
+		<!-- identifier assigned in secondary use. In Portavita that would be entity id -->
+		<use value="secondary" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.2" /><!-- entity.id, see wiki: OID Tree -->
+		<value value="31879" />
+	</identifier>
+	<identifier>
+		<!-- identifier recommended for display and use in real-world interactions. Portavita that would be vectis (agb) code. 
+			In this case from table Specialisten: zorgverlenersnummer_vektis -->
+		<use value="usual" />
+		<system value="urn:oid:2.16.840.1.113883.2.4.6.1" />
+		<value value="13199" />
+	</identifier>
+	<name><!-- 0..1  In this case from Specialisten 'WMJ JASPERS'(see AGB CODE and ENTI_ID above -->
+		<use value="usual" />
+		<text value="WMJ JASPERS-DE BOER" />
+		<family value="JASPERS" /><!-- From FAMILYNAME_PARTNER for married females. From FAMILY NAME for males and unmarried 
+			females -->
+		<given value="Francisca" />
+	</name>
+	<telecom>
+		<system value="phone" />
+		<value value="0123-456789" />
+		<use value="work" />
+	</telecom>
+	<telecom>
+		<system value="phone" />
+		<value value="06-52523542" />
+		<use value="mobile" />
+	</telecom>
+	<telecom>
+		<system value="email" />
+		<value value="wmjdeboer@zgch.nl" />
+		<use value="work" />
+	</telecom>
+	<address>
+		<use value="work" />
+		<line value="Tjongerschansweg 100-200" />
+		<city value="HEERENVEEN" />
+		<zip value="8500AB" />
+		<period>
+			<start value="2010-03-31T00:00:00" />
+		</period>
+	</address>
+	<gender>
+		<coding>
+			<system value="http://hl7.org/fhir/v3/AdministrativeGender" />
+			<code value="F" />
+		</coding>
+	</gender>
+	<birthDate value="1951-09-09T00:00:00" />
+	<organization><!-- 0..1 Resource(Organization) The represented organization §. The id is the organization's entity id -->
+		<extension url="http://portavita.eu/fhir/Identifier">
+          <valueIdentifier>
+            <system value="urn:oid:2.16.840.1.113883.2.4.3.31.1" />
+            <value value="257327" />
+          </valueIdentifier>
+        </extension>
+		<reference value="Organization/257327" /><!-- ?? 0..1 Relative, internal or absolute URL reference. In this case relative -->
+	</organization>
+	<!-- <role> doesn't seem to add anything we need momentarily and is omitted -->
+	<specialty>
+		<coding>
+			<system value="http://portavita.eu/fhir/PractitionerSpeciality" />
+			<code value="specialist" /> <!-- either "gp" or "specialist"; nothing else at this time -->
+		</coding>
+	</specialty>
+	<period><!-- 0..1 Period The period during which the person is authorized to perform the service § -->
+		<start value="2010-03-31T00:00:00" />
+	</period>
+</Practitioner>

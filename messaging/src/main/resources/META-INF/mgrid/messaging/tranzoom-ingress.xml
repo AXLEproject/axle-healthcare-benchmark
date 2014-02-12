@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:int="http://www.springframework.org/schema/integration"
+  xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
+  xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+  xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+  xmlns:task="http://www.springframework.org/schema/task"
+  xmlns:jmx="http://www.springframework.org/schema/integration/jmx"
+  xmlns:aop="http://www.springframework.org/schema/aop"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/xml http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
+    http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+    http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+    http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+  <context:property-placeholder
+    location="classpath:META-INF/mgrid/messaging/ingress.properties"
+    system-properties-mode="OVERRIDE"/>
+
+  <!-- Channels, routing and transformation -->
+
+  <int:channel id="hl7v3ValidateChannel" />
+  <int:channel id="fhirValidateChannel" />
+  <int:channel id="publishResultChannel" />
+  <int:channel id="prepareRoutingChannel"/>
+  <int:channel id="fhirTransformChannel" />
+  
+  <!-- 
+  
+  IMPORTANT NOTE!
+  
+  All channels which are connected to an outbound-channel-adapter with publisher confirms 
+  enabled should make sure that the adapter reads messages in a single thread. Because of
+  the way RabbitMQ implements publisher confirms (set the delivery tag by per-channel counting 
+  of messages) sending is not thread-safe at the connection factory level (CachingConnectionFactory
+  by default).
+  
+  Here we need to attach the publishErrorChannel and toTransformersChannel to the same
+  singleTaskExecutor dispatcher.
+  
+  -->
+  
+  <int:channel id="publishErrorChannel">
+    <int:dispatcher task-executor="singleTaskExecutor" />
+  </int:channel>
+  
+  <int:channel id="toTransformersChannel">
+    <int:dispatcher task-executor="singleTaskExecutor" />
+  </int:channel>
+  
+  <task:executor id="singleTaskExecutor"
+    pool-size="1"
+    queue-capacity="100"/>
+
+  <int:logging-channel-adapter id="debugLoggerChannel" level="DEBUG"/>
+  <int:logging-channel-adapter id="errorLoggerChannel" level="ERROR"/>
+
+  <!-- Schema validation
+
+  If XML validation fails we include the source message in the error message.
+
+  We use a custom xml validator instead of the int-xml:validating-filter because we need
+  access to both the validation exception and source message.
+
+  -->
+
+  <int:service-activator
+    input-channel="hl7v3ValidateChannel"
+    output-channel="prepareRoutingChannel"
+    method="validate">
+
+    <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
+      <property name="errorChannel" ref="publishErrorChannel"/>
+      <property name="selector" ref="hl7v3XmlValidatingMessageSelector"/>
+    </bean>
+  </int:service-activator>
+
+  <int:service-activator
+    input-channel="fhirValidateChannel"
+    output-channel="fhirTransformChannel"
+    method="validate">
+
+    <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
+      <property name="errorChannel" ref="publishErrorChannel"/>
+      <property name="selector" ref="fhirXmlValidatingMessageSelector"/>
+    </bean>
+  </int:service-activator>
+
+  <bean id="hl7v3XmlValidatingMessageSelector" class="org.springframework.integration.xml.selector.XmlValidatingMessageSelector">
+    <constructor-arg name="schema" value="CDA_R2_NE2010/infrastructure/cda/CDA.xsd"/>
+    <constructor-arg name="schemaType" value="http://www.w3.org/2001/XMLSchema"/>
+    <property name="throwExceptionOnRejection" value="true"/>
+  </bean>
+
+  <bean id="fhirXmlValidatingMessageSelector" class="org.springframework.integration.xml.selector.XmlValidatingMessageSelector">
+    <constructor-arg name="schema" value="fhir-xsd/fhir-all.xsd"/>
+    <constructor-arg name="schemaType" value="http://www.w3.org/2001/XMLSchema"/>
+    <property name="throwExceptionOnRejection" value="true"/>
+  </bean>
+
+  <!-- Transform FHIR messages -->
+
+  <int-xml:xslt-transformer
+    input-channel="fhirTransformChannel"
+    output-channel="prepareRoutingChannel"
+    xsl-resource="classpath:fhir-xsl/fhir-v3-transform.xsl"
+    result-transformer="resultToSource"/>
+    
+  <bean id="resultToSource" class="net.mgrid.tranzoom.ingress.xml.ResultToSourceTransformer" />
+
+  <!-- Prepare message for routing -->
+
+  <int:service-activator input-channel="prepareRoutingChannel" output-channel="toTransformersChannel"
+    ref="contentTypeMapperBean" method="addContentTypeHeader"/>
+
+  <bean id="contentTypeMapperBean" class="net.mgrid.tranzoom.ingress.ContentTypeMapper">
+    <property name="errorChannel" ref="publishErrorChannel"/>
+  </bean>
+
+  <!-- RabbitMQ infrastructure -->
+
+  <rabbit:connection-factory id="rabbitConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/messaging"
+    publisher-confirms="true"
+    publisher-returns="false"/>
+
+  <!--
+       We cannot use an int-amqp:inbound-channel-adapter because it requires its
+       own message listener which does not have access to an AMQP channel, which we
+       need to send AMQP acks in manual acknowledge mode (acks are sent after a
+       publisher confirm is received from RabbitMQ towards the transformers).
+    -->
+
+  <rabbit:listener-container
+    connection-factory="rabbitConnectionFactory"
+    acknowledge="manual"
+    concurrency="${config.rabbitmq.concurrent-consumers}"
+    prefetch="${config.rabbitmq.prefetch-count}">
+
+    <rabbit:listener queue-names="ingress-hl7v3" ref="hl7v3ListenerBean"/>
+    <rabbit:listener queue-names="ingress-fhir" ref="fhirListenerBean"/>
+  </rabbit:listener-container>
+
+  <bean id="hl7v3ListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
+    <property name="outputChannel" ref="hl7v3ValidateChannel"/>
+    <property name="errorChannel" ref="publishErrorChannel"/>
+  </bean>
+  
+  <bean id="fhirListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
+    <property name="outputChannel" ref="fhirValidateChannel"/>
+    <property name="errorChannel" ref="publishErrorChannel"/>
+  </bean>
+
+  <int:service-activator input-channel="publishResultChannel"
+    ref="publishConfirmListenerBean" method="publishResult"/>
+
+  <bean id="publishConfirmListenerBean" class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener">
+    <property name="errorChannel" ref="publishErrorChannel"/>
+  </bean>
+
+  <rabbit:template id="errorTemplate" connection-factory="rabbitConnectionFactory" />
+
+  <int-amqp:outbound-channel-adapter
+    channel="publishErrorChannel"
+    amqp-template="errorTemplate"
+    exchange-name="errors"
+    routing-key="ingress"
+    confirm-correlation-expression="headers['tz-source-ref']"
+    confirm-ack-channel="publishResultChannel"
+    confirm-nack-channel="publishResultChannel"
+    />
+
+  <rabbit:template id="transformTemplate" connection-factory="rabbitConnectionFactory" />
+
+  <int-amqp:outbound-channel-adapter
+    channel="toTransformersChannel"
+    amqp-template="transformTemplate"
+    exchange-name="transform"
+    routing-key="hl7v3"
+    mapped-request-headers="tz-content-type, tz-ingress-timestamp"
+    confirm-correlation-expression="headers['tz-source-ref']"
+    confirm-ack-channel="publishResultChannel"
+    confirm-nack-channel="publishResultChannel"
+    />
+    
+</beans>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OrganizationUpdate classCode="ACTN" moodCode="EVN" xmlns="urn:hl7-org:v3">
+  <participation typeCode="PART">
+    <subject classCode="IDENT">
+      <scopingOrganization classCode="ORG" determinerCode="INSTANCE">
+        <id root="2.16.840.1.113883.2.4.3.31" extension="666"/>
+        <!-- identifier use and period cannot be expressed -->
+        <id root="2.16.840.1.113883.2.4.6.1" extension="0111111"/>
+        <code code="GPS" codeSystem="2.16.840.1.113883.2.4.3.31" displayName="General Practitioner Surgery"/>
+        <name>Doctor Deke</name>
+        <telecom use="WP" value="030-1234567">
+          <useablePeriod value="20000101000000"/>
+        </telecom>
+        <addr>
+          <streetAddressLine>Renaultgarage</streetAddressLine>
+          <city>Amsterdam</city>
+          <postalCode>1079AB</postalCode>
+          <country>Nederland</country>
+          <useablePeriod value="20000101000000"/>
+        </addr>
+        <asPartOfWhole classCode="PART">
+          <wholeParent classCode="ORG" determinerCode="INSTANCE">
+            <id root="2.16.840.1.113883.2.4.3.31.1" extension="456"/>
+          </wholeParent>
+        </asPartOfWhole>
+      </scopingOrganization>
+    </subject>
+  </participation>
+</OrganizationUpdate>

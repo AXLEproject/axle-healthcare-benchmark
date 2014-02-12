@@ -1,0 +1,1 @@
+ingress: target/start -Dconfig.rabbitmq.host=10.78.40.171 net.mgrid.tranzoom.ingress.IngressApplication

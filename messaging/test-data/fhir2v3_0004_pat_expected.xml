@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Payload of the HTTP POST to http://mgrid.net/fhir/Patient This means that
+a new patient has been added to Portavita with the following details. -->
+<PatientUpdate  xmlns="urn:hl7-org:v3" classCode="ACTN" moodCode="EVN">
+  <recordTarget typeCode="RCT">
+    <patient classCode="PAT">
+      <patientPerson classCode="PSN" determinerCode="INSTANCE">
+        <id root="2.16.840.1.113883.2.4.3.31.1" extension="19889115" />
+        <id root="2.16.840.1.113883.2.4.3.31.2" extension="1629601" />
+        <id root="2.16.840.1.113883.2.4.6.3" extension="010001128" />
+        <id root="2.16.840.1.113883.2.4.3.31.3.TODO.1" extension="PV16296012637" />
+      <name use="L">
+          <given>Deliah</given>
+          <family>Slobsmeed - Schooltschuur</family>
+          Slobsmeed - Schooltschuur, D
+        </name>
+        <name use="C">
+          <family qualifier="BR">Schooltschuur</family>
+        </name>
+        <telecom use="H" value="deliah@versatel.nl"/>
+        <telecom use="HP" value="0123-456789"/>
+      <telecom use="MC" value="06-12345789" />
+        <administrativeGenderCode code="F" codeSystem="2.16.840.1.113883.5.1" codeSystemName="HL7 AdministrativeGender" displayName="Female"/>
+        <birthTime value="19510909000000"/>
+        <deceasedInd value="false"/>
+        <addr>
+          <streetAddressLine>Zijlweg 601-182</streetAddressLine>
+          <city>HAARLEM</city>
+          <postalCode>1234AB</postalCode>
+          <useablePeriod value="20130521000000"/>
+        </addr>
+        <asPolicyHolder classCode="POLHOLD">
+          <id root="2.16.840.1.113883.2.4.3.31.3.2.TODO.2" extension="P19889125" />
+          <effectiveTime>
+            <low value="20100521000000"/>
+          </effectiveTime>
+          <underwritingInsurer classCode="ORG" determinerCode="INSTANCE">
+            <id root="2.16.840.1.113883.2.4.3.31.1" extension="27085"/>
+          </underwritingInsurer>
+        </asPolicyHolder>
+        <asCareGiver classCode="CAREGIVER">
+          <code code="GP"/>
+          <effectiveTime>
+            <low value="20130521000000"/>
+          </effectiveTime>
+          <careGiverScoper classCode="PSN" determinerCode="INSTANCE">
+            <id root="2.16.840.1.113883.2.4.3.31.1" extension="19889123"/>
+          </careGiverScoper>
+        </asCareGiver>
+      </patientPerson>
+      <providerOrganization classCode="ORG" determinerCode="INSTANCE">
+        <id root="2.16.840.1.113883.2.4.3.31.2" extension="2637" />
+      </providerOrganization>
+    </patient>
+  </recordTarget>
+</PatientUpdate>
