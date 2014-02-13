@@ -116,4 +116,12 @@ sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKER
 exit
 EOF
 
+# We want to run the generator from the ingress machine, so need to copy the
+# password before bootstrapping, since the axle / cdagenpwd is necessary to
+# download the HDL installer
+if [ "x$STARTTYPE" = "xingress" ];
+then
+    scp -i ${KEYPAIR} axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || error "Could not copy axle generator password"
+fi
+
 exit $WARN
