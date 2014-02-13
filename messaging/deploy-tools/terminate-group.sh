@@ -24,3 +24,6 @@ do
     euca-terminate-instances ${INSTANCE}
 done
 
+for i in `git remote | grep ${GROUPNAME}` ; do echo "removing remote $i" ; git remote rm $i ; done
+
+echo "Now you must remove these host from ssh config yourself!!!"

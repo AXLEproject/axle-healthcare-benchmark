@@ -89,19 +89,22 @@ git init axle-healthcare-benchmark
 exit
 EOF
 
-cat >> ~/.ssh/config <<EOF
+ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+echo "export PS1=\"[\u@${GROUPNAME}-${INSTANCENAME} \W]\$ \"" >> ~/.bashrc
+exit
+EOF
 
-Host ${INSTANCENAME}
+cat >> ~/.ssh/config <<EOF
+Host ${GROUPNAME}-${INSTANCENAME}
   HostName ${IP}
   User ${AMIUSERNAME}
   IdentityFile ${KEYPAIR}
 EOF
 
 cd $(git rev-parse --show-cdup)
-git remote add ${INSTANCENAME} ssh://${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
-git push ${INSTANCENAME} topic/fawork/messaging
-
-git remote remove ${INSTANCENAME}
+git remote add ${GROUPNAME}-${INSTANCENAME} ssh://${GROUPNAME}-${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
+git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/messaging
+git remote remove ${GROUPNAME}-${INSTANCENAME}
 
 # Need to copy the password before bootstrapping, since the axle / cdagenpwd is necessary
 # to download the HDL installer
