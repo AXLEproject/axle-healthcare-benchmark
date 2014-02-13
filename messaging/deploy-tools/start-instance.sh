@@ -85,7 +85,9 @@ done
 # incorrect terminal settings
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 sudo yum install -y git
-git init axle-healthcare-benchmark
+sudo git init /media/ephemeral0/axle-healthcare-benchmark
+sudo chown -R ec2-user.ec2-user /media/ephemeral0/axle-healthcare-benchmark
+sudo ln -s /media/ephemeral0/axle-healthcare-benchmark /home/ec2-user/axle-healthcare-benchmark
 exit
 EOF
 
