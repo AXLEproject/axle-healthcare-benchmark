@@ -38,7 +38,7 @@ NUMBEROFCDAS=1000
 PGGIT=git://git.postgresql.org/git/postgresql.git
 
 # PostgreSQL branch to checkout
-PGBRANCH=master
+PGBRANCH=REL9_3_STABLE
 
 # PGTune git repository
 PGTUNEGIT=https://github.com/gregs1104/pgtune.git

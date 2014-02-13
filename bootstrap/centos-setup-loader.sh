@@ -23,6 +23,13 @@ _error() {
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y curl wget htop mc joe
 
+# packages for building postgresql
+yum install -y git gcc bison flex gdb
+yum install -y make readline-devel zlib-devel uuid-devel
+
+# packages for profiling
+yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
+
 yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm

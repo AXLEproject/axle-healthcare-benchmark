@@ -12,7 +12,7 @@ include ../default_settings
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
 
-MGRIDHDLVERSION=1.0dev
+MGRIDHDLVERSION=2.0dev
 MGRIDHDL=mgridhdl-$(MGRIDHDLVERSION)-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
 MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/$(MGRIDHDLVERSION)/$(MGRIDHDL)
