@@ -104,11 +104,7 @@ EOF
 cd $(git rev-parse --show-cdup)
 git remote add ${GROUPNAME}-${INSTANCENAME} ssh://${GROUPNAME}-${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
 git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/messaging
-git remote remove ${GROUPNAME}-${INSTANCENAME}
-
-# Need to copy the password before bootstrapping, since the axle / cdagenpwd is necessary
-# to download the HDL installer
-#scp -i ${KEYPAIR} axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || error "Could not copy axle generator password"
+git remote rm ${GROUPNAME}-${INSTANCENAME}
 
 # choose the setup script based on the instance name
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
