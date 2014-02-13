@@ -37,6 +37,12 @@ rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sb
 cd $MESSAGING_DIR && sbt clean compile stage \
   || _error "Could not build loader messaging software"
 
+# bootstrap the database
+cd axle-healthcare-benchmark/bootstrap/
+make
+echo "export PATH=\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin" >> ~/.bashrc
+source ~/.bashrc
+
 cat > /etc/init/axle-loader.conf <<EOF
 description "AXLE Messaging Loader"
 start on runlevel [2345]
