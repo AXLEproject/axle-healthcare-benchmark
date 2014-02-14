@@ -83,13 +83,17 @@ done
 # Need to sleep a bit more since otherwise we cannot login
 sleep 10
 
-ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no root@${IP} <<EOF
+# On the official CentOS image we need to create the ec2-user
+if [ "$AMI" = "ami-230b1b57" ];
+then
+    ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no root@${IP} <<EOF
 adduser ec2-user
 cp -a .ssh ~ec2-user
 chown -R ec2-user.ec2-user ~ec2-user/.ssh
 echo "ec2-user ALL=(ALL)  NOPASSWD: ALL" >> /etc/sudoers
 exit
 EOF
+fi
 
 # The double -t is necessary to not cause sudo to given an error about
 # incorrect terminal settings

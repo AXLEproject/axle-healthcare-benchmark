@@ -35,7 +35,7 @@ To avoid having to lookup IP numbers of the freshly installed machines, use the 
 * example: `shax mtest loader-1`
 
     #!/bin/bash
-    IP=`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=$1 --filter tag:instancename=$2 | tr '\n' ' ' | awk '{print $18}'`
+    IP=`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=$1 --filter tag:instancename=$2 | tr '\n' ' ' | awk '{print $7}'`
     TYPE=`expr match "$2" '\(^[a-zA-Z]*\)'`
     if [ "x$TYPE" = "xbroker" ]
     then

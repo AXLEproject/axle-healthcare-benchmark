@@ -9,7 +9,12 @@ GROUPNAME="${1:-mytest}"
 
 # A note about AMIs: these are bound to a region.
 
-CENTOSAMI="${AMI:-ami-230b1b57}"
+# Official Centos Image (does not recognize additional storage)
+##CENTOSAMI="${AMI:-ami-230b1b57}"
+# Bashton Centos Image (recognized additional storage, but may experience
+# troubles resulting in unable to install packages with yum since it cannot
+# resolve mirror.centos.org.)
+CENTOSAMI="${AMI:-ami-8aa3a8fe}"
 UBUNTUAMI="${AMI:-ami-aa56a1dd}"
 
 AMIUSERNAME="${AMIUSERNAME:-ec2-user}"
