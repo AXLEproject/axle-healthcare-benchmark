@@ -17,7 +17,7 @@ MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
 MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/$(MGRIDHDLVERSION)/$(MGRIDHDL)
 MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
-MGRIDMSG=mgridhdl-$(MGRIDMSGVERSION)-linux-x64-installer.run
+MGRIDMSG=mgridmsg-$(MGRIDMSGVERSION)-linux-x64-installer.run
 MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
 MGRIDMSGURL=http://www.mgrid.net/system/files/downloads/msg/$(MGRIDMSGVERSION)/$(MGRIDMSG)
 

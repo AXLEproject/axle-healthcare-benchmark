@@ -69,19 +69,6 @@ export NONDEFAULTPOSTGRESQLCONF
 #------------------------------------------------------------------------------
 # DATABASE SERVERS AND NAMES
 #------------------------------------------------------------------------------
-PSTHOST=localhost
-PSTPORT=5432
-PSTUSER=${USER}
-PSTDB=prestaging
-
-STHOST=localhost
-STPORT=5432
-STUSER=${USER}
-STDB=staging
-
-DWHHOST=127.0.0.1
-DWHPORT=5432
-DWHUSER=${USER}
-DWHDB=dwh
-
-
+PONDHOST=localhost
+PONDPORT=5432
+PONDUSER=${USER}

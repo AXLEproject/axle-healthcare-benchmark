@@ -37,8 +37,11 @@ rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sb
 cd $MESSAGING_DIR && sbt clean compile stage \
   || _error "Could not build loader messaging software"
 
-# bootstrap the database
+# bootstrap the database server software and cluster
 sudo -u ec2-user sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin\" >> ~/.bashrc"
+
+# create pond databases
+sudo -u ec2-user sh -c "cd \$HOME/axle-healthcare-benchmark/pond && make ponds"
 
 cat > /etc/init/axle-loader.conf <<EOF
 description "AXLE Messaging Loader"
