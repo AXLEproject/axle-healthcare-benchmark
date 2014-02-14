@@ -12,15 +12,14 @@ include ../default_settings
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
 
-MGRIDHDLVERSION=2.0dev
 MGRIDHDL=mgridhdl-$(MGRIDHDLVERSION)-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
 MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/$(MGRIDHDLVERSION)/$(MGRIDHDL)
 MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
 
-MGRIDMSG=mgridmsg-0.9-linux-x64-installer.run
+MGRIDMSG=mgridhdl-$(MGRIDMSGVERSION)-linux-x64-installer.run
 MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
-MGRIDMSGURL=http://www.mgrid.net/system/files/downloads/msg/0.9/$(MGRIDMSG)
+MGRIDMSGURL=http://www.mgrid.net/system/files/downloads/msg/$(MGRIDMSGVERSION)/$(MGRIDMSG)
 
 prepare: start installhdl installmsg installhdl
 

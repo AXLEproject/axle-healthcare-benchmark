@@ -29,7 +29,6 @@ CDAGENCONF=$(CDAGENERATOR)/src/main/resources/application.conf
 # Number of documents to generate.
 NUMBEROFCDAS=1000
 
-
 #------------------------------------------------------------------------------
 # PREPARE POSTGRESQL DATABASE CLUSTER
 #------------------------------------------------------------------------------
@@ -39,6 +38,10 @@ PGGIT=git://git.postgresql.org/git/postgresql.git
 
 # PostgreSQL branch to checkout
 PGBRANCH=REL9_3_STABLE
+
+# MGRID software versions
+MGRIDHDLVERSION=2.0dev
+MGRIDMSGVERSION=2.0dev
 
 # PGTune git repository
 PGTUNEGIT=https://github.com/gregs1104/pgtune.git
