@@ -17,6 +17,8 @@
   <context:property-placeholder 
     location="classpath:META-INF/mgrid/messaging/ccloader.properties"
     system-properties-mode="OVERRIDE"/>
+    
+  <context:annotation-config />
 
   <!-- Channels, routing and transformation -->
 
@@ -70,7 +72,7 @@
   <int:service-activator
     input-channel="toDatabaseChannel"
     ref="ccloaderDatabaseBean"
-    method="load"
+    method="loadGroup"
     />
 
   <int:service-activator
@@ -80,7 +82,14 @@
     />
 
   <bean id="ccloaderDatabaseBean" class="net.mgrid.tranzoom.ccloader.Loader">
-    <constructor-arg name="connectURI" value="${config.connect-uri}"/>
+    <property name="pondHost" value="${config.pond.dbhost}"/>
+    <property name="pondPort" value="${config.pond.dbport}"/>
+    <property name="pondDatabase" value="${config.pond.dbname}"/>
+    <property name="pondUser" value="${config.pond.dbuser}"/>
+    <property name="lakeHost" value="${config.lake.dbhost}"/>
+    <property name="lakePort" value="${config.lake.dbport}"/>
+    <property name="lakeDatabase" value="${config.lake.dbname}"/>
+    <property name="lakeUser" value="${config.lake.dbuser}"/>
     <property name="failedGroupChannel" ref="failedGroupChannel"/>
     <property name="errorChannel" ref="publishErrorChannel"/>
     <property name="confirmListener" ref="publishConfirmListenerBean"/>
@@ -101,9 +110,9 @@
     pool-size="${config.pool-size}"
     queue-capacity="100"
     rejection-policy="CALLER_RUNS" />
-
+    
   <!--
-       We cannot use an int-amqp:inbound-channel-adapter because it requires its
+       We cannot use an int-amqp:inbound-channel-adapter for the sql messages because it requires its
        own message listener which does not have access to a AMQP channel, which we
        need to send AMQP acks in manual acknowledge mode (acks are sent after a
        publisher confirm is received from RabbitMQ towards the transformers).

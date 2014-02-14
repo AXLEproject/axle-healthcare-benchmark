@@ -22,6 +22,12 @@ import net.mgrid.tranzoom.rabbitmq.MessageListener
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import javax.annotation.PostConstruct
+import javax.annotation.PreDestroy
+import java.sql.Connection
+import scala.collection.JavaConverters._
+import scala.collection.mutable.Buffer
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 
 /**
  * Load SQL in database.
@@ -29,141 +35,129 @@ import scala.util.Success
  * Receives a configurable number of messages from the aggregator and groups them in
  * a single transaction for more efficient context conduction.
  */
-class Loader(connectURI: String) {
+class Loader {
 
   import Loader._
   import MessageListener.SourceRef
 
-  @BeanProperty
-  var failedGroupChannel: MessageChannel = _
+  @BeanProperty var pondHost: String = _
+  @BeanProperty var pondPort: String = _
+  @BeanProperty var pondDatabase: String = _
+  @BeanProperty var pondUser: String = _
+  @BeanProperty var lakeHost: String = _
+  @BeanProperty var lakePort: String = _
+  @BeanProperty var lakeDatabase: String = _
+  @BeanProperty var lakeUser: String = _
+  @BeanProperty var failedGroupChannel: MessageChannel = _
+  @BeanProperty var errorChannel: MessageChannel = _
+  @BeanProperty var confirmListener: PublishConfirmListener = _
 
-  @BeanProperty
-  var errorChannel: MessageChannel = _
+  private lazy val dataSource = newDatasource(s"jdbc:postgresql://$pondHost:$pondPort/$pondDatabase?user=$pondUser")
+  
+  private val PondSequence = """(\d+):(\d+)""".r
 
-  @BeanProperty
-  var confirmListener: PublishConfirmListener = _
+  @PostConstruct // TODO get sequence from rabbit
+  def start: Unit = withConnection { conn => query(conn, "SELECT pond_setseq('1:1000000')") }
 
-  private val datasource = newDatasource(connectURI)
-
-  /**
-   * Load SQL message group in the database.
-   *
-   * After a successful commit, send upstream confirm that the database system has taken over
-   * the responsibility of the message.
-   *
-   * On error, send a message to the configured failedGroupChannel.
-   *
-   * @param message The message with a SQL message group
-   */
-  def load(group: Message[java.util.List[Message[String]]]): Unit = {
-    import scala.collection.JavaConverters._
-
-    Try(datasource.getConnection()) match {
-      case Success(conn) => {
-        val messages = group.getPayload.asScala
-        val txStart = System.currentTimeMillis
-
-        if (logger.isDebugEnabled) {
-          logger.debug(s"Start loading of group with ${messages.size} messages on time $txStart")
-        }
-
-        try {
-          messages.foreach { m =>
-            val q = m.getPayload
-            val stmt = conn.createStatement()
-            stmt.execute(q)
-          }
-
-          if (logger.isDebugEnabled) {
-            logger.debug(s"Committing group with ${messages.size} messages")
-          }
-
-          conn.commit()
-          messages.foreach(confirmListener.deliverConfirm(_))
-
-          if (logger.isDebugEnabled()) {
-            val txEnd = System.currentTimeMillis
-            messages.foreach { m =>
-              val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp")
-              val txDelta = txEnd - txStart
-              logger.debug(s"Loading complete: ingress time $ingressTimestamp loading end time $txEnd, load time $txDelta")
-            }
-          }
-        } catch {
-          case ex: Throwable => {
-            logger.info(s"Transaction throwed exception: ${ex.getMessage}, rollback and forward to failed group channel.", ex)
-            conn.rollback()
-            messages.foreach(failedGroupChannel.send(_))
-          }
-        } finally {
-          conn.close()
-        }
-      }
-      case Failure(ex) => {
-        logger.info(s"Could not get a database connection, put reason on error queue for each message in the group.", ex)
-
-        val messages = group.getPayload.asScala
-        messages.foreach { m =>
-          val ref = m.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
-          val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage, ref)
-          errorChannel.send(errorMessage)
-        }
-      }
+  @PreDestroy
+  def stop: Unit = withConnection { conn =>
+    val stmt = conn.createStatement()
+    val rs = stmt.executeQuery(s"SELECT pond_retseq()")
+    if (rs.next()) {
+      val range = rs.getString("pond_retseq")
+      // TODO return available range to redis
+      logger.debug(s"Return range $range")
     }
-
   }
 
   /**
-   * Load a single SQL message in the database.
-   * 
-   * For example, this method can be used as a fall back when loading a message group fails.
+   * Load SQL message group in the data pond and upload to the data lake.
    *
-   * @param message The message with a SQL payload
+   * On error, send all messages to the configured failed group channel.
+   *
+   * @param message Message containing the SQL message group
    */
-  def loadSingle(message: Message[String]): Unit = {
+  def loadGroup(group: Message[java.util.List[Message[String]]]): Unit = {
+    val messages = group.getPayload.asScala
+    load(messages) { ex =>
+      logger.info(s"Forward messages to failed group channel.", ex)
+      messages.foreach(failedGroupChannel.send(_))
+    }
+  }
 
-    Try(datasource.getConnection()) match {
-      case Success(conn) => {
-        try {
-          val stmt = conn.createStatement()
-          stmt.execute(message.getPayload)
-          conn.commit()
+  /**
+   * Load SQL message in the data pond and upload to the data lake.
+   * 
+   * On error, send error message to the error channel.
+   *
+   * @param message Message with a SQL payload
+   */
+  def loadSingle(message: Message[String]): Unit = load(Buffer(message)) { ex =>
+    logger.info(s"Put reason on error queue.", ex)
+    val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
+    val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage, ref)
+    errorChannel.send(errorMessage)
+  }
 
-          if (logger.isDebugEnabled) {
-            val ts = System.currentTimeMillis
-            val ingressTimestamp = message.getHeaders.get("tz-ingress-timestamp")
-            logger.debug(s"Staging complete: ingress time $ingressTimestamp staging time $ts")
-          }
+  private def load(messages: Buffer[Message[String]])(txFail: Throwable => Unit): Unit = withConnection { conn =>
+    val loadStart = System.currentTimeMillis
 
-          confirmListener.deliverConfirm(message)
+    if (logger.isDebugEnabled) {
+      logger.debug(s"Start load ${messages.size} messages on time $loadStart")
+    }
 
-        } catch {
-          case ex: Throwable => {
-            logger.info(s"Single query throwed exception for $message: ${ex.getMessage}, put reason on error queue.", ex)
-            conn.rollback()
+    Try { // commit messages to data pond
 
-            val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) match {
-              case ref: SourceRef => ref
-            }
+      messages foreach { m => query(conn, m.getPayload) }
+      conn.commit()
 
-            val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage, ref)
-            errorChannel.send(errorMessage)
-          }
-        } finally {
-          conn.close()
-        }
-      }
-      case Failure(ex) => {
-        logger.info(s"Could not get a database connection, put reason on error queue.", ex)
+    } recover { // failed transaction 
 
-        val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) match {
-          case ref: SourceRef => ref
-        }
+      case ex: Throwable =>
+        logger.info(s"Transaction throwed exception: ${ex.getMessage}, rollback and handle fail.", ex)
+        conn.rollback()
+        txFail(ex)
 
-        val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage, ref)
-        errorChannel.send(errorMessage)
+    } map { // upload to data lake
+      
+      import sys.process._
+
+      _ => s"./loader-tools/pond_upload.sh -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
+
+    } recover { // failed upload
+
+      // TODO what should we do here? can we send the broker ack? should we do the empty, etc.
+      case ex: Throwable =>
+        logger.warn("Could not upload data from pond to lake", ex)
+
+    } map { // commit and upload successful
+      
+      _ => messages.foreach(confirmListener.deliverConfirm(_))
+      
+    }
+
+    if (logger.isDebugEnabled()) {
+      val loadEnd = System.currentTimeMillis
+      messages.foreach { m =>
+        val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp")
+        val txDelta = loadEnd - loadStart
+        logger.debug(s"Loading complete: ingress time $ingressTimestamp loading end time $loadEnd, load time $txDelta")
       }
     }
+  }
+
+  private def withConnection[A](f: Connection => A): A = {
+    val conn = dataSource.getConnection()
+    try {
+      f(conn)
+    } finally {
+      conn.close()
+    }
+  }
+
+  private def query(conn: Connection, sql: String): Unit = {
+    val s = conn.createStatement()
+    s.execute(sql)
   }
 }
 
@@ -182,11 +176,12 @@ private object Loader {
 
   private val logger = LoggerFactory.getLogger(Loader.getClass)
 
-  private def newDatasource(connectURI: String): DataSource = {
+  private def newDatasource(jdbcUri: String): DataSource = {
     val connPool = new GenericObjectPool()
-    val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(connectURI, new Properties())
+    val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
     val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )
 
     new PoolingDataSource(connPool)
   }
+
 }

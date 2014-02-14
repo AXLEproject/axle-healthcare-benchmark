@@ -27,6 +27,7 @@ BEGIN
                 || pg_get_serial_sequence('"InfrastructureRoot"', '_id')
                 || ' START WITH ' || in_start
                 || ' RESTART WITH ' || in_start
+                || ' MINVALUE ' || in_start
                 || ' MAXVALUE ' || in_end
                 || 'NO CYCLE INCREMENT BY 1';
 END
@@ -68,7 +69,7 @@ BEGIN
         INTO result;
 
         /* Ensure no new records can be inserted after we are through */
-        PERFORM pond_setseq('0:0');
+        PERFORM pond_setseq('0:1');
         EXECUTE 'SELECT nextval(''' || t || ''')';
 	RETURN result;
 END
