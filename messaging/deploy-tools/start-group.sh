@@ -9,12 +9,10 @@ GROUPNAME="${1:-mytest}"
 
 # A note about AMIs: these are bound to a region.
 
-# AMI provided by http://www.bashton.com/blog/2013/centos-6-4-ami-available/
-# eu-west-1 image. Use ami-e4b5be90 for hvm image
-CENTOSAMI="${AMI:-ami-8aa3a8fe}"
+CENTOSAMI="${AMI:-ami-230b1b57}"
 UBUNTUAMI="${AMI:-ami-aa56a1dd}"
 
-AMIUSERNAME="ec2-user"
+AMIUSERNAME="${AMIUSERNAME:-ec2-user}"
 EC2_REGION="eu-west-1"
 # need 4GB ram minimal
 INSTANCETYPE="${INSTANCETYPE:-m1.large}"
@@ -49,23 +47,30 @@ echo "Starting group ${GROUPNAME}"
 echo "Start broker first (we need to propagate its IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "broker-1" "0.0.0.0" \
-    || _error "Could not start the broker, stop further processing"
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "0.0.0.0" 2>&1 > broker.log &
+
+# It takes about 30 seconds to start the instance
+sleep 25
+
+while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
+	echo "Waiting for the broker to become running"
+	sleep 5
+done
 
 BROKERIP=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $7}'`
 
 echo "============= BROKER RUNNING ON IP ${BROKERIP} ============="
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} &
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP} &
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP} &
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP} &
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP}    2>&1 > loader-1.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP} &
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
 
 FAIL=0
 for job in `jobs -p`

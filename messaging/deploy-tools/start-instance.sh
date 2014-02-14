@@ -26,7 +26,9 @@ EC2_REGION="$5"
 INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
-BROKERIP=$9
+BROKERIP="$9"
+
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerip $9"
 
 #exit code
 WARN=0
@@ -72,22 +74,31 @@ echo "Succesfully started ${INSTANCE} running on ip ${IP}"
 RES=`euca-create-tags --tag groupname=${GROUPNAME} --tag instancename=${INSTANCENAME} ${INSTANCE}` \
         || _error "Could not create tags '${GROUPNAME}' and '${INSTANCENAME}' for instance ${INSTANCE} on region ${EC2_REGION}"
 
-# Wait 5 more seconds before we can login
-sleep 5
-
 while ! test `nmap ${IP} -PN -p ssh | grep tcp | awk '{print $2}'` = "open"
 do
 	echo "Waiting for SSH to be available on ${IP}"
 	sleep 2
 done
 
+# Need to sleep a bit more since otherwise we cannot login
+sleep 10
+
+ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no root@${IP} <<EOF
+adduser ec2-user
+cp -a .ssh ~ec2-user
+chown -R ec2-user.ec2-user ~ec2-user/.ssh
+echo "ec2-user ALL=(ALL)  NOPASSWD: ALL" >> /etc/sudoers
+exit
+EOF
+
 # The double -t is necessary to not cause sudo to given an error about
 # incorrect terminal settings
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+T=`mktemp`
 sudo yum install -y git
 sudo git init /media/ephemeral0/axle-healthcare-benchmark
-sudo chown -R ec2-user.ec2-user /media/ephemeral0/axle-healthcare-benchmark
-sudo ln -s /media/ephemeral0/axle-healthcare-benchmark /home/ec2-user/axle-healthcare-benchmark
+sudo chown -R ${AMIUSERNAME}.${AMIUSERNAME} /media/ephemeral0/axle-healthcare-benchmark
+sudo ln -s /media/ephemeral0/axle-healthcare-benchmark axle-healthcare-benchmark
 exit
 EOF
 
@@ -103,27 +114,37 @@ Host ${GROUPNAME}-${INSTANCENAME}
   IdentityFile ${KEYPAIR}
 EOF
 
-cd $(git rev-parse --show-cdup)
+pushd $(git rev-parse --show-cdup)
 git remote add ${GROUPNAME}-${INSTANCENAME} ssh://${GROUPNAME}-${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
 git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/messaging
 git remote rm ${GROUPNAME}-${INSTANCENAME}
+popd
 
-# choose the setup script based on the instance name
+# Install axle-healthcare-benchmark project including password
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd axle-healthcare-benchmark
 git checkout topic/fawork/messaging
-cd
-sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP}
 exit
 EOF
 
 # We want to run the generator from the ingress machine, so need to copy the
 # password before bootstrapping, since the axle / cdagenpwd is necessary to
-# download the HDL installer
-if [ "x$STARTTYPE" = "xingress" ];
+# download the HDL installer We also need the password to download mgrid
+# software, so just copy it to all machines.
+if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xloader" ];
 then
-    scp -i ${KEYPAIR} axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || error "Could not copy axle generator password"
+    echo "Copying axle password for type $STARTTYPE"
+    pwd
+    TOPDIR=$(git rev-parse --show-cdup)
+    scp -i ${KEYPAIR} ${TOPDIR}/cda-generator/axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || _error "Could not copy axle generator password"
 fi
+
+# Start the setup script based on the instance name
+ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+cd
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP}
+exit
+EOF
 
 exit $WARN
