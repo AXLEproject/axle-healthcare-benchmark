@@ -2,6 +2,7 @@
 
 Steps to perform locally
 
+* install git, nmap and ec2tools
 * clone axle-healthcare-benchmark
 * setup AWS credentials in ~/.aws/axle.pem
 * make axle password available in `axle-healthcare-benchmark/cda-generator/axle-generator-password.txt` (do not commit)

@@ -13,6 +13,7 @@ fi
 
 BROKERIP=$1
 DB_DIR=/home/ec2-user/axle-healthcare-benchmark/database
+USER=ec2-user
 
 _error() {
     echo "ERROR: $1"
@@ -31,10 +32,10 @@ yum install -y make readline-devel zlib-devel uuid-devel
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
 # bootstrap the database server software and cluster
-sudo -u ec2-user sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin\" >> ~/.bashrc"
+sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin\" >> ~/.bashrc"
 
 # create data warehouse
-sudo -u ec2-user sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
+sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
 
 cat > /etc/init/axle-dwh.conf <<EOF
 description "AXLE Data Warehouse"
@@ -43,7 +44,7 @@ stop on runlevel [016]
 respawn
 
 script
-  cd $DB_DIR && ./postgres/bin/pg_ctl -D ./data -l logfile start 2>&1 | logger -t axle-database
+    exec su -c "cd ${DB_DIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
 end script
 EOF
 

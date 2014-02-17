@@ -35,6 +35,8 @@ BROKERTYPE="c3.large"
 INGRESSTYPE="c3.xlarge"
 XFMTYPE="c3.xlarge"
 LOADTYPE="c3.xlarge"
+
+# uncomment the following line to create a data warehouse
 DWHTYPE="hs1.8xlarge"
 
 # Error handlers
@@ -70,16 +72,22 @@ BROKERIP=`euca-describe-instances  --filter instance-state-name=running --filter
 
 echo "============= BROKER RUNNING ON IP ${BROKERIP} ============="
 
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
+#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+#   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
+#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+#    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
+#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+#    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
     ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP}    2>&1 > loader-1.log  &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
+#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+#    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
+
+if [ "x${DWHTYPE}" != "x" ];
+then
+    ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+        ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERIP}    2>&1 > dwh.log  &
+fi
 
 FAIL=0
 for job in `jobs -p`
