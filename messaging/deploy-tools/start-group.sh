@@ -11,10 +11,14 @@ GROUPNAME="${1:-mytest}"
 
 # Official Centos Image (does not recognize additional storage)
 ##CENTOSAMI="${AMI:-ami-230b1b57}"
+
 # Bashton Centos Image (recognized additional storage, but may experience
 # troubles resulting in unable to install packages with yum since it cannot
 # resolve mirror.centos.org.)
-CENTOSAMI="${AMI:-ami-8aa3a8fe}"
+##CENTOSAMI="${AMI:-ami-8aa3a8fe}"
+
+# Copy of Bashton Image: in case the Bashton image is taken offline:
+CENTOSAMI="${AMI:-ami-ce10e0b9}"
 UBUNTUAMI="${AMI:-ami-aa56a1dd}"
 
 AMIUSERNAME="${AMIUSERNAME:-ec2-user}"
