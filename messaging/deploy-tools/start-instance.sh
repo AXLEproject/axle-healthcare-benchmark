@@ -84,13 +84,24 @@ done
 sleep 10
 
 # On the official CentOS image we need to create the ec2-user
-if [ "$AMI" = "ami-230b1b57" ];
+if [ "X$AMI" = "Xami-230b1b57" ];
 then
     ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no root@${IP} <<EOF
 adduser ec2-user
 cp -a .ssh ~ec2-user
 chown -R ec2-user.ec2-user ~ec2-user/.ssh
 echo "ec2-user ALL=(ALL)  NOPASSWD: ALL" >> /etc/sudoers
+exit
+EOF
+fi
+
+# On the hs1.8xlarge instance we must manually mount the EBS volume
+if [ "X$INSTANCETYPE" = "Xhs1.8xlarge" ];
+then
+    ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ec2-user@${IP} <<EOF
+sudo mkfs.ext4 -m 0 /dev/xvdf
+sudo sed -i 's/sdb/xvdf/' /etc/fstab
+sudo mount -a
 exit
 EOF
 fi
