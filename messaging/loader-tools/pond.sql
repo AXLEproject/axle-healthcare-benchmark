@@ -69,7 +69,8 @@ BEGIN
         INTO result;
 
         /* Ensure no new records can be inserted after we are through */
-        PERFORM pond_setseq('0:1');
+        PERFORM pond_setseq('1:2');
+        EXECUTE 'SELECT nextval(''' || t || ''')';
         EXECUTE 'SELECT nextval(''' || t || ''')';
 	RETURN result;
 END

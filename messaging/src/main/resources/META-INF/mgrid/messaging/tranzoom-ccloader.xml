@@ -93,6 +93,7 @@
     <property name="failedGroupChannel" ref="failedGroupChannel"/>
     <property name="errorChannel" ref="publishErrorChannel"/>
     <property name="confirmListener" ref="publishConfirmListenerBean"/>
+    <property name="rabbitConnectionFactory" ref="ccloaderConnectionFactory"/>
   </bean>
 
   <!-- RabbitMQ infrastructure -->

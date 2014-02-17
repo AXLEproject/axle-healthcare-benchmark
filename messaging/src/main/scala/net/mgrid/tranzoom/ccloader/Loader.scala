@@ -28,6 +28,9 @@ import java.sql.Connection
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 import org.springframework.amqp.rabbit.core.RabbitTemplate
+import org.springframework.amqp.rabbit.connection.{ ConnectionFactory => RabbitConnectionFactory }
+import com.rabbitmq.client.Channel
+import com.rabbitmq.client.AMQP
 
 /**
  * Load SQL in database.
@@ -51,24 +54,59 @@ class Loader {
   @BeanProperty var failedGroupChannel: MessageChannel = _
   @BeanProperty var errorChannel: MessageChannel = _
   @BeanProperty var confirmListener: PublishConfirmListener = _
+  @BeanProperty var rabbitConnectionFactory: RabbitConnectionFactory = _
 
   private lazy val dataSource = newDatasource(s"jdbc:postgresql://$pondHost:$pondPort/$pondDatabase?user=$pondUser")
-  
-  private val PondSequence = """(\d+):(\d+)""".r
 
-  @PostConstruct // TODO get sequence from rabbit
-  def start: Unit = withConnection { conn => query(conn, "SELECT pond_setseq('1:1000000')") }
+  private val PondSequence = """([-0-9]+):([-0-9]+)""".r
+
+  @PostConstruct
+  def start: Unit =
+    withDatabaseConnection { conn =>
+      withRabbitChannel { channel =>
+
+        Option(channel.basicGet("pond-seq", false)) match {
+          case Some(response) =>
+            val PondSequence(start, end) = new String(response.getBody())
+
+            if (logger.isDebugEnabled()) {
+              logger.debug(s"Received pond sequence range [$start:$end] from broker, now tell the database")
+            }
+
+            val result = Try {
+              query(conn, s"SELECT pond_setseq('$start:$end')")
+            } map { // successfully set sequence; ack message
+              _ => channel.basicAck(response.getEnvelope().getDeliveryTag(), false /*multiple*/ )
+            } recover { // return sequence to broker on fail
+              case ex: Throwable => channel.basicReject(response.getEnvelope().getDeliveryTag(), true /*requeue*/ )
+            }
+
+            result.get // throws exception on fail
+
+          case None =>
+            logger.error("No sequence range available for pond")
+            throw new Exception("No sequence range available for pond")
+        }
+      }
+    }
 
   @PreDestroy
-  def stop: Unit = withConnection { conn =>
-    val stmt = conn.createStatement()
-    val rs = stmt.executeQuery(s"SELECT pond_retseq()")
-    if (rs.next()) {
-      val range = rs.getString("pond_retseq")
-      // TODO return available range to redis
-      logger.debug(s"Return range $range")
+  def stop: Unit =
+    withDatabaseConnection { conn =>
+      withRabbitChannel { channel =>
+        
+        if (logger.isDebugEnabled()) {
+          logger.debug("Stopping loader; return available sequence range to broker")
+        }
+        
+        val stmt = conn.createStatement()
+        val rs = stmt.executeQuery(s"SELECT pond_retseq()")
+        if (rs.next()) {
+          val PondSequence(start, end) = rs.getString("pond_retseq")
+          channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , s"$start:$end".getBytes())
+        }
+      }
     }
-  }
 
   /**
    * Load SQL message group in the data pond and upload to the data lake.
@@ -87,7 +125,7 @@ class Loader {
 
   /**
    * Load SQL message in the data pond and upload to the data lake.
-   * 
+   *
    * On error, send error message to the error channel.
    *
    * @param message Message with a SQL payload
@@ -99,7 +137,7 @@ class Loader {
     errorChannel.send(errorMessage)
   }
 
-  private def load(messages: Buffer[Message[String]])(txFail: Throwable => Unit): Unit = withConnection { conn =>
+  private def load(messages: Buffer[Message[String]])(txFail: Throwable => Unit): Unit = withDatabaseConnection { conn =>
     val loadStart = System.currentTimeMillis
 
     if (logger.isDebugEnabled) {
@@ -111,46 +149,54 @@ class Loader {
       messages foreach { m => query(conn, m.getPayload) }
       conn.commit()
 
-    } recover { // failed transaction 
-
-      case ex: Throwable =>
-        logger.info(s"Transaction throwed exception: ${ex.getMessage}, rollback and handle fail.", ex)
-        conn.rollback()
-        txFail(ex)
-
     } map { // upload to data lake
-      
+
       import sys.process._
 
       _ => s"./loader-tools/pond_upload.sh -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
 
-    } recover { // failed upload
-
-      // TODO what should we do here? can we send the broker ack? should we do the empty, etc.
-      case ex: Throwable =>
-        logger.warn("Could not upload data from pond to lake", ex)
-
     } map { // commit and upload successful
-      
-      _ => messages.foreach(confirmListener.deliverConfirm(_))
-      
+
+      _ =>
+        messages.foreach(confirmListener.deliverConfirm(_))
+
+        if (logger.isDebugEnabled()) {
+          val loadEnd = System.currentTimeMillis
+          messages.foreach { m =>
+            val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp")
+            val txDelta = loadEnd - loadStart
+            logger.debug(s"Loading complete: ingress time $ingressTimestamp loading end time $loadEnd, load time $txDelta")
+          }
+        }
+
+    } recover { // handle fail
+
+      case ex: Throwable =>
+        logger.info(s"Exception during loading: ${ex.getMessage}, rollback transaction, empty pond and handle fail.", ex)
+        conn.rollback()
+        query(conn, "SELECT pond_empty()")
+        txFail(ex)
+
     }
 
-    if (logger.isDebugEnabled()) {
-      val loadEnd = System.currentTimeMillis
-      messages.foreach { m =>
-        val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp")
-        val txDelta = loadEnd - loadStart
-        logger.debug(s"Loading complete: ingress time $ingressTimestamp loading end time $loadEnd, load time $txDelta")
-      }
-    }
   }
 
-  private def withConnection[A](f: Connection => A): A = {
+  private def withDatabaseConnection[A](f: Connection => A): A = {
     val conn = dataSource.getConnection()
     try {
       f(conn)
     } finally {
+      conn.close()
+    }
+  }
+
+  private def withRabbitChannel[A](f: Channel => A): A = {
+    val conn = rabbitConnectionFactory.createConnection()
+    val channel = conn.createChannel(false)
+    try {
+      f(channel)
+    } finally {
+      channel.close()
       conn.close()
     }
   }
