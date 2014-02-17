@@ -15,7 +15,7 @@ AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
 MGRIDHDL=mgridhdl-$(MGRIDHDLVERSION)-linux-x64-installer.run
 MGRIDHDLFILE=$(BASEDIR)/$(MGRIDHDL)
 MGRIDHDLURL=http://www.mgrid.net/system/files/downloads/hdl/$(MGRIDHDLVERSION)/$(MGRIDHDL)
-MGRIDHDLCOMPONENTS=hl7v3models_edition2011,snomedctvocab_20110731,loinc_242
+MGRIDHDLCOMPONENTS=snomedctvocab_20110731,loinc_242,hl7v3models_edition2005,hl7v3models_edition2006,hl7v3models_edition2008,hl7v3models_edition2009,hl7v3models_edition2010,hl7v3models_edition2011,hl7v3models_edition2012
 
 MGRIDMSG=mgridmsg-$(MGRIDMSGVERSION)-linux-x64-installer.run
 MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
