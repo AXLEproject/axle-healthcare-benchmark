@@ -35,7 +35,7 @@ yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin\" >> ~/.bashrc"
 
 # create data warehouse
-sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
+sudo -iu ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
 
 cat > /etc/init/axle-dwh.conf <<EOF
 description "AXLE Data Warehouse"
