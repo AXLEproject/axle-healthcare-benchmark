@@ -53,12 +53,11 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 start: $(PGDATA)
 	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
 
-login:
-	wget --save-cookies cookies.txt --post-data 'name=axle&pass=$(AXLEPWD)&op=submit&form_build_id=form-eZqiGNVQiZgeVGmMosZH-iZFz8C5DwBTVygPrQ3I8cU&form_id=user_login' --delete-after http://www.mgrid.net/user/login
-
 # Download HDL and HDM
-$(MGRIDHDLFILE): login
+$(MGRIDHDLFILE):
+	wget --save-cookies cookies.txt --post-data 'name=axle&pass=$(AXLEPWD)&op=submit&form_build_id=form-eZqiGNVQiZgeVGmMosZH-iZFz8C5DwBTVygPrQ3I8cU&form_id=user_login' --delete-after http://www.mgrid.net/user/login
 	wget --load-cookies cookies.txt -O $(MGRIDHDLFILE) $(MGRIDHDLURL)
+	rm cookies.txt
 	chmod +x $(MGRIDHDLFILE)
 	touch $@
 
@@ -68,7 +67,9 @@ installhdl: $(MGRIDHDLFILE) $(PGSERVER)
 
 # Download messaging SDK and install
 $(MGRIDMSGFILE): login
+	wget --save-cookies cookies.txt --post-data 'name=axle&pass=$(AXLEPWD)&op=submit&form_build_id=form-eZqiGNVQiZgeVGmMosZH-iZFz8C5DwBTVygPrQ3I8cU&form_id=user_login' --delete-after http://www.mgrid.net/user/login
 	wget --load-cookies cookies.txt -O $(MGRIDMSGFILE) $(MGRIDMSGURL)
+	rm cookies.txt
 	chmod +x $(MGRIDMSGFILE)
 	touch $@
 
