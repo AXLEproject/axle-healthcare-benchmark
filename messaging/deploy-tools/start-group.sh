@@ -72,16 +72,16 @@ BROKERIP=`euca-describe-instances  --filter instance-state-name=running --filter
 
 echo "============= BROKER RUNNING ON IP ${BROKERIP} ============="
 
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
     ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP}    2>&1 > loader-1.log  &
-#./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-#    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
 
 if [ "x${DWHTYPE}" != "x" ];
 then
