@@ -12,8 +12,8 @@ then
 fi
 
 BROKERIP=$1
-DB_DIR=/home/ec2-user/axle-healthcare-benchmark/database
 USER=ec2-user
+DB_DIR=/home/${USER}/axle-healthcare-benchmark/database
 
 _error() {
     echo "ERROR: $1"
@@ -32,7 +32,7 @@ yum install -y make readline-devel zlib-devel uuid-devel
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
 # bootstrap the database server software and cluster
-sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/postgres/bin\" >> ~/.bashrc"
+sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/pgserver/bin\" >> ~/.bashrc"
 
 # create data warehouse
 sudo -iu ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
