@@ -14,6 +14,7 @@ object LoaderApplication extends App {
   
   val ac = new ClassPathXmlApplicationContext(configFiles, LoaderApplication.getClass)
   
+  // used for @PreDestroy annotations on Loader
   ac.registerShutdownHook()
 
 }

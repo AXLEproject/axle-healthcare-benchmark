@@ -31,6 +31,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.amqp.rabbit.connection.{ ConnectionFactory => RabbitConnectionFactory }
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.AMQP
+import sys.process._
 
 /**
  * Load SQL in database.
@@ -43,14 +44,14 @@ class Loader {
   import Loader._
   import MessageListener.SourceRef
 
-  @BeanProperty var pondHost: String = _
-  @BeanProperty var pondPort: String = _
-  @BeanProperty var pondDatabase: String = _
-  @BeanProperty var pondUser: String = _
-  @BeanProperty var lakeHost: String = _
-  @BeanProperty var lakePort: String = _
-  @BeanProperty var lakeDatabase: String = _
-  @BeanProperty var lakeUser: String = _
+  @BeanProperty var pondHost: String = "localhost"
+  @BeanProperty var pondPort: String = "5432"
+  @BeanProperty var pondDatabase: String = "pond"
+  @BeanProperty var pondUser: String = System.getProperty("user.name")
+  @BeanProperty var lakeHost: String = "localhost"
+  @BeanProperty var lakePort: String = "5432"
+  @BeanProperty var lakeDatabase: String = "lake"
+  @BeanProperty var lakeUser: String = System.getProperty("user.name")
   @BeanProperty var failedGroupChannel: MessageChannel = _
   @BeanProperty var errorChannel: MessageChannel = _
   @BeanProperty var confirmListener: PublishConfirmListener = _
@@ -61,9 +62,12 @@ class Loader {
   private val PondSequence = """([-0-9]+):([-0-9]+)""".r
 
   @PostConstruct
-  def start: Unit =
-    withDatabaseConnection { conn =>
-      withRabbitChannel { channel =>
+  def start: Unit = withDatabaseConnection { conn =>
+    singleQuery[Boolean](conn, "SELECT pond_ready()") match {
+      case Some(isReady) if isReady => {
+        logger.info("Pond ready, no need to obtain sequence from broker")
+      }
+      case _ => withRabbitChannel { channel =>
 
         Option(channel.basicGet("pond-seq", false)) match {
           case Some(response) =>
@@ -74,11 +78,14 @@ class Loader {
             }
 
             val result = Try {
-              query(conn, s"SELECT pond_setseq('$start:$end')")
+              val hostname = "hostname --fqdn".!!.filter(_ >= ' ') // filter out all control characters
+              singleQuery(conn, s"SELECT pond_init('$start:$end', '$hostname')")
             } map { // successfully set sequence; ack message
               _ => channel.basicAck(response.getEnvelope().getDeliveryTag(), false /*multiple*/ )
             } recover { // return sequence to broker on fail
-              case ex: Throwable => channel.basicReject(response.getEnvelope().getDeliveryTag(), true /*requeue*/ )
+              case ex: Throwable => 
+                logger.warn("Could not initialize pond", ex)
+                channel.basicReject(response.getEnvelope().getDeliveryTag(), true /*requeue*/ )
             }
 
             result.get // throws exception on fail
@@ -89,21 +96,19 @@ class Loader {
         }
       }
     }
+  }
 
   @PreDestroy
   def stop: Unit =
     withDatabaseConnection { conn =>
       withRabbitChannel { channel =>
-        
+
         if (logger.isDebugEnabled()) {
           logger.debug("Stopping loader; return available sequence range to broker")
         }
-        
-        val stmt = conn.createStatement()
-        val rs = stmt.executeQuery(s"SELECT pond_retseq()")
-        if (rs.next()) {
-          val PondSequence(start, end) = rs.getString("pond_retseq")
-          channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , s"$start:$end".getBytes())
+
+        singleQuery[String](conn, s"SELECT pond_retseq()") map { range =>
+          channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , range.getBytes())
         }
       }
     }
@@ -151,8 +156,6 @@ class Loader {
 
     } map { // upload to data lake
 
-      import sys.process._
-
       _ => s"./loader-tools/pond_upload.sh -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
 
     } map { // commit and upload successful
@@ -173,9 +176,9 @@ class Loader {
 
       case ex: Throwable =>
         logger.info(s"Exception during loading: ${ex.getMessage}, rollback transaction, empty pond and handle fail.", ex)
-        conn.rollback()
-        query(conn, "SELECT pond_empty()")
-        txFail(ex)
+        quietly(conn.rollback())
+        quietly(singleQuery(conn, "SELECT pond_empty()"))
+        quietly(txFail(ex))
 
     }
 
@@ -201,16 +204,39 @@ class Loader {
     }
   }
 
-  private def query(conn: Connection, sql: String): Unit = {
+  private def singleQuery[T](conn: Connection, sql: String): Option[T] = {
+    val result = query(conn, sql)
+    conn.commit()
+    result
+  }
+
+  private def query[T](conn: Connection, sql: String): Option[T] = {
     val s = conn.createStatement()
-    s.execute(sql)
+    if (s.execute(sql)) {
+      val rs = s.getResultSet()
+      if (rs.next()) {
+        Some(rs.getObject(1).asInstanceOf[T])
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  private def quietly[T](f: => T): Unit = {
+    try {
+      f
+    } catch {
+      case _: Throwable => /* ssst */
+    }
   }
 }
 
 /**
  * Helpers and database connection pooling.
  */
-private object Loader {
+object Loader {
   import org.apache.commons.pool.impl.GenericObjectPool
   import org.apache.commons.dbcp.PoolableConnectionFactory
   import org.apache.commons.dbcp.DriverManagerConnectionFactory
@@ -222,7 +248,7 @@ private object Loader {
 
   private val logger = LoggerFactory.getLogger(Loader.getClass)
 
-  private def newDatasource(jdbcUri: String): DataSource = {
+  def newDatasource(jdbcUri: String): DataSource = {
     val connPool = new GenericObjectPool()
     val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
     val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )

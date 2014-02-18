@@ -5,24 +5,67 @@
  * Functions for dealing with parititioned minirims aka data ponds.
  */
 
+
 /*
- * Set the current start and end value of the pond sequence. This value is
- * retrieved from the grid pool and then used to sequentially mark incoming
- * message fragments. Note that nextval needs to be called at least once for
- * pond_retseq to return a sensible value.
+ * Initialize the pond. Takes a sequence and hostname.
  *
- * Expects a <start>:<end> as text
- * Where start and end are signed int8s
+ * The sequence is retrieved from the grid pool and then used to sequentially mark incoming
+ * message fragments.
+  *
+ * seq expects a <start>:<end> as text where start and end are signed int8s
+ * hostname is the FQDN of the pond node.
  */
-CREATE OR REPLACE FUNCTION pond_setseq(s text) RETURNS void AS
+CREATE OR REPLACE FUNCTION pond_init(seq text, hostname text) RETURNS void AS
 $$
 DECLARE
         in_start int8;
         in_end int8;
 BEGIN
-        in_start := substring(s from '^[-0-9]+')::int8;
-        in_end := substring(s from '[-0-9]+$')::int8;
+        IF EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'pond') THEN
+          RAISE 'Pond already initialized';
+        END IF;
 
+        CREATE SCHEMA pond;
+
+        in_start := substring(seq from '^[-0-9]+')::int8;
+        in_end := substring(seq from '[-0-9]+$')::int8;
+
+        PERFORM pond_setseq(in_start, in_end);
+        PERFORM pond_setinfo(in_start, in_end, hostname);
+END
+$$ LANGUAGE plpgsql;
+
+/*
+ * Check whether the pond is ready for loading. True if pond schema exists, created by pond_init().
+ */
+CREATE OR REPLACE FUNCTION pond_ready() RETURNS boolean AS
+$$
+BEGIN
+        RETURN EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'pond');
+END
+$$ LANGUAGE plpgsql;
+
+/*
+ * Set pond information. Creates pond table with administrative info.
+ */
+CREATE OR REPLACE FUNCTION pond_setinfo(seqstart bigint, seqend bigint, hostname text) RETURNS void AS
+$$
+BEGIN
+        EXECUTE 'CREATE TABLE IF NOT EXISTS pond."_Info" (ts timestamp, hostname text, seqstart bigint, seqend bigint)';
+
+        EXECUTE 'INSERT INTO pond."_Info" VALUES (now(), ''' || hostname || ''', ' || seqstart || ', ' || seqend || ')';
+END
+$$ LANGUAGE plpgsql;
+
+/*
+ * Set the current start and end value of the pond sequence. Note that 
+ * nextval needs to be called at least once for
+ * pond_retseq to return a sensible value.
+ *
+ */
+CREATE OR REPLACE FUNCTION pond_setseq(in_start bigint, in_end bigint) RETURNS void AS
+$$
+BEGIN
         EXECUTE 'ALTER SEQUENCE '
                 || pg_get_serial_sequence('"InfrastructureRoot"', '_id')
                 || ' START WITH ' || in_start
@@ -43,6 +86,8 @@ $$ LANGUAGE plpgsql;
  *
  * Obstructs the pond sequence for use afterwards to ensure that no inserts
  * happen unsollicited.
+ *
+ * Drops pond schema to invalidate pond (pond_init has to be called again).
  */
 CREATE OR REPLACE FUNCTION pond_retseq() RETURNS text AS
 $$
@@ -52,6 +97,10 @@ DECLARE
         t name;
         result text;
 BEGIN
+        IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'pond') THEN
+          RAISE 'Pond not yet initialized';
+        END IF;
+
         t := pg_get_serial_sequence('"InfrastructureRoot"', '_id');
         seqname := trim('"' from substring(t from '[^\.]+$'));
         seqschema := substring(t from '^[^\.]+');
@@ -69,10 +118,14 @@ BEGIN
         INTO result;
 
         /* Ensure no new records can be inserted after we are through */
-        PERFORM pond_setseq('1:2');
+        PERFORM pond_setseq(1, 2);
         EXECUTE 'SELECT nextval(''' || t || ''')';
         EXECUTE 'SELECT nextval(''' || t || ''')';
-	RETURN result;
+
+        /* Remove stored pond info as retseq() renders it invalid */
+        DROP SCHEMA IF EXISTS pond CASCADE;
+
+        RETURN result;
 END
 $$ LANGUAGE plpgsql;
 
@@ -102,9 +155,9 @@ $$ LANGUAGE plpgsql;
 
 /*
  * Determine all ids that were inserted into this pond, and store them in
- * dwhupload.<rimtablename>.
+ * pond.<rimtablename>.
  *
- * The dwhupload schema can then be used at the dwh/datalake side to
+ * The pond schema can then be used at the dwh/datalake side to
  * determine the new _ids that are to be acted on.
  */
 CREATE OR REPLACE FUNCTION pond_recordids() RETURNS int AS
@@ -114,9 +167,6 @@ DECLARE
         total int;
         current int;
 BEGIN
-        DROP SCHEMA IF EXISTS pond CASCADE;
-        CREATE SCHEMA pond;
-
         total := 0;
 
         FOR tblname IN SELECT pond_tables()
@@ -141,11 +191,11 @@ DECLARE
         total int;
         current int;
 BEGIN
-        DROP SCHEMA IF EXISTS pond CASCADE;
         total := 0;
 
         FOR tblname IN SELECT pond_tables()
         LOOP
+                EXECUTE 'DROP TABLE IF EXISTS pond."' || tblname || '"';
                 EXECUTE 'TRUNCATE TABLE "' || tblname || '" CASCADE';
                 GET DIAGNOSTICS current = ROW_COUNT;
                 total := total + current;
@@ -156,15 +206,30 @@ $$ LANGUAGE plpgsql;
 
 /*
  * The set of ddl statements that need to be issued on a dwh to be able to
- * ingest a pond update
+ * ingest a pond update. Should be pre-loaded on dwh.
  */
 CREATE OR REPLACE FUNCTION pond_ddl() RETURNS text AS
 $$
 DECLARE
         rt text;
         tblname name;
+        seq_start int8;
+        seq_end int8;
 BEGIN
+        seq_start := -9223372036854775808;
+        seq_end := 9223372036854775807;
+
         rt := 'CREATE SCHEMA IF NOT EXISTS pond;';
+
+        rt := rt || 'ALTER SEQUENCE "InfrastructureRoot__id_seq"'
+                 || ' START WITH ' || seq_start
+                 || ' RESTART WITH ' || seq_start
+                 || ' MINVALUE ' || seq_start
+                 || ' MAXVALUE ' || seq_end
+                 || ' NO CYCLE INCREMENT BY 1;';
+
+        rt := rt || 'CREATE TABLE IF NOT EXISTS pond."_Info" (ts timestamp, hostname text, seqstart bigint, seqend bigint);';
+
         FOR tblname IN SELECT pond_tables()
         LOOP
                 rt := rt || 'CREATE TABLE IF NOT EXISTS pond."' || tblname || '" (_id bigint);';
