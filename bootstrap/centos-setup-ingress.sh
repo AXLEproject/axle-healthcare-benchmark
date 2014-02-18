@@ -5,19 +5,28 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 1 ];
+if [ $# -ne 2 ];
 then
-  echo "Usage: $0 <broker-ip>"
+  echo "Usage: $0 <broker-ip> <username>"
   exit 127
 fi
 
 BROKERIP=$1
-MESSAGING_DIR=/home/ec2-user/axle-healthcare-benchmark/messaging
+USER=$2
+
+AXLE=/home/${USER}/axle-healthcare-benchmark
+BASEDIR=${AXLE}/database
+
+# ingest part of the default_settings include makefile
+sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n '/^define/,$!p'  > /tmp/default_settings_bash
+source /tmp/default_settings_bash
 
 _error() {
     echo "ERROR: $1"
     exit 1
 }
+
+MESSAGING_DIR=${AXLE}/messaging
 
 # Add EPEL repository
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -27,7 +36,7 @@ yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
-cd /home/ec2-user
+cd /home/${USER}
 wget http://apache.cs.uu.nl/dist/maven/maven-2/2.2.1/binaries/apache-maven-2.2.1-bin.tar.gz
 tar xf apache-maven-2.2.1-bin.tar.gz
 mkdir bin

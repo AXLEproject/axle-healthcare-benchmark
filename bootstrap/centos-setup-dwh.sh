@@ -5,15 +5,21 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 1 ];
+if [ $# -ne 2 ];
 then
-  echo "Usage: $0 <broker-ip>"
+  echo "Usage: $0 <broker-ip> <username>"
   exit 127
 fi
 
 BROKERIP=$1
-USER=ec2-user
-DB_DIR=/home/${USER}/axle-healthcare-benchmark/database
+USER=$2
+
+AXLE=/home/${USER}/axle-healthcare-benchmark
+BASEDIR=${AXLE}/database
+
+# ingest part of the default_settings include makefile
+sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n '/^define/,$!p'  > /tmp/default_settings_bash
+source /tmp/default_settings_bash
 
 _error() {
     echo "ERROR: $1"
@@ -25,17 +31,16 @@ rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.n
 yum install -y curl wget htop mc joe
 
 # packages for building postgresql
-yum install -y git gcc bison flex gdb
-yum install -y make readline-devel zlib-devel uuid-devel
+yum install -y git gcc bison flex gdb make readline-devel zlib-devel uuid-devel
 
 # packages for profiling
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
 # bootstrap the database server software and cluster
-sudo -u ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/bootstrap && make && echo \"export PATH=\\\${PATH}:/home/\${USER}/axle-healthcare-benchmark/database/pgserver/bin\" >> ~/.bashrc"
+sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
 
 # create data warehouse
-sudo -iu ${USER} sh -c "cd \$HOME/axle-healthcare-benchmark/datawarehouse && make datawarehouse"
+sudo -iu ${USER} sh -c "cd ${AXLE}/$DWHDIR && make datawarehouse"
 
 cat > /etc/init/axle-dwh.conf <<EOF
 description "AXLE Data Warehouse"
@@ -44,7 +49,7 @@ stop on runlevel [016]
 respawn
 
 script
-    exec su -c "cd ${DB_DIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
+    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
 end script
 EOF
 
