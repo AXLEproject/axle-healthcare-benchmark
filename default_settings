@@ -16,8 +16,8 @@ DWHDIR=datawarehouse
 # the following directories are created
 PERFDATADIR=perfdata
 DATABASEDIR=database
-PGSOURCE=$(BASEDIR)/postgresql
-PGSERVER=$(BASEDIR)/postgres
+PGSOURCE=$(BASEDIR)/pgsource
+PGSERVER=$(BASEDIR)/pgserver
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
 
@@ -33,8 +33,9 @@ NUMBEROFCDAS=1000
 # PREPARE POSTGRESQL DATABASE CLUSTER
 #------------------------------------------------------------------------------
 
-# PostgreSQL source repository
-PGGIT=git://git.postgresql.org/git/postgresql.git
+# Use the official PostgreSQL mirror at github
+PGGIT=https://github.com/postgres/postgres
+PGGITDIR=$(shell basename $(PGGIT))
 
 # PostgreSQL branch to checkout
 PGBRANCH=REL9_3_STABLE
