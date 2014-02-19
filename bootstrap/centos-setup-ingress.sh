@@ -53,18 +53,23 @@ EOF
 cd $MESSAGING_DIR && sbt clean compile stage \
   || _error "Could not build ingress messaging software"
 
-cat > /etc/init/axle-ingress.conf <<EOF
+CPUS=`grep MHz /proc/cpuinfo | wc -l`
+
+for i in $(seq $CPUS)
+do
+cat > /etc/init/axle-ingress$i.conf <<EOF
 description "AXLE Messaging Ingress"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress
+  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i
 end script
 EOF
 
-initctl start axle-ingress
+initctl start axle-ingress$i
+done
 
 # Add symon
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm

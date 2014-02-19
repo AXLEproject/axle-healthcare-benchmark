@@ -27,15 +27,15 @@ INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERHOST="$9"
-DWHUSER="$10"
-DWHHOST="$11"
+DWHUSER="${10}"
+DWHHOST="${11}"
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 dwhhost $10"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 dwhuser $10 dwhhost $11"
 
 #exit code
 WARN=0
@@ -119,9 +119,9 @@ ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}
 T=`mktemp`
 sudo yum install -y git
 sudo git init /media/ephemeral0/axle-healthcare-benchmark
-sudo git config receive.denyCurrentBranch ignore
 sudo chown -R ${AMIUSERNAME}.${AMIUSERNAME} /media/ephemeral0/axle-healthcare-benchmark
 sudo ln -s /media/ephemeral0/axle-healthcare-benchmark axle-healthcare-benchmark
+cd axle-healthcare-benchmark && git config receive.denyCurrentBranch ignore
 exit
 EOF
 
@@ -172,6 +172,11 @@ then
     pwd
     TOPDIR=$(git rev-parse --show-cdup)
     scp -p -P ${SSHPORT} -i ${KEYPAIR} ${TOPDIR}/messaging/loader-key ${AMIUSERNAME}@${IP}:.ssh/loader-key || _error "Could not copy loader private key"
+ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+cd
+chmod 600 .ssh/loader-key
+exit
+EOF
 fi
 
 if [ "x$STARTTYPE" = "xdwh" ];

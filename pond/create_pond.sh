@@ -73,7 +73,7 @@ case "${ACTION}" in
         # Load term mappings
         pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
-        # Load pond functions
+        echo ".. Load pond functions"
         pgcommandfromfile $DBNAME "pond.sql"
 
         echo "..Restricting login to owner"

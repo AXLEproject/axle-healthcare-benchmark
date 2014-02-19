@@ -43,7 +43,7 @@ tar -xvf axle-healthcare-benchmark/messaging/mgrid-messaging-0.9.tar.gz
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
-for i in {1..$CPUS}
+for i in $(seq $CPUS)
 do
 cat > /etc/init/axle-xfm$i.conf <<EOF
 description "AXLE Messaging Transformer"

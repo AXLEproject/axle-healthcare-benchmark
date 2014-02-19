@@ -62,7 +62,7 @@ while getopts ":hH:P:I:K:U:B:N:D:" opt; do
                 BROKERHOST=$OPTARG
         ;;
         N)
-                DWHNAME=$OPTARG
+                DWHUSER=$OPTARG
         ;;
         D)
                 DWHHOST=$OPTARG

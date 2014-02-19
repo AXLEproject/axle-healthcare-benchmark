@@ -30,6 +30,11 @@ service rabbitmq-server restart
 curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhost:15672/api/definitions \
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
+# Load loader sequences in queue
+yum install -y python-pip python-lxml
+pip install importlib kombu
+python axle-healthcare-benchmark/pond/rabbitmq_seed_pond_seq.py
+
 # Add symon
 yum install -y httpd rrdtool php
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
