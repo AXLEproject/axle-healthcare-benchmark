@@ -163,6 +163,34 @@ then
     scp -P ${SSHPORT} -i ${KEYPAIR} ${TOPDIR}/cda-generator/axle-generator-password.txt ${AMIUSERNAME}@${IP}:axle-healthcare-benchmark/cda-generator/password.txt || _error "Could not copy axle generator password"
 fi
 
+if [ "x$STARTTYPE" = "xloader" ];
+then
+    echo "Copying private key to loader"
+    pwd
+    TOPDIR=$(git rev-parse --show-cdup)
+    LOADERKEY=$(<${TOPDIR}/messaging/loader-key)
+ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+cd
+echo ${LOADERKEY} > .ssh/loader-key
+chmod 600 .ssh/loader-key
+exit
+EOF
+fi
+
+if [ "x$STARTTYPE" = "xdwh" ];
+then
+    echo "Adding loader key to dwh authorized keys"
+    pwd
+    TOPDIR=$(git rev-parse --show-cdup)
+    PUBKEY=$(<${TOPDIR}/messaging/loader-key.pub)
+ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+cd
+echo ${PUBKEY} >> .ssh/authorized_keys
+chmod 600 .ssh/authorized_keys
+exit
+EOF
+fi
+
 # Start the setup script based on the instance name
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd

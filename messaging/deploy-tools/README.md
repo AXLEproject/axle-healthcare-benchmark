@@ -6,6 +6,7 @@ Steps to perform locally
 * clone axle-healthcare-benchmark
 * setup AWS credentials in ~/.aws/axle.pem
 * make axle password available in `axle-healthcare-benchmark/cda-generator/axle-generator-password.txt` (do not commit)
+* make loader/dwh keypair available in `axle-healthcare-benchmark/messaging/{loader-key, loader-key.pub}` (do not commit)
 * `cp ~/.ssh/config ~/.ssh/config.bak`
 
 ## START GROUP ##
@@ -20,6 +21,13 @@ Initially:
 
 Once other processes have started:
     tail -f *.log
+
+## MONITOR GROUP ##
+
+Symon is used to monitor the instances. To complete the monitoring setup run update-group-monitoring.sh after all
+instances are up. Check the script for required arguments.
+
+The Symon web interface is available on the broker instance's localhost, port 80.
 
 ## TERMINATE GROUP ##
 

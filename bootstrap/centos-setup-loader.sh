@@ -39,6 +39,9 @@ yum install -y git gcc bison flex gdb make readline-devel zlib-devel uuid-devel
 # packages for profiling
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
+# package for autorestart SSH tunnels (to dwh)
+yum install -y autossh
+
 yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
@@ -52,9 +55,12 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 # create pond databases
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
+# setup tunnel to dwh
+sudo -u ${USER} sh -c "autossh -M 0 -f -i ~/.ssh/loader.key -L15432:localhost:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${DWHUSER}@${DWHHOST}"
+
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
-for i in {1..$CPUS};
+for i in $(seq $CPUS)
 do
 cat > /etc/init/axle-loader$i.conf <<EOF
 description "AXLE Messaging Loader"
@@ -73,7 +79,7 @@ script
 end script
 EOF
 
-initctl start axle-loader$i
+  initctl start axle-loader$i
 done
 
 # Add symon
