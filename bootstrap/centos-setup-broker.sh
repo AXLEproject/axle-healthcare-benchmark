@@ -38,6 +38,7 @@ rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/syweb-0.65-1.el6.x86_64.rpm
 chkconfig --add symon
 chkconfig --add symux
 chkconfig --add httpd
-/usr/share/symon/c_config.sh ${BROKERIP} > /etc/symon.conf
+LOCALIP=`wget -qO- http://instance-data/latest/meta-data/local-ipv4`
+/usr/share/symon/c_config.sh ${LOCALIP} > /etc/symon.conf
 service symon start
 service httpd start
