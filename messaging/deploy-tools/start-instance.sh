@@ -119,8 +119,7 @@ ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}
 T=`mktemp`
 sudo yum install -y git
 sudo git init /media/ephemeral0/axle-healthcare-benchmark
-sudo git config --unset-all receive.denyCurrentBranch
-sudo git config --add receive.denyCurrentBranch ignore
+sudo git config receive.denyCurrentBranch ignore
 sudo chown -R ${AMIUSERNAME}.${AMIUSERNAME} /media/ephemeral0/axle-healthcare-benchmark
 sudo ln -s /media/ephemeral0/axle-healthcare-benchmark axle-healthcare-benchmark
 exit

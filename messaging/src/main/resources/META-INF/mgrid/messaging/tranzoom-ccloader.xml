@@ -82,6 +82,7 @@
     />
 
   <bean id="ccloaderDatabaseBean" class="net.mgrid.tranzoom.ccloader.Loader">
+    <property name="pondUploadScript" value="${config.pond.uploadscript}"/>
     <property name="pondHost" value="${config.pond.dbhost}"/>
     <property name="pondPort" value="${config.pond.dbport}"/>
     <property name="pondDatabase" value="${config.pond.dbname}"/>

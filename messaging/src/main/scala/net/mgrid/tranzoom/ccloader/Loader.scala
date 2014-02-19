@@ -44,6 +44,7 @@ class Loader {
   import Loader._
   import MessageListener.SourceRef
 
+  @BeanProperty var pondUploadScript: String = "../pond/pond_upload.sh"
   @BeanProperty var pondHost: String = "localhost"
   @BeanProperty var pondPort: String = "5432"
   @BeanProperty var pondDatabase: String = "pond"
@@ -156,7 +157,7 @@ class Loader {
 
     } map { // upload to data lake
 
-      _ => s"./loader-tools/pond_upload.sh -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
+      _ => s"$pondUploadScript -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
 
     } map { // commit and upload successful
 

@@ -73,6 +73,9 @@ case "${ACTION}" in
         # Load term mappings
         pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
+        # Load pond functions
+        pgcommandfromfile $DBNAME "pond.sql"
+
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
         ;;
