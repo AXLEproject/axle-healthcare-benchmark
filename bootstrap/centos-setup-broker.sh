@@ -31,7 +31,7 @@ curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhos
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
 # Add symon
-yum install httpd rrdtool php
+yum install -y httpd rrdtool php
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mux-2.87-1.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/syweb-0.65-1.el6.x86_64.rpm
