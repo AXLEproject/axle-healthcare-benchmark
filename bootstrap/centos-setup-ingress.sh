@@ -5,14 +5,15 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 2 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-ip> <username>"
+  echo "Usage: $0 <broker-host> <dwh-host> <username>"
   exit 127
 fi
 
-BROKERIP=$1
-USER=$2
+BROKERHOST=$1
+DWHHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -58,7 +59,7 @@ stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERIP net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress
+  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress
 end script
 EOF
 

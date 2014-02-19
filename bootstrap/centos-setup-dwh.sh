@@ -5,14 +5,15 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 2 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-ip> <username>"
+  echo "Usage: $0 <broker-host> <dwh-host> <username>"
   exit 127
 fi
 
-BROKERIP=$1
-USER=$2
+BROKERHOST=$1
+DWHHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -49,7 +50,7 @@ stop on runlevel [016]
 respawn
 
 script
-    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
+    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -o "-h 0.0.0.0" -l logfile start" ${USER}
 end script
 EOF
 

@@ -6,14 +6,15 @@
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
 
-if [ $# -ne 2 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-ip> <username>"
+  echo "Usage: $0 <broker-host> <dwh-host> <username>"
   exit 127
 fi
 
-BROKERIP=$1
-USER=$2
+BROKERHOST=$1
+DWHHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -39,18 +40,23 @@ pip install importlib kombu
 
 tar -xvf axle-healthcare-benchmark/messaging/mgrid-messaging-0.9.tar.gz
 
-cat > /etc/init/axle-xfm.conf <<EOF
+CPUS=`grep MHz /proc/cpuinfo | wc -l`
+
+for i in {1..$CPUS}
+do
+cat > /etc/init/axle-xfm$i.conf <<EOF
 description "AXLE Messaging Transformer"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERIP
+  cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERHOST 2>&1 | logger -t axle-xfm$i 
 end script
 EOF
 
-initctl start axle-xfm
+initctl start axle-xfm$i
+done
 
 # Add symon
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm

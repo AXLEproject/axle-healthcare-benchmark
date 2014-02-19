@@ -5,14 +5,15 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 2 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-ip> <username>"
+  echo "Usage: $0 <broker-host> <dwh-host> <username>"
   exit 127
 fi
 
-BROKERIP=$1
-USER=$2
+BROKERHOST=$1
+DWHHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -51,18 +52,29 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 # create pond databases
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
-cat > /etc/init/axle-loader.conf <<EOF
+CPUS=`grep MHz /proc/cpuinfo | wc -l`
+
+for i in {1..$CPUS};
+do
+cat > /etc/init/axle-loader$i.conf <<EOF
 description "AXLE Messaging Loader"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERIP net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader
+  cd $MESSAGING_DIR && ./target/start \
+    -Dconfig.rabbitmq.host=$BROKERHOST \
+    -Dconfig.pond.dbname=pond$i \
+    -Dconfig.pond.dbuser=$USER \
+    -Dconfig.lake.dbhost=$DWHHOST \
+    -Dconfig.lake.dbuser=$USER \
+    net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i
 end script
 EOF
 
-initctl start axle-loader
+initctl start axle-loader$i
+done
 
 # Add symon
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm

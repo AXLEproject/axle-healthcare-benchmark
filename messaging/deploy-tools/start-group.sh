@@ -6,6 +6,7 @@
 #
 
 GROUPNAME="${1:-mytest}"
+DWHHOST="$2"
 
 # A note about AMIs: these are bound to a region.
 
@@ -35,8 +36,6 @@ BROKERTYPE="c3.large"
 INGRESSTYPE="c3.xlarge"
 XFMTYPE="c3.xlarge"
 LOADTYPE="c3.xlarge"
-
-# uncomment the following line to create a data warehouse
 DWHTYPE="hs1.8xlarge"
 
 # Error handlers
@@ -58,36 +57,49 @@ echo "Starting group ${GROUPNAME}"
 echo "Start broker first (we need to propagate its IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "broker-1" "0.0.0.0" 2>&1 > broker.log &
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "localhost" ${DWHHOST:-unknown.dwh.host} 2>&1 > broker.log &
 
 # It takes about 30 seconds to start the instance
 sleep 25
 
 while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
-	echo "Waiting for the broker to become running"
-	sleep 5
+  echo "Waiting for the broker to become running"
+  sleep 5
 done
 
-BROKERIP=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $7}'`
+BROKERHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $7}'`
 
-echo "============= BROKER RUNNING ON IP ${BROKERIP} ============="
-
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} 2>&1 > ingress-2.log &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}        2>&1 > xfm-1.log     &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP}        2>&1 > xfm-2.log     &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP}    2>&1 > loader-1.log  &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP}    2>&1 > loader-2.log  &
-
-if [ "x${DWHTYPE}" != "x" ];
+if [ "x${DWHHOST}" = "x" ];
 then
-    ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-        ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERIP}    2>&1 > dwh.log  &
+  echo "No dwh host provided, creating new dwh instance of type ${DWHTYPE}"
+
+  ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+      ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERHOST} "localhost"   2>&1 > dwh.log  &
+
+  # It takes about 30 seconds to start the instance
+  sleep 25
+
+  while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
+    echo "Waiting for the dwh to become running"
+    sleep 5
+  done
+
+  DWHHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $7}'`
 fi
+
+echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
+echo "================ DWH RUNNING ON HOST ${DWHHOST} ================"
+
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${DWHHOST} 2>&1 > ingress-2.log &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERHOST} ${DWHHOST}        2>&1 > xfm-1.log     &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERHOST} ${DWHHOST}        2>&1 > xfm-2.log     &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERHOST} ${DWHHOST}    2>&1 > loader-1.log  &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERHOST} ${DWHHOST}    2>&1 > loader-2.log  &
 
 FAIL=0
 for job in `jobs -p`

@@ -14,7 +14,7 @@
 
 if [ $# -ne 9 ];
 then
-    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-ip>"
+    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <dwh-host>"
     exit 127
 fi
 
@@ -26,9 +26,10 @@ EC2_REGION="$5"
 INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
-BROKERIP="$9"
+BROKERHOST="$9"
+DWHHOST="$10"
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerip $9"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 dwhhost $10"
 
 #exit code
 WARN=0
@@ -158,7 +159,7 @@ fi
 # Start the setup script based on the instance name
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd
-sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP} ${AMIUSERNAME}
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${DWHHOST} ${AMIUSERNAME}
 exit
 EOF
 
