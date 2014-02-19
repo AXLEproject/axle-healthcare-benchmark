@@ -5,15 +5,18 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 3 ];
+if [ $# -ne 4 ];
 then
-  echo "Usage: $0 <broker-host> <dwh-host> <username>"
+  echo "Usage: $0 <broker-host> <dwh-user> <dwh-host> <username>"
   exit 127
 fi
 
 BROKERHOST=$1
-DWHHOST=$2
-USER=$3
+DWHUSER=$2
+DWHHOST=$3
+USER=$4
+
+DWHLOCALPORT=15432
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -56,7 +59,7 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
 # setup tunnel to dwh
-sudo -u ${USER} sh -c "autossh -M 0 -f -i ~/.ssh/loader.key -L15432:localhost:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${DWHUSER}@${DWHHOST}"
+sudo -u ${USER} sh -c "autossh -M 0 -f -i ~/.ssh/loader.key -L${DWHLOCALPORT}:localhost:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${DWHUSER}@${DWHHOST}"
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
@@ -71,10 +74,12 @@ respawn
 script
   cd $MESSAGING_DIR && ./target/start \
     -Dconfig.rabbitmq.host=$BROKERHOST \
+    -Dconfig.pond.dbhost=localhost \
     -Dconfig.pond.dbname=pond$i \
     -Dconfig.pond.dbuser=$USER \
-    -Dconfig.lake.dbhost=$DWHHOST \
-    -Dconfig.lake.dbuser=$USER \
+    -Dconfig.lake.dbhost=localhost \
+    -Dconfig.lake.dbport=$DWHLOCALPORT \
+    -Dconfig.lake.dbuser=$DWHUSER \
     net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i
 end script
 EOF

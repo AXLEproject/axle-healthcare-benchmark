@@ -7,6 +7,7 @@ Steps to perform locally
 * setup AWS credentials in ~/.aws/axle.pem
 * make axle password available in `axle-healthcare-benchmark/cda-generator/axle-generator-password.txt` (do not commit)
 * make loader/dwh keypair available in `axle-healthcare-benchmark/messaging/{loader-key, loader-key.pub}` (do not commit)
+  (generate with ssh-keygen)
 * `cp ~/.ssh/config ~/.ssh/config.bak`
 
 ## START GROUP ##

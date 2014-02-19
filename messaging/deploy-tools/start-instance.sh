@@ -12,9 +12,9 @@
 # - copy the password
 #
 
-if [ $# -ne 10 ];
+if [ $# -ne 11 ];
 then
-    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <dwh-host>"
+    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <dwh-user> <dwh-host>"
     exit 127
 fi
 
@@ -27,7 +27,8 @@ INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERHOST="$9"
-DWHHOST="$10"
+DWHUSER="$10"
+DWHHOST="$11"
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
@@ -118,6 +119,8 @@ ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}
 T=`mktemp`
 sudo yum install -y git
 sudo git init /media/ephemeral0/axle-healthcare-benchmark
+sudo git config --unset-all receive.denyCurrentBranch
+sudo git config --add receive.denyCurrentBranch ignore
 sudo chown -R ${AMIUSERNAME}.${AMIUSERNAME} /media/ephemeral0/axle-healthcare-benchmark
 sudo ln -s /media/ephemeral0/axle-healthcare-benchmark axle-healthcare-benchmark
 exit
@@ -148,6 +151,7 @@ STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd axle-healthcare-benchmark
 git checkout topic/fawork/messaging
+git reset --hard
 exit
 EOF
 
@@ -168,13 +172,7 @@ then
     echo "Copying private key to loader"
     pwd
     TOPDIR=$(git rev-parse --show-cdup)
-    LOADERKEY=$(<${TOPDIR}/messaging/loader-key)
-ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
-cd
-echo ${LOADERKEY} > .ssh/loader-key
-chmod 600 .ssh/loader-key
-exit
-EOF
+    scp -p -P ${SSHPORT} -i ${KEYPAIR} ${TOPDIR}/messaging/loader-key ${AMIUSERNAME}@${IP}:.ssh/loader-key || _error "Could not copy loader private key"
 fi
 
 if [ "x$STARTTYPE" = "xdwh" ];
@@ -183,9 +181,10 @@ then
     pwd
     TOPDIR=$(git rev-parse --show-cdup)
     PUBKEY=$(<${TOPDIR}/messaging/loader-key.pub)
+    scp -p -P ${SSHPORT} -i ${KEYPAIR} ${TOPDIR}/messaging/loader-key.pub ${AMIUSERNAME}@${IP}:.ssh/loader-key.pub || _error "Could not copy loader public key"
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd
-echo ${PUBKEY} >> .ssh/authorized_keys
+cat .ssh/loader-key.pub >> .ssh/authorized_keys
 chmod 600 .ssh/authorized_keys
 exit
 EOF
@@ -194,7 +193,7 @@ fi
 # Start the setup script based on the instance name
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd
-sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${DWHHOST} ${AMIUSERNAME}
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${DWHUSER} ${DWHHOST} ${AMIUSERNAME}
 exit
 EOF
 
