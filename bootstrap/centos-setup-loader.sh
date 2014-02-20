@@ -88,14 +88,13 @@ EOF
 done
 
 # pgserver is already started but make sure it survives reboot
-cat > /etc/init/pond-pgserver.conf <<EOF
-description "Pond PostgreSQL Server"
+cat > /etc/init/pgserver.conf <<EOF
+description "PostgreSQL server"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
 
 script
-    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
+    exec su -c "cd ${BASEDIR} && ${PGSERVER}/bin/pg_ctl -D ./data -l logfile start" ${USER}
 end script
 EOF
-

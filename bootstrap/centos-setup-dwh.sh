@@ -44,15 +44,15 @@ sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${P
 # create data warehouse
 sudo -iu ${USER} sh -c "cd ${AXLE}/$DWHDIR && make datawarehouse"
 
-cat > /etc/init/axle-dwh.conf <<EOF
-description "AXLE Data Warehouse"
+cat > /etc/init/pgserver.conf <<EOF
+description "PostgreSQL server"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
 
 script
-    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
+    exec su -c "cd ${BASEDIR} && ${PGSERVER}/bin/pg_ctl -D ./data -l logfile start" ${USER}
 end script
 EOF
 
-initctl start axle-dwh
+initctl start pgserver
