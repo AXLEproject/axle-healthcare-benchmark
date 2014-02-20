@@ -17,12 +17,13 @@ EOF
 }
 
 DPDB=test
+DPUSER=mgrid
 DLHOST=127.0.0.1
 DLPORT=5432
 DLDB=dwh
 DLUSER=mgrid
 
-while getopts "hn:H:N:U:" opt; do
+while getopts "hn:u:H:N:U:P:" opt; do
         case $opt in
         h)
           usage
@@ -30,6 +31,9 @@ while getopts "hn:H:N:U:" opt; do
         ;;
         n)
           DPDB=$OPTARG
+        ;;
+        u)
+          DPUSER=$OPTARG
         ;;
         H)
           DLHOST=$OPTARG
@@ -39,6 +43,9 @@ while getopts "hn:H:N:U:" opt; do
         ;;
         U)
           DLUSER=$OPTARG
+        ;;
+        P)
+          DLPORT=$OPTARG
         ;;
         ?)
           exit 1
@@ -54,7 +61,7 @@ fi
 
 # TODO: dwh must have db, pond_ddl and cc_ddl!
 
-psql -d ${DPDB} -tc "SELECT pond_ddl()" | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
-pg_dump -aOx ${DPDB} | sed 's/^SET search_path = public, pg_catalog;$/SET search_path = public, pg_catalog, hl7;/' | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
+psql -U ${DPUSER) -d ${DPDB} -tc "SELECT pond_ddl()" | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
+pg_dump -aOx ${DPDB} -U ${DPUSER) | sed 's/^SET search_path = public, pg_catalog;$/SET search_path = public, pg_catalog, hl7;/' | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
 
-psql -d ${DPDB} -c "SELECT pond_empty()"
+psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_empty()"

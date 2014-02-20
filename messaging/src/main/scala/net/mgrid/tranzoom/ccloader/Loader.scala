@@ -157,7 +157,7 @@ class Loader {
 
     } map { // upload to data lake
 
-      _ => s"$pondUploadScript -n $pondDatabase -H $lakeHost -N $lakeDatabase -U $lakeUser".!!
+      _ => s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!!
 
     } map { // commit and upload successful
 
