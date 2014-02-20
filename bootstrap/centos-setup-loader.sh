@@ -49,8 +49,8 @@ yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
-cd $MESSAGING_DIR && sbt clean compile stage \
-  || _error "Could not build loader messaging software"
+sudo -u ${USER} sh -c "cd $MESSAGING_DIR && sbt clean compile stage \
+  || _error 'Could not build loader messaging software'"
 
 # bootstrap the database server software and cluster
 sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
@@ -72,8 +72,7 @@ stop on runlevel [016]
 respawn
 
 script
-  source /home/$USER/.bashrc
-  cd $MESSAGING_DIR && ./target/start \
+  su -l ${USER} -c "(source /home/$USER/.bashrc; \ cd $MESSAGING_DIR && ./target/start \
     -Dconfig.rabbitmq.host=$BROKERHOST \
     -Dconfig.pond.dbhost=localhost \
     -Dconfig.pond.dbname=pond$i \
@@ -82,7 +81,7 @@ script
     -Dconfig.lake.dbname=madrim \
     -Dconfig.lake.dbport=$DWHLOCALPORT \
     -Dconfig.lake.dbuser=$DWHUSER \
-    net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i
+    net.mgrid.tranzoom.ccloader.LoaderApplication)" 2>&1 | logger -t axle-loader$i
 end script
 EOF
 
