@@ -72,12 +72,14 @@ stop on runlevel [016]
 respawn
 
 script
+  source /home/$USER/.bashrc
   cd $MESSAGING_DIR && ./target/start \
     -Dconfig.rabbitmq.host=$BROKERHOST \
     -Dconfig.pond.dbhost=localhost \
     -Dconfig.pond.dbname=pond$i \
     -Dconfig.pond.dbuser=$USER \
     -Dconfig.lake.dbhost=localhost \
+    -Dconfig.lake.dbname=madrim \
     -Dconfig.lake.dbport=$DWHLOCALPORT \
     -Dconfig.lake.dbuser=$DWHUSER \
     net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i
