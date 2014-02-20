@@ -92,7 +92,7 @@ echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
 echo "================ DWH RUNNING ON HOST ${DWHHOST} ================"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST} 2>&1 > ingress-2.log &
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST} 2>&1 > ingress-1.log &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
     ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST}        2>&1 > xfm-1.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
@@ -110,4 +110,14 @@ do
 done
 
 echo $FAIL
-exit
+
+if [ $FAIL -eq 0 ];
+then
+    # Finalize symon and symux configuration
+    ./update-group-monitoring.sh ${KEYPAIR} ${GROUPNAME}
+else
+    exit 1;
+fi
+
+echo $FAIL
+exit 0;

@@ -87,8 +87,15 @@ EOF
   initctl start axle-loader$i
 done
 
-# Add symon
-rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
-chkconfig --add symon
-/usr/share/symon/c_config.sh ${BROKERIP} > /etc/symon.conf
-service symon start
+# pgserver is already started but make sure it survives reboot
+cat > /etc/init/pond-pgserver.conf <<EOF
+description "Pond PostgreSQL Server"
+start on runlevel [2345]
+stop on runlevel [016]
+respawn
+
+script
+    exec su -c "cd ${BASEDIR} && ./postgres/bin/pg_ctl -D ./data -l logfile start" ${USER}
+end script
+EOF
+

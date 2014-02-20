@@ -70,9 +70,3 @@ EOF
 
 initctl start axle-ingress$i
 done
-
-# Add symon
-rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
-chkconfig --add symon
-/usr/share/symon/c_config.sh ${BROKERIP} > /etc/symon.conf
-service symon start
