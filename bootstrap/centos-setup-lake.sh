@@ -1,7 +1,7 @@
 #
 # axle-healthcare-benchmark
 #
-# install dwh prerequisites on CentOS 6.
+# install lake prerequisites on CentOS 6.
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
@@ -41,7 +41,7 @@ yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
 
 # create data warehouse
-sudo -iu ${USER} sh -c "cd ${AXLE}/$DWHDIR && make datawarehouse"
+sudo -iu ${USER} sh -c "cd ${AXLE}/$LAKEDIR && make datawarehouse"
 
 cat > /etc/init/pgserver.conf <<EOF
 description "PostgreSQL server"

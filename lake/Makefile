@@ -16,10 +16,10 @@ all: datawarehouse
 
 # create databases
 createdb:
-	./create_dwh.sh $(LAKELOCALHOST) $(LAKEPORT) $(LAKEUSER) $(LAKEDB) create
+	./create_lake.sh $(LAKELOCALHOST) $(LAKEPORT) $(LAKEUSER) $(LAKEDB) create
 
 dropdb:
-	./create_dwh.sh $(LAKELOCALHOST) $(LAKEPORT) $(LAKEUSER) $(LAKEDB) drop
+	./create_lake.sh $(LAKELOCALHOST) $(LAKEPORT) $(LAKEUSER) $(LAKEDB) drop
 
 datawarehouse: createdb opaque
 

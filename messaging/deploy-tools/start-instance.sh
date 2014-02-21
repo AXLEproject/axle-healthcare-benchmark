@@ -157,7 +157,7 @@ EOF
 # password before bootstrapping, since the axle / cdagenpwd is necessary to
 # download the HDL installer We also need the password to download mgrid
 # software, so just copy it to all machines.
-if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xdwh" ];
+if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xlake" ];
 then
     echo "Copying axle password for type $STARTTYPE"
     pwd
@@ -178,9 +178,9 @@ exit
 EOF
 fi
 
-if [ "x$STARTTYPE" = "xdwh" ];
+if [ "x$STARTTYPE" = "xlake" ];
 then
-    echo "Adding loader key to dwh authorized keys"
+    echo "Adding loader key to lake authorized keys"
     pwd
     TOPDIR=$(git rev-parse --show-cdup)
     PUBKEY=$(<${TOPDIR}/messaging/loader-key.pub)

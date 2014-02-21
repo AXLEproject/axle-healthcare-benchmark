@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# create_dwh.sh
+# create_lake.sh
 #
 # Creates a RIM based data warehouse.
 #
@@ -10,7 +10,6 @@
 #
 usage() {
     echo "USAGE: $0 <PG_HOST> <PG_PORT> <PG_USER> <DB_NAME> <ACTION>";
-    echo "e.g.: $0 localhost 6042 pvmgrid dwh_eemla create";
     echo "action is one of drop, create";
     exit 1;
 }

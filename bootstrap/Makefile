@@ -81,5 +81,3 @@ installmsg: $(MGRIDMSGFILE)
 stop:
 	test -d $(PGDATA) && PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast || echo ""
 
-psql: start
-	PATH=$(PGSERVER)/bin:${PATH} ; psql dwh

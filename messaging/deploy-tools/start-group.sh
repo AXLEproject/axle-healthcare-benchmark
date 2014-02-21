@@ -40,7 +40,7 @@ BROKERTYPE="c3.large"
 INGRESSTYPE="c3.xlarge"
 XFMTYPE="c3.xlarge"
 LOADTYPE="c3.xlarge"
-DWHTYPE="hs1.8xlarge"
+LAKETYPE="hs1.8xlarge"
 
 # Error handlers
 _error() {
@@ -75,24 +75,24 @@ BROKERHOST=`euca-describe-instances  --filter instance-state-name=running --filt
 
 if [ "x${LAKEEXTERNALHOST}" = "x" ];
 then
-  echo "No dwh host provided, creating new dwh instance of type ${DWHTYPE}"
+  echo "No lake host provided, creating new lake instance of type ${LAKETYPE}"
 
   ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-      ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > dwh.log  &
+      ${LAKETYPE} ${GROUPNAME} "lake" ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > lake.log  &
 
   # It takes about 30 seconds to start the instance
   sleep 25
 
-  while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
-    echo "Waiting for the dwh to become running"
+  while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=lake | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
+    echo "Waiting for the lake to become running"
     sleep 5
   done
 
-  LAKEEXTERNALHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $7}'`
+  LAKEEXTERNALHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=lake | tr '\n' ' ' | awk '{print $7}'`
 fi
 
 echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
-echo "================ DWH RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
+echo "=============== LAKE RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
    ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${LAKEEXTERNALHOST} 2>&1 > ingress-1.log &

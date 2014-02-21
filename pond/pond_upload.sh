@@ -20,7 +20,7 @@ DPDB=test
 DPUSER=mgrid
 DLHOST=127.0.0.1
 DLPORT=5432
-DLDB=dwh
+DLDB=lake
 DLUSER=mgrid
 
 while getopts "hn:u:H:N:U:P:" opt; do
@@ -59,7 +59,7 @@ if [ $? -ne 0 ]; then
     exit $?
 fi
 
-# TODO: dwh must have db, pond_ddl and cc_ddl!
+# TODO: lake must have db, pond_ddl and cc_ddl!
 
 psql -U ${DPUSER} -d ${DPDB} -tc "SELECT pond_ddl()" | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
 pg_dump -aOx ${DPDB} -U ${DPUSER} | sed 's/^SET search_path = public, pg_catalog;$/SET search_path = public, pg_catalog, hl7;/' | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?

@@ -12,7 +12,7 @@ export TOP_PID=$$
 
 usage() {
     echo "USAGE: $0 <YAML_FILE> [PG_HOST [PG_PORT [PG_USER [DB_NAME]]]]";
-    echo "e.g.: $0 load_dim_provider.sql localhost 5432 m dwh";
+    echo "e.g.: $0 load_dim_provider.sql localhost 5432 m lake";
     exit 1;
 }
 

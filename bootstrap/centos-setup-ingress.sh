@@ -5,16 +5,15 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 4 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-host> <dwh-user> <dwh-host> <username>"
+  echo "Usage: $0 <broker-host> <lake-external-host> <user>"
   exit 127
 fi
 
 BROKERHOST=$1
-DWHUSER=$2
-DWHHOST=$3
-USER=$4
+LAKEEXTERNALHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database

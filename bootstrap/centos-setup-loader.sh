@@ -39,7 +39,7 @@ yum install -y git gcc bison flex gdb make readline-devel zlib-devel uuid-devel
 # packages for profiling
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
-# package for autorestart SSH tunnels (to dwh)
+# package for autorestart SSH tunnels (to lake)
 yum install -y autossh
 
 yum install -y java-1.7.0-openjdk
@@ -55,7 +55,7 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 # create pond databases
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
-# setup tunnel to dwh
+# setup tunnel to lake
 sudo -u ${USER} sh -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}"
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`

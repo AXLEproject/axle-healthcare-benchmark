@@ -12,7 +12,7 @@
 CDAGENERATOR=cda-generator
 CDAOUTPUT=$(CDAGENERATOR)/output
 BOOTSTRAPDIR=bootstrap
-DWHDIR=datawarehouse
+LAKEDIR=lake
 # the following directories are created
 PERFDATADIR=perfdata
 DATABASEDIR=database

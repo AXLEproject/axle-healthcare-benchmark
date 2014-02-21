@@ -157,7 +157,7 @@ $$ LANGUAGE plpgsql;
  * Determine all ids that were inserted into this pond, and store them in
  * pond.<rimtablename>.
  *
- * The pond schema can then be used at the dwh/datalake side to
+ * The pond schema can then be used at the lake side to
  * determine the new _ids that are to be acted on.
  */
 CREATE OR REPLACE FUNCTION pond_recordids() RETURNS int AS
@@ -205,8 +205,8 @@ END
 $$ LANGUAGE plpgsql;
 
 /*
- * The set of ddl statements that need to be issued on a dwh to be able to
- * ingest a pond update. Should be pre-loaded on dwh.
+ * The set of ddl statements that need to be issued on a lake to be able to
+ * ingest a pond update. Should be pre-loaded on lake.
  */
 CREATE OR REPLACE FUNCTION pond_ddl() RETURNS text AS
 $$
