@@ -68,31 +68,32 @@ case "${ACTION}" in
 
         pgext2sql $DBNAME hl7v3datatypes_r1--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2005"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2005--2.0.sql
+#        pgcommand $DBNAME "CREATE SCHEMA rim2005"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
+#        pgext2sql $DBNAME hl7v3rim_edition2005--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2006"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2006--2.0.sql
+#        pgcommand $DBNAME "CREATE SCHEMA rim2006"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
+#        pgext2sql $DBNAME hl7v3rim_edition2006--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2008"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2008, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2008--2.0.sql
+#        pgcommand $DBNAME "CREATE SCHEMA rim2008"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2008, public, hl7, pg_hl7, \"\$user\";"
+#        pgext2sql $DBNAME hl7v3rim_edition2008--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2009"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2009, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2009--2.0.sql
+#        pgcommand $DBNAME "CREATE SCHEMA rim2009"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2009, public, hl7, pg_hl7, \"\$user\";"
+#        pgext2sql $DBNAME hl7v3rim_edition2009--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2010"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2010--2.0.sql
+#        pgcommand $DBNAME "CREATE SCHEMA rim2010"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
+#        pgext2sql $DBNAME hl7v3rim_edition2010--2.0.sql
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+#        pgcommand $DBNAME "CREATE SCHEMA rim2011"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
         pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
+#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
 

@@ -6,8 +6,11 @@
 #
 
 GROUPNAME="${1:-mytest}"
-DWHHOST="$2"
-DWHUSER="${3:-ec2-user}"
+LAKEEXTERNALHOST="$2"
+
+# ingest part of the default_settings include makefile
+sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n '/^define/,$!p'  > /tmp/default_settings_bash
+source /tmp/default_settings_bash
 
 # A note about AMIs: these are bound to a region.
 
@@ -58,7 +61,7 @@ echo "Starting group ${GROUPNAME}"
 echo "Start broker first (we need to propagate its IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "broker-1" "localhost" ${DWHUSER} ${DWHHOST:-unknown.dwh.host} 2>&1 > broker.log &
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "localhost" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > broker.log &
 
 # It takes about 30 seconds to start the instance
 sleep 25
@@ -70,12 +73,12 @@ done
 
 BROKERHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $7}'`
 
-if [ "x${DWHHOST}" = "x" ];
+if [ "x${LAKEEXTERNALHOST}" = "x" ];
 then
   echo "No dwh host provided, creating new dwh instance of type ${DWHTYPE}"
 
   ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-      ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERHOST} ${DWHUSER} "localhost"   2>&1 > dwh.log  &
+      ${DWHTYPE} ${GROUPNAME} "dwh" ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > dwh.log  &
 
   # It takes about 30 seconds to start the instance
   sleep 25
@@ -85,22 +88,22 @@ then
     sleep 5
   done
 
-  DWHHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $7}'`
+  LAKEEXTERNALHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=dwh | tr '\n' ' ' | awk '{print $7}'`
 fi
 
 echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
-echo "================ DWH RUNNING ON HOST ${DWHHOST} ================"
+echo "================ DWH RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST} 2>&1 > ingress-1.log &
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${LAKEEXTERNALHOST} 2>&1 > ingress-1.log &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST}        2>&1 > xfm-1.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-1.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERHOST} ${DWHUSER} ${DWHHOST}        2>&1 > xfm-2.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERHOST} ${DWHUSER} ${DWHHOST}    2>&1 > loader-1.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERHOST} ${DWHUSER} ${DWHHOST}    2>&1 > loader-2.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
 
 FAIL=0
 for job in `jobs -p`

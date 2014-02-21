@@ -5,18 +5,15 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 4 ];
+if [ $# -ne 3 ];
 then
-  echo "Usage: $0 <broker-host> <dwh-user> <dwh-host> <username>"
+  echo "Usage: $0 <broker-host> <lake-external-host> <user>"
   exit 127
 fi
 
 BROKERHOST=$1
-DWHUSER=$2
-DWHHOST=$3
-USER=$4
-
-DWHLOCALPORT=15432
+LAKEEXTERNALHOST=$2
+USER=$3
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -59,7 +56,7 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
 # setup tunnel to dwh
-sudo -u ${USER} sh -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${DWHLOCALPORT}:localhost:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${DWHUSER}@${DWHHOST}"
+sudo -u ${USER} sh -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}"
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
@@ -74,13 +71,13 @@ respawn
 script
   su -l ${USER} -c "(source /home/$USER/.bashrc; \ cd $MESSAGING_DIR && ./target/start \
     -Dconfig.rabbitmq.host=$BROKERHOST \
-    -Dconfig.pond.dbhost=localhost \
-    -Dconfig.pond.dbname=pond$i \
-    -Dconfig.pond.dbuser=$USER \
-    -Dconfig.lake.dbhost=localhost \
-    -Dconfig.lake.dbname=madrim \
-    -Dconfig.lake.dbport=$DWHLOCALPORT \
-    -Dconfig.lake.dbuser=$DWHUSER \
+    -Dconfig.pond.dbhost=${PONDHOST} \
+    -Dconfig.pond.dbname=${PONDDBPREFIX}${i} \
+    -Dconfig.pond.dbuser=${PONDUSER} \
+    -Dconfig.lake.dbhost=${LAKELOCALHOST} \
+    -Dconfig.lake.dbname=${LAKEDB} \
+    -Dconfig.lake.dbport=${LAKELOCALPORT} \
+    -Dconfig.lake.dbuser=${LAKEUSER} \
     net.mgrid.tranzoom.ccloader.LoaderApplication)" 2>&1 | logger -t axle-loader$i
 end script
 EOF

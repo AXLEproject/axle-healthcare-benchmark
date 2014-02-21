@@ -30,6 +30,20 @@ CDAGENCONF=$(CDAGENERATOR)/src/main/resources/application.conf
 NUMBEROFCDAS=1000
 
 #------------------------------------------------------------------------------
+# DATABASE SERVERS AND NAMES
+#------------------------------------------------------------------------------
+PONDHOST=localhost
+PONDPORT=5432
+PONDUSER=$(USER)
+PONDDBPREFIX=pond
+LAKELOCALPORT=15432
+LAKELOCALHOST=localhost
+
+LAKEPORT=5432
+LAKEUSER=$(USER)
+LAKEDB=lake
+
+#------------------------------------------------------------------------------
 # PREPARE POSTGRESQL DATABASE CLUSTER
 #------------------------------------------------------------------------------
 
@@ -67,9 +81,3 @@ join_collapse_limit = 12
 endef
 export NONDEFAULTPOSTGRESQLCONF
 
-#------------------------------------------------------------------------------
-# DATABASE SERVERS AND NAMES
-#------------------------------------------------------------------------------
-PONDHOST=localhost
-PONDPORT=5432
-PONDUSER=${USER}

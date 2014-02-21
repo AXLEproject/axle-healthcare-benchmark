@@ -12,9 +12,9 @@
 # - copy the password
 #
 
-if [ $# -ne 11 ];
+if [ $# -ne 10 ];
 then
-    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <dwh-user> <dwh-host>"
+    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <lake-external-host>"
     exit 127
 fi
 
@@ -27,15 +27,14 @@ INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERHOST="$9"
-DWHUSER="${10}"
-DWHHOST="${11}"
+LAKEEXTERNALHOST="$10"
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 dwhuser $10 dwhhost $11"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9"
 
 #exit code
 WARN=0
@@ -197,7 +196,7 @@ fi
 # Start the setup script based on the instance name
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd
-sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${DWHUSER} ${DWHHOST} ${AMIUSERNAME}
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${LAKEEXTERNALHOST} ${AMIUSERNAME}
 exit
 EOF
 
