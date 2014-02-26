@@ -29,6 +29,16 @@
   <int:channel id="prepareRoutingChannel"/>
   <int:channel id="fhirTransformChannel" />
   
+  <!-- Global error channel and handler -->
+  <int:channel id="errorChannel" />
+  
+  <int:service-activator
+    input-channel="errorChannel"
+    method="globalError">
+    
+    <bean class="net.mgrid.tranzoom.error.GlobalErrorHandler" />
+  </int:service-activator>
+  
   <!-- 
   
   IMPORTANT NOTE!
@@ -55,9 +65,6 @@
   <task:executor id="singleTaskExecutor"
     pool-size="1"
     queue-capacity="100"/>
-
-  <int:logging-channel-adapter id="debugLoggerChannel" level="DEBUG"/>
-  <int:logging-channel-adapter id="errorLoggerChannel" level="ERROR"/>
 
   <!-- Schema validation
 
@@ -169,6 +176,7 @@
   <rabbit:template id="errorTemplate" connection-factory="rabbitConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
+    id="errorOutboundAdapter"
     channel="publishErrorChannel"
     amqp-template="errorTemplate"
     exchange-name="errors"
@@ -181,6 +189,7 @@
   <rabbit:template id="transformTemplate" connection-factory="rabbitConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
+    id="transformOutboundAdapter"
     channel="toTransformersChannel"
     amqp-template="transformTemplate"
     exchange-name="transform"

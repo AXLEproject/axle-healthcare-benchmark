@@ -87,6 +87,7 @@ class Loader {
               case ex: Throwable => 
                 logger.warn("Could not initialize pond", ex)
                 channel.basicReject(response.getEnvelope().getDeliveryTag(), true /*requeue*/ )
+                throw ex
             }
 
             result.get // throws exception on fail
@@ -229,7 +230,7 @@ class Loader {
     try {
       f
     } catch {
-      case _: Throwable => /* ssst */
+      case ex: Throwable => /* ssst */ logger.info("Quietly ignoring exception", ex)
     }
   }
 }
@@ -251,6 +252,12 @@ object Loader {
 
   def newDatasource(jdbcUri: String): DataSource = {
     val connPool = new GenericObjectPool()
+    
+    connPool.setMaxActive(1)
+    connPool.setMaxIdle(1)
+    connPool.setWhenExhaustedAction(GenericObjectPool.WHEN_EXHAUSTED_BLOCK)
+    connPool.setMaxWait(0)
+    
     val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
     val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )
 

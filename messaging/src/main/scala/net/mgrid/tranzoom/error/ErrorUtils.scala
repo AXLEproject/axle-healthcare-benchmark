@@ -22,7 +22,7 @@ object ErrorUtils {
   // error types should only use [a-zA-Z0-9] for use in amqp routing keys
   val ERROR_TYPE_INTERNAL = "internal"
   val ERROR_TYPE_VALIDATION = "validation"
-
+    
   def errorMessage(errorType: String, reason: String, ref: SourceRef): Message[_] = {
     val (payload, _, _) = ref
     val sourcePayload = new String(payload)

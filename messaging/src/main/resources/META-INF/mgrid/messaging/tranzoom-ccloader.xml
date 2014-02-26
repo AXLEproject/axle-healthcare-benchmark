@@ -35,8 +35,15 @@
     pool-size="1"
     queue-capacity="100"/>
 
-  <int:logging-channel-adapter id="debugLoggerChannel" level="DEBUG"/>
-  <int:logging-channel-adapter id="errorLoggerChannel" level="ERROR"/>
+  <!-- Global error channel and handler -->
+  <int:channel id="errorChannel" />
+  
+  <int:service-activator
+    input-channel="errorChannel"
+    method="globalError">
+    
+    <bean class="net.mgrid.tranzoom.error.GlobalErrorHandler" />
+  </int:service-activator>
 
   <!--
     To keep state the aggregator uses an in-memory map by default.
