@@ -53,11 +53,11 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
-psql -d ${DPDB} -c "SELECT pond_recordids()"
+# Set pipefail option: "The return value of a pipeline is the value of the last (rightmost) command to exit with a non-zero status, or 
+# zero if all commands in the pipeline exit successfully.
+set -o pipefail
 
-if [ $? -ne 0 ]; then
-    exit $?
-fi
+psql -d ${DPDB} -c "SELECT pond_recordids()" || exit $?
 
 # TODO: lake must have db, pond_ddl and cc_ddl!
 
