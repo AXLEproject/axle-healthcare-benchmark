@@ -37,9 +37,9 @@ KEYPAIR="/home/${USER}/.aws/axle.pem"
 # c3.xlarge 4 cpu, 7.5GB 2x40 SSD
 
 BROKERTYPE="c3.large"
-INGRESSTYPE="c3.xlarge"
-XFMTYPE="c3.xlarge"
-LOADTYPE="c3.xlarge"
+INGRESSTYPE="c1.xlarge"
+XFMTYPE="c1.xlarge"
+LOADTYPE="hs1.8xlarge"
 LAKETYPE="hs1.8xlarge"
 
 # Error handlers
@@ -102,8 +102,6 @@ echo "=============== LAKE RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
     ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
     ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
 
 FAIL=0
 for job in `jobs -p`

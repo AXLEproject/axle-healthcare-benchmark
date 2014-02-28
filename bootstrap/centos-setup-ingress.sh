@@ -38,13 +38,13 @@ yum install -y java-1.7.0-openjdk
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
 cd /home/${USER}
-wget http://apache.cs.uu.nl/dist/maven/maven-2/2.2.1/binaries/apache-maven-2.2.1-bin.tar.gz
-tar xf apache-maven-2.2.1-bin.tar.gz
+wget http://apache.cs.uu.nl/dist/maven/maven-3/3.2.1/binaries/apache-maven-3.2.1-bin.tar.gz
+tar xf apache-maven-3.2.1-bin.tar.gz
 mkdir bin
-mv apache-maven-2.2.1 bin
-rm -f apache-maven-2.2.1-bin.tar.gz
+mv apache-maven-3.2.1 bin
+rm -f apache-maven-3.2.1-bin.tar.gz
 cat >> .bashrc <<EOF
-export M2_HOME=/home/\${USER}/bin/apache-maven-2.2.1 
+export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1 
 export M2=\${M2_HOME}/bin 
 export PATH=\${M2}:\${PATH}
 EOF
