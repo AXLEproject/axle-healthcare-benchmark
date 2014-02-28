@@ -160,8 +160,8 @@ class Loader {
    * @param message Message containing the SQL message group
    */
   @ServiceActivator
-  def loadGroup(group: java.util.List[Message[String]]): Unit = {
-    val messages = group.asScala
+  def loadGroup(group: Message[java.util.List[Message[String]]]): Unit = {
+    val messages = group.getPayload().asScala
     load(messages) { ex =>
       logger.info(s"Loading group failed, try one-by-one.", ex)
       messages.foreach(loadSingle)

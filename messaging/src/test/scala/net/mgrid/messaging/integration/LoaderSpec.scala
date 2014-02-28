@@ -57,7 +57,7 @@ class LoaderSpec extends FlatSpec with Matchers {
     val confirmListener = mock(classOf[PublishConfirmListener])
     val sql = Source.fromFile("test-data/fhir_0001_prac.sql").mkString
     val msg  = MessageBuilder.withPayload(sql).build()
-    val group = seqAsJavaListConverter(Seq(msg)).asJava
+    val group = MessageBuilder.withPayload(seqAsJavaListConverter(Seq(msg)).asJava).build()
     
     loader.confirmListener = confirmListener
     
