@@ -1,6 +1,14 @@
 #!/bin/bash
 #
 # Transfer a local data pond to the data lake
+
+
+# Set pipefail option: "The return value of a pipeline is the value of the last (rightmost) command to exit with a non-zero status, or 
+# zero if all commands in the pipeline exit successfully.
+set -o pipefail
+# Exit immediately on error
+set -e
+
 usage() {
   cat << EOF
   usage: $0 [OPTIONS]
@@ -53,15 +61,11 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
-# Set pipefail option: "The return value of a pipeline is the value of the last (rightmost) command to exit with a non-zero status, or 
-# zero if all commands in the pipeline exit successfully.
-set -o pipefail
-
-psql -d ${DPDB} -c "SELECT pond_recordids()" || exit $?
+psql -d ${DPDB} -c "SELECT pond_recordids()"
 
 # TODO: lake must have db, pond_ddl and cc_ddl!
 
-psql -U ${DPUSER} -d ${DPDB} -tc "SELECT pond_ddl()" | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
-pg_dump -aOx ${DPDB} -U ${DPUSER} | sed 's/^SET search_path = public, pg_catalog;$/SET search_path = public, pg_catalog, hl7;/' | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER} || exit $?
+psql -U ${DPUSER} -d ${DPDB} -tc "SELECT pond_ddl()" | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
+pg_dump -aOx ${DPDB} -U ${DPUSER} | sed 's/^SET search_path = public, pg_catalog;$/SET search_path = public, pg_catalog, hl7;/' | psql -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
 
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_empty()"
