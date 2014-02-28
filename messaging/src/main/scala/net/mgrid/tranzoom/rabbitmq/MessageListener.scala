@@ -5,7 +5,7 @@ package net.mgrid.tranzoom.rabbitmq
 
 import scala.beans.BeanProperty
 import org.slf4j.LoggerFactory
-import org.springframework.amqp.core.{Message => AmqpMessage}
+import org.springframework.amqp.core.{ Message => AmqpMessage }
 import org.springframework.amqp.rabbit.core.ChannelAwareMessageListener
 import org.springframework.integration.Message
 import org.springframework.integration.MessageChannel
@@ -20,6 +20,10 @@ import net.mgrid.tranzoom.error.ErrorUtils
 import net.mgrid.tranzoom.ingress.xml.XmlConverter
 import javax.xml.transform.dom.DOMSource
 import org.springframework.util.Assert
+import net.mgrid.tranzoom.error.ErrorHandler
+import javax.annotation.PostConstruct
+import org.springframework.beans.factory.annotation.Required
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * Channel-aware message listener for RabbitMQ.
@@ -33,52 +37,44 @@ import org.springframework.util.Assert
 abstract class MessageListener[T] extends ChannelAwareMessageListener {
   import MessageListener._
 
-  @BeanProperty
+  @BeanProperty @Required
   var outputChannel: MessageChannel = _
 
-  @BeanProperty
-  var errorChannel: MessageChannel = _
+  @Autowired @Required
+  var errorHandler: ErrorHandler = _
 
   private val headerMapper: AmqpHeaderMapper = new DefaultAmqpHeaderMapper
 
   def convert(bytes: Array[Byte]): T
 
-  def onMessage(message: AmqpMessage, channel: Channel): Unit = {
-    Assert.notNull(message.getMessageProperties())
-    Assert.notNull(message.getMessageProperties().getDeliveryTag())
-
-    val tag = message.getMessageProperties().getDeliveryTag()
-    val ref = (message.getBody, tag, channel)
-
+  def onMessage(amqpMessage: AmqpMessage, channel: Channel): Unit =
     try {
-      val payload = convert(message.getBody)
-      val headers = headerMapper.toHeadersFromRequest(message.getMessageProperties)
-      val m = MessageBuilder
-        .withPayload(payload)
-        .copyHeaders(headers)
-        .setHeader(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP, System.currentTimeMillis.toString)
-        .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref)
-        .build()
+      val tag = amqpMessage.getMessageProperties().getDeliveryTag()
+      val ref: SourceRef = (amqpMessage.getBody, tag, channel)
+      val headers = headerMapper.toHeadersFromRequest(amqpMessage.getMessageProperties)
 
-      if (logger.isDebugEnabled) {
-        logger.debug(s"Received $message with tag $tag from RabbitMQ channel $channel, converted to $m; forward to spring message channel.")
+      try {
+        val message = buildMessage(convert(amqpMessage.getBody), ref)
+
+        if (logger.isDebugEnabled) {
+          logger.debug(s"Received $amqpMessage with tag $tag from RabbitMQ channel $channel, converted to $message; forward to spring message channel.")
+        }
+
+        outputChannel.send(message)
+
+      } catch {
+        case ex: SAXException => {
+          // build message without conversion
+          val message = buildMessage(amqpMessage.getBody(), ref)
+          logger.warn(s"Parsing of $amqpMessage failed.", ex)
+          errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, s"Parse exception; ${ex.getMessage}")
+        }
       }
-
-      outputChannel.send(m)
-
     } catch {
-      case ex: SAXException => {
-        logger.warn(s"Parsing of $message failed.", ex)
-        val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, s"Parse exception; ${ex.getMessage}", ref)
-        errorChannel.send(errorMessage)
-      }
-      case ex: Throwable => {
-        logger.warn(s"Processing of $message failed.", ex)
-        val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_INTERNAL, s"Exception during message processing: ${ex.getMessage}", ref)
-        errorChannel.send(errorMessage)
-      }
+      case ex: Throwable =>
+        logger.error(s"Unexpected error during processing AMQP message: ${ex.getMessage}", ex)
+        errorHandler.fatal(ex)
     }
-  }
 }
 
 object MessageListener {
@@ -86,5 +82,11 @@ object MessageListener {
   type SourceRef = (Array[Byte], Long, Channel)
 
   private val logger = LoggerFactory.getLogger(MessageListener.getClass)
+
+  def buildMessage[T](payload: T, ref: SourceRef) =
+    MessageBuilder.withPayload(payload)
+      .setHeader(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP, System.currentTimeMillis.toString)
+      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref)
+      .build()
 
 }

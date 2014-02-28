@@ -10,6 +10,11 @@ import scala.beans.BeanProperty
 import org.springframework.integration.amqp.AmqpHeaders
 import net.mgrid.tranzoom.TranzoomHeaders
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Required
+import net.mgrid.tranzoom.error.ErrorHandler
+import org.springframework.integration.support.MessageBuilder
+import org.springframework.integration.annotation.ServiceActivator
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * Listener for downstream confirms, sends ack upstream.
@@ -18,16 +23,17 @@ class PublishConfirmListener {
   import PublishConfirmListener._
   import MessageListener.SourceRef
 
-  @BeanProperty
-  var errorChannel: MessageChannel = _
+  @Autowired @Required
+  var errorHandler: ErrorHandler = _
 
+  @ServiceActivator
   def publishResult(message: Message[SourceRef]): Unit =
     message.getHeaders.get(AmqpHeaders.PUBLISH_CONFIRM) match {
       case isConfirm: java.lang.Boolean if isConfirm => confirmMessage(message.getPayload)
       case _ => {
-        val (payload, _, _) = message.getPayload
-        val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_INTERNAL, "Message rejected by message broker.", message.getPayload)
-        errorChannel.send(errorMessage)
+        val ref @ (payload, _, _) = message.getPayload()
+        val source = MessageBuilder.withPayload(payload).setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref).build
+        errorHandler.error(source, ErrorUtils.ERROR_TYPE_INTERNAL, "Message rejected by message broker.")
       }
     }
 

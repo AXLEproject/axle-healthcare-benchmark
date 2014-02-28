@@ -42,7 +42,7 @@ class LoaderSpec extends FlatSpec with Matchers {
     
     when(channel.basicGet("pond-seq", false)).thenReturn(response)
     
-    loader.setRabbitConnectionFactory(connFactory)
+    loader.rabbitConnectionFactory = connFactory
     
     isPondReady(loader) should be (false)
     loader.start
@@ -57,9 +57,9 @@ class LoaderSpec extends FlatSpec with Matchers {
     val confirmListener = mock(classOf[PublishConfirmListener])
     val sql = Source.fromFile("test-data/fhir_0001_prac.sql").mkString
     val msg  = MessageBuilder.withPayload(sql).build()
-    val group = MessageBuilder.withPayload(seqAsJavaListConverter(Seq(msg)).asJava).build()
+    val group = seqAsJavaListConverter(Seq(msg)).asJava
     
-    loader.setConfirmListener(confirmListener)
+    loader.confirmListener = confirmListener
     
     isPondReady(loader) should be (true)
     
@@ -84,7 +84,7 @@ class LoaderSpec extends FlatSpec with Matchers {
     val loader = initLoader
     val (connFactory, channel) = rabbitMock
     
-    loader.setRabbitConnectionFactory(connFactory)
+    loader.rabbitConnectionFactory = connFactory
     
     isPondReady(loader) should be (true)
     

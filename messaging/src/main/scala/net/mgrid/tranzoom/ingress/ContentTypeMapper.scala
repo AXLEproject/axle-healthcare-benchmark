@@ -17,6 +17,10 @@ import net.mgrid.tranzoom.TranzoomHeaders
 import net.mgrid.tranzoom.rabbitmq.MessageListener
 import net.mgrid.tranzoom.ingress.xml.XmlConverter
 import javax.xml.transform.dom.DOMSource
+import org.springframework.beans.factory.annotation.Required
+import net.mgrid.tranzoom.error.ErrorHandler
+import org.springframework.integration.annotation.ServiceActivator
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * Mapping class for content type routing.
@@ -26,8 +30,8 @@ class ContentTypeMapper {
   import ContentTypeMapper._
   import MessageListener.SourceRef
 
-  @BeanProperty
-  var errorChannel: MessageChannel = _
+  @Autowired @Required
+  var errorHandler: ErrorHandler = _
 
   /**
    * Add a content type header used for downstream processing. The type is the interaction as described
@@ -37,6 +41,7 @@ class ContentTypeMapper {
    * @param message The message for which to add an content type header.
    * @return The message including content type header, or null if no content type could be determined.
    */
+  @ServiceActivator
   def addContentTypeHeader(message: Message[DOMSource]): Message[Array[Byte]] = {
     val node = converter.convertToNode(message.getPayload)
     val contentType: Option[String] = XPathEvaluationType.STRING_RESULT.evaluateXPath(messageTypeExpression, node) match {
@@ -53,24 +58,21 @@ class ContentTypeMapper {
     val result = contentType map { ct =>
       val payload = XmlConverter.toBytes(message.getPayload)
       MessageBuilder.withPayload(payload).copyHeaders(message.getHeaders()).setHeader(CONTENT_TYPE_HEADER, ct).build()
-    } getOrElse {
-      message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) match {
-        case ref: SourceRef => {
-          val reason = s"Unsupported interaction."
-          val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, reason, ref)
-          logger.info(s"Determine content type failed for message $message: $reason. Sending error message: $errorMessage")
-          errorChannel.send(errorMessage)
-          null
-        }
+    } orElse {
+      val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
+      logger.info(s"Determine content type failed for message $message: Unknown interaction.")
+      errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, "Unsupported interaction.")
+      None
+    }
+
+    if (logger.isDebugEnabled) {
+      result map { m =>
+        val p = new String(m.getPayload)
+        logger.debug(s"Added content type header $contentType to result message $m with payload $p")
       }
     }
-    
-    if (logger.isDebugEnabled) {
-      val p = new String(result.getPayload())
-      logger.debug(s"Added content type header $contentType to result message $result with payload $p")
-    }
-    
-    result
+
+    result.orNull
   }
 
 }

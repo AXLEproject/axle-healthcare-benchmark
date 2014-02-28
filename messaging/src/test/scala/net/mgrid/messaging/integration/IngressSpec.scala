@@ -52,7 +52,7 @@ class IngressSpec extends FlatSpec with Matchers with BeforeAndAfter {
     publish("some.fhir.message", """<Organization xmlns="http://hl7.org/fhir"></Organization>""")
     
     queueSize("transform-hl7v3") should be (0)
-    queueSize("ingress-hl7v3") should be (1)
+    queueSize("ingress-fhir") should be (1)
     
   }
 

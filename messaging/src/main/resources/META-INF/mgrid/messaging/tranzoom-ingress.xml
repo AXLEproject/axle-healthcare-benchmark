@@ -16,6 +16,48 @@
     http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
     http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
     http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+    
+    <!--BEGIN-DOT
+    
+    digraph ingress {
+      hl7v3ValidateChannel [shape=cds]
+      prepareRoutingChannel [shape=cds]
+      toTransformersChannel [shape=cds]
+      fhirValidateChannel [shape=cds]
+      fhirTransformChannel [shape=cds]
+      errorChannel [shape=cds]
+      publishErrorChannel [shape=cds]
+      
+      Broker -> hl7v3ListenerBean
+      hl7v3ListenerBean -> hl7v3ValidateChannel
+      hl7v3ValidateChannel -> hl7v3Validator
+      hl7v3Validator -> prepareRoutingChannel
+      
+      Broker -> fhirListenerBean
+      fhirListenerBean -> fhirValidateChannel
+      fhirValidateChannel -> fhirValidator
+      fhirValidator -> fhirTransformChannel
+      fhirTransformChannel -> fhirTransformer
+      fhirTransformer -> prepareRoutingChannel
+      
+      prepareRoutingChannel -> interactionMapper
+      interactionMapper -> toTransformersChannel
+      toTransformersChannel -> transformOutboundAdapter
+      
+      transformOutboundAdapter -> publishResultChannel
+      
+      errorChannel -> errorHandler
+      errorHandler -> publishErrorChannel
+      publishErrorChannel -> errorOutboundAdapter
+      errorOutboundAdapter -> publishResultChannel
+      publishResultChannel -> publishConfirmer
+      publishConfirmer -> errorHandler
+      
+    }
+      
+    END-DOT-->
+
+  <context:annotation-config/>
 
   <context:property-placeholder
     location="classpath:META-INF/mgrid/messaging/ingress.properties"
@@ -28,43 +70,46 @@
   <int:channel id="publishResultChannel" />
   <int:channel id="prepareRoutingChannel"/>
   <int:channel id="fhirTransformChannel" />
-  
-  <!-- Global error channel and handler -->
-  <int:channel id="errorChannel" />
-  
-  <int:service-activator
-    input-channel="errorChannel"
-    method="globalError">
-    
-    <bean class="net.mgrid.tranzoom.error.GlobalErrorHandler" />
-  </int:service-activator>
-  
-  <!-- 
-  
+
+  <!--
+
   IMPORTANT NOTE!
-  
-  All channels which are connected to an outbound-channel-adapter with publisher confirms 
+
+  All channels which are connected to an outbound-channel-adapter with publisher confirms
   enabled should make sure that the adapter reads messages in a single thread. Because of
-  the way RabbitMQ implements publisher confirms (set the delivery tag by per-channel counting 
+  the way RabbitMQ implements publisher confirms (set the delivery tag by per-channel counting
   of messages) sending is not thread-safe at the connection factory level (CachingConnectionFactory
   by default).
-  
+
   Here we need to attach the publishErrorChannel and toTransformersChannel to the same
   singleTaskExecutor dispatcher.
-  
+
   -->
-  
+
   <int:channel id="publishErrorChannel">
     <int:dispatcher task-executor="singleTaskExecutor" />
   </int:channel>
-  
+
   <int:channel id="toTransformersChannel">
     <int:dispatcher task-executor="singleTaskExecutor" />
   </int:channel>
-  
+
   <task:executor id="singleTaskExecutor"
     pool-size="1"
     queue-capacity="100"/>
+
+  <!-- Global error channel and handler -->
+
+  <bean id="errorHandler" class="net.mgrid.tranzoom.error.GlobalErrorHandler">
+    <property name="publishErrorChannel" ref="publishErrorChannel"/>
+  </bean>
+
+  <int:channel id="errorChannel" />
+
+  <int:service-activator
+    id="globalErrorHandler"
+    input-channel="errorChannel"
+    ref="errorHandler" />
 
   <!-- Schema validation
 
@@ -76,23 +121,21 @@
   -->
 
   <int:service-activator
+    id="hl7v3Validator"
     input-channel="hl7v3ValidateChannel"
-    output-channel="prepareRoutingChannel"
-    method="validate">
+    output-channel="prepareRoutingChannel">
 
     <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
-      <property name="errorChannel" ref="publishErrorChannel"/>
       <property name="selector" ref="hl7v3XmlValidatingMessageSelector"/>
     </bean>
   </int:service-activator>
 
   <int:service-activator
+    id="fhirValidator"
     input-channel="fhirValidateChannel"
-    output-channel="fhirTransformChannel"
-    method="validate">
+    output-channel="fhirTransformChannel">
 
     <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
-      <property name="errorChannel" ref="publishErrorChannel"/>
       <property name="selector" ref="fhirXmlValidatingMessageSelector"/>
     </bean>
   </int:service-activator>
@@ -112,21 +155,23 @@
   <!-- Transform FHIR messages -->
 
   <int-xml:xslt-transformer
+    id="fhirTransformer"
     input-channel="fhirTransformChannel"
     output-channel="prepareRoutingChannel"
     xsl-resource="classpath:fhir-xsl/fhir-v3-transform.xsl"
     result-transformer="resultToSource"/>
-    
+
   <bean id="resultToSource" class="net.mgrid.tranzoom.ingress.xml.ResultToSourceTransformer" />
 
   <!-- Prepare message for routing -->
 
-  <int:service-activator input-channel="prepareRoutingChannel" output-channel="toTransformersChannel"
-    ref="contentTypeMapperBean" method="addContentTypeHeader"/>
+  <int:service-activator
+    id="interactionMapper"
+    input-channel="prepareRoutingChannel" 
+    output-channel="toTransformersChannel">
 
-  <bean id="contentTypeMapperBean" class="net.mgrid.tranzoom.ingress.ContentTypeMapper">
-    <property name="errorChannel" ref="publishErrorChannel"/>
-  </bean>
+    <bean class="net.mgrid.tranzoom.ingress.ContentTypeMapper" />
+  </int:service-activator>
 
   <!-- RabbitMQ infrastructure -->
 
@@ -158,20 +203,18 @@
 
   <bean id="hl7v3ListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
     <property name="outputChannel" ref="hl7v3ValidateChannel"/>
-    <property name="errorChannel" ref="publishErrorChannel"/>
   </bean>
-  
+
   <bean id="fhirListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
     <property name="outputChannel" ref="fhirValidateChannel"/>
-    <property name="errorChannel" ref="publishErrorChannel"/>
   </bean>
 
-  <int:service-activator input-channel="publishResultChannel"
-    ref="publishConfirmListenerBean" method="publishResult"/>
+  <int:service-activator 
+    id="publishConfirmer"
+    input-channel="publishResultChannel">
 
-  <bean id="publishConfirmListenerBean" class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener">
-    <property name="errorChannel" ref="publishErrorChannel"/>
-  </bean>
+    <bean class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener" />
+  </int:service-activator>
 
   <rabbit:template id="errorTemplate" connection-factory="rabbitConnectionFactory" />
 
@@ -199,5 +242,5 @@
     confirm-ack-channel="publishResultChannel"
     confirm-nack-channel="publishResultChannel"
     />
-    
+
 </beans>

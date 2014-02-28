@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory
 import scala.beans.BeanProperty
 import net.mgrid.tranzoom.TranzoomHeaders
 import net.mgrid.tranzoom.rabbitmq.MessageListener
+import org.springframework.beans.factory.annotation.Required
+import net.mgrid.tranzoom.error.ErrorHandler
+import org.springframework.integration.annotation.ServiceActivator
 
 /**
  * Validate XML messages.
@@ -28,12 +31,13 @@ class XmlValidator {
   import XmlValidator._
   import MessageListener.SourceRef
 
-  @BeanProperty
-  var errorChannel: MessageChannel = _
+  @Autowired @Required
+  var errorHandler: ErrorHandler = _
 
-  @BeanProperty
+  @BeanProperty @Required
   var selector: XmlValidatingMessageSelector = _
 
+  @ServiceActivator
   def validate(message: Message[_]): Message[_] = {
 
     val result = Try(selector.accept(message)) match {
@@ -60,20 +64,17 @@ class XmlValidator {
       case ex: MessageRejectedException => ex.getCause match {
         case xmlException: AggregatedXmlMessageValidationException => {
           val reason = xmlException.exceptionIterator.asScala.map(_.getMessage).mkString("\n")
-          val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, reason, ref)
-          logger.info(s"Schema validation failed for message $message: $reason. Sending error message: $errorMessage")
-          errorChannel.send(errorMessage)
+          logger.info(s"Schema validation failed for message $message: $reason.")
+          errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, reason)
         }
         case ex @ _ => {
           logger.warn(s"Unknown message rejection cause $ex for message $message")
-          val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_INTERNAL, "Internal server error", ref)
-          errorChannel.send(errorMessage)
+          errorHandler.error(message, ErrorUtils.ERROR_TYPE_INTERNAL, "Internal server error")
         }
       }
       case ex: Throwable => {
         logger.warn(s"Unknown exception thrown during validation of $message", ex)
-        val errorMessage = ErrorUtils.errorMessage(ErrorUtils.ERROR_TYPE_INTERNAL, "Internal server error", ref)
-        errorChannel.send(errorMessage)
+        errorHandler.error(message, ErrorUtils.ERROR_TYPE_INTERNAL, "Internal server error")
       }
     }
 

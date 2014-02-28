@@ -13,18 +13,42 @@
     http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
     http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
     http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+    
+    <!--BEGIN-DOT
+    
+    digraph loader {
+      sqlAggregateChannel [shape=cds]
+      toDatabaseChannel [shape=cds]
+      publishResultChannel [shape=cds]
+      errorChannel [shape=cds]
+      
+      Broker -> sqlListenerBean
+      sqlListenerBean -> sqlAggregateChannel
+      sqlAggregateChannel -> aggregator
+      aggregator -> toDatabaseChannel
+      toDatabaseChannel -> loader
+      
+      errorChannel -> errorHandler
+      errorHandler -> publishErrorChannel
+      publishErrorChannel -> errorOutboundAdapter
+      errorOutboundAdapter -> publishResultChannel
+      publishResultChannel -> publishConfirmer
+      publishConfirmer -> errorHandler
+      
+    }
+      
+    END-DOT-->
 
+  <context:annotation-config />
+  
   <context:property-placeholder 
     location="classpath:META-INF/mgrid/messaging/ccloader.properties"
     system-properties-mode="OVERRIDE"/>
-    
-  <context:annotation-config />
 
   <!-- Channels, routing and transformation -->
 
   <int:channel id="sqlAggregateChannel"/>
   <int:channel id="toDatabaseChannel"/>
-  <int:channel id="failedGroupChannel"/>
   <int:channel id="publishResultChannel"/>
   
   <int:channel id="publishErrorChannel">
@@ -36,21 +60,25 @@
     queue-capacity="100"/>
 
   <!-- Global error channel and handler -->
+  
+  <bean id="errorHandler" class="net.mgrid.tranzoom.error.GlobalErrorHandler">
+    <property name="publishErrorChannel" ref="publishErrorChannel"/>
+  </bean>
+  
   <int:channel id="errorChannel" />
   
   <int:service-activator
     input-channel="errorChannel"
-    method="globalError">
-    
-    <bean class="net.mgrid.tranzoom.error.GlobalErrorHandler" />
-  </int:service-activator>
-
+    ref="errorHandler"/>
+  
   <!--
     To keep state the aggregator uses an in-memory map by default.
     For the correlation strategy we use a constant expression because in the current implementation
     there is no discrimination between messages (i.e. all belong to the same group).
   -->
+  
   <int:aggregator
+    id="aggregator"
     input-channel="sqlAggregateChannel"
     output-channel="toDatabaseChannel"
     message-store="aggregatorStore"
@@ -77,18 +105,10 @@
   </task:scheduled-tasks>
 
   <int:service-activator
-    input-channel="toDatabaseChannel"
-    ref="ccloaderDatabaseBean"
-    method="loadGroup"
-    />
+    id="loader"
+    input-channel="toDatabaseChannel">
 
-  <int:service-activator
-    input-channel="failedGroupChannel"
-    ref="ccloaderDatabaseBean"
-    method="loadSingle"
-    />
-
-  <bean id="ccloaderDatabaseBean" class="net.mgrid.tranzoom.ccloader.Loader">
+  <bean class="net.mgrid.tranzoom.ccloader.Loader">
     <property name="pondUploadScript" value="${config.pond.uploadscript}"/>
     <property name="pondHost" value="${config.pond.dbhost}"/>
     <property name="pondPort" value="${config.pond.dbport}"/>
@@ -98,11 +118,8 @@
     <property name="lakePort" value="${config.lake.dbport}"/>
     <property name="lakeDatabase" value="${config.lake.dbname}"/>
     <property name="lakeUser" value="${config.lake.dbuser}"/>
-    <property name="failedGroupChannel" ref="failedGroupChannel"/>
-    <property name="errorChannel" ref="publishErrorChannel"/>
-    <property name="confirmListener" ref="publishConfirmListenerBean"/>
-    <property name="rabbitConnectionFactory" ref="ccloaderConnectionFactory"/>
   </bean>
+  </int:service-activator>
 
   <!-- RabbitMQ infrastructure -->
 
@@ -115,11 +132,6 @@
     publisher-confirms="true"
     publisher-returns="false"/>
 
-  <task:executor id="inboundTaskExecutor"
-    pool-size="${config.pool-size}"
-    queue-capacity="100"
-    rejection-policy="CALLER_RUNS" />
-    
   <!--
        We cannot use an int-amqp:inbound-channel-adapter for the sql messages because it requires its
        own message listener which does not have access to a AMQP channel, which we
@@ -129,10 +141,8 @@
 
   <rabbit:listener-container
     connection-factory="ccloaderConnectionFactory"
-    task-executor="inboundTaskExecutor"
     acknowledge="manual"
-    concurrency="${config.rabbitmq.concurrent-consumers}"
-    prefetch="${config.rabbitmq.prefetch-count}"
+    prefetch="${config.group-size}"
     requeue-rejected="false">
 
     <rabbit:listener 
@@ -142,19 +152,19 @@
 
   <bean id="sqlListenerBean" class="net.mgrid.tranzoom.ccloader.LoaderListener">
     <property name="outputChannel" ref="sqlAggregateChannel"/>
-    <property name="errorChannel" ref="publishErrorChannel"/>
   </bean>
 
-  <int:service-activator input-channel="publishResultChannel"
-    ref="publishConfirmListenerBean" method="publishResult"/>
+  <int:service-activator 
+    id="publishConfirmer"
+    input-channel="publishResultChannel"
+    ref="publishConfirmListenerBean" />
 
-  <bean id="publishConfirmListenerBean" class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener">
-    <property name="errorChannel" ref="publishErrorChannel"/>
-  </bean>
+  <bean id="publishConfirmListenerBean" class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener" />
 
   <rabbit:template id="errorTemplate" connection-factory="ccloaderConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
+    id="errorOutboundAdapter"
     channel="publishErrorChannel"
     amqp-template="errorTemplate"
     exchange-name="errors"

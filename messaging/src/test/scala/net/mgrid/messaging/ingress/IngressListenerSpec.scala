@@ -24,6 +24,7 @@ import java.nio.charset.Charset
 import net.mgrid.tranzoom.ingress.xml.XmlConverter
 import javax.xml.transform.dom.DOMSource
 import scala.xml.XML
+import net.mgrid.tranzoom.error.GlobalErrorHandler
 
 class IngressListenerSpec extends FlatSpec with Matchers {
 
@@ -32,7 +33,7 @@ class IngressListenerSpec extends FlatSpec with Matchers {
 
   "The ingress listener" should "forward messages to the output channel as DOMSource" in {
     val outputChannel = mock(classOf[MessageChannel])
-    val errorChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
     val channel = mock(classOf[Channel])
     val message = mock(classOf[AmqpMessage])
     val payload = "<test></test>"
@@ -46,12 +47,13 @@ class IngressListenerSpec extends FlatSpec with Matchers {
 
     val listener = new IngressListener
     listener.outputChannel = outputChannel
-    listener.errorChannel = errorChannel
+    listener.errorHandler = errorHandler
     listener.onMessage(message, channel)
 
     // ack's should not be sent synchronously
     verify(channel, never()).basicAck(anyLong(), anyBoolean())
-    verify(errorChannel, never()).send(anyObject())
+    verify(errorHandler, never()).error(anyObject(), anyString(), anyString())
+    verify(errorHandler, never()).fatal(anyObject())
     val outArgument = ArgumentCaptor.forClass(classOf[Message[_]])
     verify(outputChannel).send(outArgument.capture())
     val result = outArgument.getValue.getPayload.asInstanceOf[DOMSource]
@@ -61,7 +63,7 @@ class IngressListenerSpec extends FlatSpec with Matchers {
   
   it should "send errors to the error channel" in {
     val outputChannel = mock(classOf[MessageChannel])
-    val errorChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
     val channel = mock(classOf[Channel])
     val message = mock(classOf[AmqpMessage])
     val payload = "TEST"
@@ -76,12 +78,13 @@ class IngressListenerSpec extends FlatSpec with Matchers {
 
     val listener = new IngressListener
     listener.outputChannel = outputChannel
-    listener.errorChannel = errorChannel
+    listener.errorHandler = errorHandler
     listener.onMessage(message, channel)
 
     // ack's should not be sent synchronously
     verify(channel, never()).basicAck(anyLong(), anyBoolean())
-    verify(errorChannel).send(anyObject())
+    verify(errorHandler).error(anyObject(), anyString(), anyString())
+    verify(errorHandler, never()).fatal(anyObject())
   }
 
   it should "add timestamp header" in {

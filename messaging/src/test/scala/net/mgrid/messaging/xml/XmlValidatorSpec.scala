@@ -13,6 +13,7 @@ import org.springframework.integration.MessageRejectedException
 import org.scalatest.Matchers
 import net.mgrid.tranzoom.TranzoomHeaders
 import com.rabbitmq.client.Channel
+import net.mgrid.tranzoom.error.GlobalErrorHandler
 
 class XmlValidatorSpec extends FlatSpec with Matchers {
   
@@ -22,7 +23,7 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
   val source = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
 
   "XML Validator" should "return validated messages" in {
-    val errorChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
     val selector = mock(classOf[XmlValidatingMessageSelector])
     val message = MessageBuilder
       .withPayload("TEST")
@@ -32,16 +33,17 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
     when(selector.accept(message)).thenReturn(true)
 
     val validator = new XmlValidator
-    validator.errorChannel = errorChannel
+    validator.errorHandler = errorHandler
     validator.selector= selector
     val result = validator.validate(message)
 
-    verify(errorChannel, never()).send(anyObject())
+    verify(errorHandler, never()).error(anyObject(), anyString(), anyString())
+    verify(errorHandler, never()).fatal(anyObject())
     result.getPayload should be (message.getPayload)
   }
 
   it should "return null and send an error message on the error channel for invalid messages" in {
-    val errorChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
     val selector = mock(classOf[XmlValidatingMessageSelector])
     val message = MessageBuilder
       .withPayload("TEST")
@@ -51,16 +53,17 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
     when(selector.accept(message)).thenThrow(new MessageRejectedException(message))
 
     val validator = new XmlValidator
-    validator.errorChannel = errorChannel
+    validator.errorHandler = errorHandler
     validator.selector= selector
     val result = validator.validate(message)
 
-    verify(errorChannel).send(anyObject())
+    verify(errorHandler).error(anyObject(), anyString(), anyString())
+    verify(errorHandler, never()).fatal(anyObject())
     result should be (null)
   }
 
   it should "return null and send an error message on the error channel for message exceptions" in {
-    val errorChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
     val selector = mock(classOf[XmlValidatingMessageSelector])
     val message = MessageBuilder
       .withPayload("TEST")
@@ -70,11 +73,12 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
     when(selector.accept(message)).thenThrow(new RuntimeException("Random exception during validating"))
 
     val validator = new XmlValidator
-    validator.errorChannel = errorChannel
+    validator.errorHandler = errorHandler
     validator.selector= selector
     val result = validator.validate(message)
 
-    verify(errorChannel).send(anyObject())
+    verify(errorHandler).error(anyObject(), anyString(), anyString())
+    verify(errorHandler, never()).fatal(anyObject())
     result should be (null)
   }
 }
