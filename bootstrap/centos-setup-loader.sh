@@ -56,7 +56,18 @@ sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\
 sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 
 # setup tunnel to lake
-sudo -u ${USER} sh -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}"
+cat > /etc/init/axle-laketunnel.conf <<EOF
+description "AXLE Data Pond to Lake Tunneling"
+start on runlevel [2345]
+stop on runlevel [016]
+respawn
+
+script
+  sudo -u ${USER} sh -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}"
+end script
+EOF
+
+initctl start axle-laketunnel
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
