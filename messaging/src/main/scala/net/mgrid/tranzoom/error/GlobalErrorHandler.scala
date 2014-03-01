@@ -54,7 +54,7 @@ class GlobalErrorHandler extends ErrorHandler with XmlErrorFormat with ForceExit
     import MessageListener.SourceRef
     val ref = failedMessage.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
     val error = errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, reason, ref)
-    logger.info(s"Determine content type failed for message $failedMessage: $reason. Sending error message: $error")
+    logger.info(s"Message handling failed for $failedMessage: $reason. Sending error message: $error")
     publishErrorChannel.send(error)
   }
 
