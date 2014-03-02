@@ -67,7 +67,6 @@ installhdl: $(MGRIDHDLFILE) $(PGSERVER)
 
 # Download messaging SDK and install
 $(MGRIDMSGFILE): login
-	mkdir -p $(BASEDIR)
 	wget --save-cookies cookies.txt --post-data 'name=axle&pass=$(AXLEPWD)&op=submit&form_build_id=form-eZqiGNVQiZgeVGmMosZH-iZFz8C5DwBTVygPrQ3I8cU&form_id=user_login' --delete-after http://www.mgrid.net/user/login
 	wget --load-cookies cookies.txt -O $(MGRIDMSGFILE) $(MGRIDMSGURL)
 	rm cookies.txt
