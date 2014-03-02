@@ -28,7 +28,7 @@ _error() {
     exit 1
 }
 
-MESSAGING_DIR=/home/ec2-user/mgrid-messaging-0.9
+MESSAGING_DIR=/home/${USER}/mgrid-messaging-${MGRIDMSGVERSION}
 
 # Add EPEL repository
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -38,7 +38,7 @@ yum install -y python-pip python-lxml
 
 pip install importlib kombu
 
-tar -xvf axle-healthcare-benchmark/messaging/mgrid-messaging-0.9.tar.gz
+sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make installmsg"
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 

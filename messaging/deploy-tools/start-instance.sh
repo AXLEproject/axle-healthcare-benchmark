@@ -157,7 +157,7 @@ EOF
 # password before bootstrapping, since the axle / cdagenpwd is necessary to
 # download the HDL installer We also need the password to download mgrid
 # software, so just copy it to all machines.
-if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xlake" ];
+if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xxfm" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xlake" ];
 then
     echo "Copying axle password for type $STARTTYPE"
     pwd
