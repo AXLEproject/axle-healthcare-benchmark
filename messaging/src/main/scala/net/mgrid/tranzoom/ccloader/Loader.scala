@@ -177,8 +177,8 @@ class Loader {
       } recover { // handle fail
 
         case ex: Throwable =>
-          logger.info(s"Exception during loading: ${ex.getMessage}, rollback transaction and empty pond.", ex)
-          quietly(conn.rollback())
+          logger.info(s"Exception during loading: ${ex.getMessage}, report error for all messages in group and empty pond.", ex)
+          messages foreach (m => errorHandler.error(m, ErrorUtils.ERROR_TYPE_INTERNAL, ex.getMessage))
           emptyPond
       }
 
