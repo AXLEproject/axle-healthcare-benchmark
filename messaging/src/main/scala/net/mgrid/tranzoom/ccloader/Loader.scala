@@ -165,7 +165,7 @@ class Loader {
 
           if (logger.isDebugEnabled()) {
             val loadEnd = System.currentTimeMillis
-            messages.foreach { m =>
+            messages.headOption map { m =>
               val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp").asInstanceOf[String]
               val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
               val loadDelta = loadEnd - loadStart
