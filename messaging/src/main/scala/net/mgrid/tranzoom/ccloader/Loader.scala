@@ -25,8 +25,6 @@ import scala.util.Success
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import java.sql.Connection
-import scala.collection.JavaConverters._
-import scala.collection.mutable.Buffer
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.amqp.rabbit.connection.{ ConnectionFactory => RabbitConnectionFactory }
 import com.rabbitmq.client.Channel
@@ -36,6 +34,8 @@ import net.mgrid.tranzoom.error.ErrorHandler
 import org.springframework.integration.annotation.ServiceActivator
 import org.springframework.beans.factory.annotation.Required
 import org.springframework.beans.factory.annotation.Autowired
+import java.sql.SQLException
+import java.sql.Statement
 
 /**
  * Load SQL in database.
@@ -106,7 +106,7 @@ class Loader {
 
   @PreDestroy
   def stop: Unit = {
-  logger.info("Stopping loader, reset pond")
+    logger.info("Stopping loader, reset pond")
     withDatabaseConnection { implicit conn =>
       withRabbitChannel { implicit channel =>
         resetPond
@@ -122,28 +122,11 @@ class Loader {
    * @param message Message containing the SQL message group
    */
   @ServiceActivator
-  def loadGroup(group: Message[java.util.List[Message[String]]]): Unit = {
-    val messages = group.getPayload().asScala
-    load(messages) { ex =>
-      logger.info(s"Loading group failed, try one-by-one.", ex)
-      messages.foreach(loadSingle)
-    }
-  }
+  def loadGroup(group: Message[java.util.List[Message[String]]]): Unit = synchronized {
+    import scala.collection.JavaConversions._
+    val messages = group.getPayload().toList
 
-  /**
-   * Load SQL message in the data pond and upload to the data lake.
-   *
-   * On error, send error message to the error channel.
-   *
-   * @param message Message with a SQL payload
-   */
-  private def loadSingle(message: Message[String]): Unit = load(Buffer(message)) { ex =>
-    logger.warn(s"Could not load single message: ${ex.getMessage}")
-    errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage)
-  }
-
-  private def load(messages: Buffer[Message[String]])(txFail: Throwable => Unit): Unit = synchronized {
-    withDatabaseConnection { conn =>
+    withDatabaseConnection { implicit conn =>
       val loadStart = System.currentTimeMillis
 
       if (logger.isDebugEnabled) {
@@ -154,28 +137,26 @@ class Loader {
 
         val txStart = System.currentTimeMillis()
 
-        val stmt = conn.createStatement()
-        messages foreach { m => stmt.addBatch(m.getPayload) }
-        stmt.executeBatch()
-        conn.commit()
+        val numCommitted = commitToPond(messages)
 
         if (logger.isDebugEnabled()) {
           val txEnd = System.currentTimeMillis()
           val txDelta = txEnd - txStart
-          logger.debug(s"Transaction finished, start $txStart end $txEnd, total $txDelta ms")
+          logger.debug(s"Transaction finished, group size ${messages.size}, success $numCommitted, time $txDelta ms")
         }
 
       } map { // committed, upload to data lake
 
         val uploadStart = System.currentTimeMillis()
 
-        _ => s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!!
+        _ =>
+          s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!!
 
-        if (logger.isDebugEnabled()) {
-          val uploadEnd = System.currentTimeMillis()
-          val uploadDelta = uploadEnd - uploadStart
-          logger.debug(s"Upload finished, start $uploadStart end $uploadEnd, total $uploadDelta ms")
-        }
+          if (logger.isDebugEnabled()) {
+            val uploadEnd = System.currentTimeMillis()
+            val uploadDelta = uploadEnd - uploadStart
+            logger.debug(s"Upload finished, total $uploadDelta ms")
+          }
 
       } map { // uploaded, confirm to broker
 
@@ -189,28 +170,23 @@ class Loader {
               val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
               val loadDelta = loadEnd - loadStart
               val total = loadEnd - ingressStart
-              logger.debug(s"Loading complete: ingress time $ingressTimestamp loading end time $loadEnd, load time $loadDelta, total $total ms")
+              logger.debug(s"Loading complete: ingress time $ingressTimestamp, total $total ms")
             }
           }
 
       } recover { // handle fail
 
         case ex: Throwable =>
-          logger.info(s"Exception during loading: ${ex.getMessage}, rollback transaction, empty pond and handle fail.", ex)
+          logger.info(s"Exception during loading: ${ex.getMessage}, rollback transaction and empty pond.", ex)
           quietly(conn.rollback())
-          quietly(singleQuery(conn, "SELECT pond_empty()"))
-          quietly(txFail(ex))
-
+          emptyPond
       }
 
     }
   }
 
   private def pondReady(implicit conn: Connection): Boolean =
-    singleQuery[Boolean](conn, "SELECT pond_ready()") match {
-      case Some(isReady) => isReady
-      case None => false
-    }
+    singleQuery[Boolean]("SELECT pond_ready()").getOrElse(false)
 
   private def withPondSequence[T](f: String => T)(implicit channel: Channel): T =
     Option(channel.basicGet("pond-seq", false)) match {
@@ -231,20 +207,56 @@ class Loader {
     }
 
   private def initPond(seq: String)(implicit conn: Connection): Unit =
-    singleQuery(conn, s"SELECT pond_init('$seq', '$hostname')")
+    singleQuery(s"SELECT pond_init('$seq', '$hostname')")
 
   private def resetPond(implicit conn: Connection, channel: Channel): Unit =
-    singleQuery[String](conn, s"SELECT pond_retseq()") map { seq =>
+    singleQuery[String](s"SELECT pond_retseq()") map { seq =>
       logger.info(s"Return sequence  $seq to broker")
       channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , seq.getBytes())
     }
+
+  private def emptyPond(implicit conn: Connection): Unit = singleQuery("SELECT pond_empty()")
+
+  /**
+   * @return Number of messages that successfully committed
+   */
+  private def commitToPond(messages: List[Message[String]])(implicit conn: Connection): Int = {
+    def queryOk(message: Message[String])(onFail: Throwable => Unit): Boolean = {
+      val stmt = conn.createStatement()
+      try {
+        stmt.execute(message.getPayload)
+        true
+      } catch {
+        case ex: SQLException =>
+          onFail(ex)
+          false
+      } finally {
+        quietly(stmt.close())
+      }
+    }
+
+    messages partition (m => queryOk(m)(ex => errorHandler.error(m, ErrorUtils.ERROR_TYPE_VALIDATION, ex.getMessage))) match {
+      case (Nil, _) =>
+        // all messages failed
+        quietly(conn.rollback())
+        0
+      case (_, Nil) =>
+        // all messages successfully executed, we can commit
+        conn.commit()
+        messages.size
+      case (successList, failList) =>
+        // some messages failed, rollback and commit the succeeded messages
+        quietly(conn.rollback())
+        commitToPond(successList)
+    }
+  }
 
   private def withDatabaseConnection[A](f: Connection => A): A = {
     val conn = dataSource.getConnection()
     try {
       f(conn)
     } finally {
-      conn.close()
+      quietly(conn.close())
     }
   }
 
@@ -254,12 +266,12 @@ class Loader {
     try {
       f(channel)
     } finally {
-      channel.close()
-      conn.close()
+      quietly(channel.close())
+      quietly(conn.close())
     }
   }
 
-  private def singleQuery[T](conn: Connection, sql: String): Option[T] = {
+  private def singleQuery[T](sql: String)(implicit conn: Connection): Option[T] = {
     def query[T](conn: Connection, sql: String): Option[T] = {
       val s = conn.createStatement()
       if (s.execute(sql)) {
@@ -283,7 +295,7 @@ class Loader {
     try {
       f
     } catch {
-      case ex: Throwable => /* ssst */ logger.info("Quietly ignoring exception", ex)
+      case ex: Throwable => /* ssst */ logger.info(s"Quietly ignoring exception ${ex.getMessage}")
     }
   }
 
@@ -297,7 +309,7 @@ class Loader {
 /**
  * Helpers and database connection pooling.
  */
-private object Loader {
+object Loader {
   import org.apache.commons.pool.impl.GenericObjectPool
   import org.apache.commons.dbcp.PoolableConnectionFactory
   import org.apache.commons.dbcp.DriverManagerConnectionFactory
