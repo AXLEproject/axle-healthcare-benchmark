@@ -49,8 +49,8 @@ export M2=\${M2_HOME}/bin
 export PATH=\${M2}:\${PATH}
 EOF
 
-cd $MESSAGING_DIR && sbt clean compile stage \
-  || _error "Could not build ingress messaging software"
+sudo -u ${USER} sh -c "cd $MESSAGING_DIR && sbt clean compile stage \
+  || _error 'Could not build ingress messaging software'"
 
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
@@ -61,9 +61,12 @@ description "AXLE Messaging Ingress"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
+expect fork
 
 script
-  cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i
+  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST \
+    net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i)" \
+    ${USER}
 end script
 EOF
 

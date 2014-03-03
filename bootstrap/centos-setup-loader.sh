@@ -63,7 +63,9 @@ stop on runlevel [016]
 respawn
 
 script
-  su -l ${USER} -c "autossh -M 0 -f -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}"
+  exec su -l -c "autossh -M 0 -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 \
+    -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}" \
+    ${USER} 
 end script
 EOF
 
@@ -78,9 +80,10 @@ description "AXLE Messaging Loader"
 start on runlevel [2345]
 stop on runlevel [016]
 respawn
+expect fork
 
 script
-  su -l ${USER} -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start \
+  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start \
     -Dconfig.rabbitmq.host=${BROKERHOST} \
     -Dconfig.pond.dbhost=${PONDHOST} \
     -Dconfig.pond.dbname=${PONDDBPREFIX}${i} \
@@ -89,7 +92,8 @@ script
     -Dconfig.lake.dbname=${LAKEDB} \
     -Dconfig.lake.dbport=${LAKELOCALPORT} \
     -Dconfig.lake.dbuser=${LAKEUSER} \
-    net.mgrid.tranzoom.ccloader.LoaderApplication)" 2>&1 | logger -t axle-loader$i
+    net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i)" \
+    ${USER} 
 end script
 EOF
 
