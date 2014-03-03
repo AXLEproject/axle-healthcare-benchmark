@@ -117,8 +117,6 @@ class Loader {
   /**
    * Load SQL message group in the data pond and upload to the data lake.
    *
-   * On error, send all messages to the configured failed group channel.
-   *
    * @param message Message containing the SQL message group
    */
   @ServiceActivator
@@ -147,15 +145,22 @@ class Loader {
 
       } map { // committed, upload to data lake
 
-        val uploadStart = System.currentTimeMillis()
-
         _ =>
-          s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!!
-
+          val uploadStart = System.currentTimeMillis()
+          val stdout = StringBuilder.newBuilder
+          val stderr = StringBuilder.newBuilder
+          val processLogger = ProcessLogger(out => stdout.append(s"$out\n"), err => stderr.append(s"$err\n"))
+          
+          val exitCode = s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!(processLogger)
+          
           if (logger.isDebugEnabled()) {
             val uploadEnd = System.currentTimeMillis()
             val uploadDelta = uploadEnd - uploadStart
-            logger.debug(s"Upload finished, total $uploadDelta ms")
+            logger.debug(s"Upload script finished, running time $uploadDelta ms, exit code $exitCode, stderr[${stderr.mkString}], stdout[${stdout.mkString}]")
+          }
+          
+          if (exitCode != 0) {
+            throw new Exception(s"Upload to data lake failed: ${stderr.mkString}")
           }
 
       } map { // uploaded, confirm to broker
@@ -211,7 +216,7 @@ class Loader {
 
   private def resetPond(implicit conn: Connection, channel: Channel): Unit =
     singleQuery[String](s"SELECT pond_retseq()") map { seq =>
-      logger.info(s"Return sequence  $seq to broker")
+      logger.info(s"Return sequence $seq to broker")
       channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , seq.getBytes())
     }
 
