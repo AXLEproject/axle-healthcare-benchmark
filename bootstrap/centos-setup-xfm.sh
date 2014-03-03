@@ -51,7 +51,7 @@ stop on runlevel [016]
 respawn
 
 script
-  cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERHOST 2>&1 | logger -t axle-xfm$i 
+  exec su -l -c "(cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERHOST 2>&1 | logger -t axle-xfm$i)" ${USER}
 end script
 EOF
 
