@@ -7,16 +7,21 @@
 #
 include ../default_settings
 
+.PHONY: reconfig template ponds desert clean
+
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 
 TEMPLATEDB=pondtemplate
 CPUS=$(shell grep MHz /proc/cpuinfo | wc -l)
 
+reconfig:
+	@echo "$$NONDEFAULTPOSTGRESQLCONFPOND" >> $(PGDATA)/postgresql.conf
+	PATH=$(PGSERVER)/bin:${PATH} pg_ctl reload -D $(PGDATA)
 
 template:
 	PATH=$(PGSERVER)/bin:${PATH} psql $(TEMPLATEDB) -c "SELECT 1" || PATH=$(PGSERVER)/bin:${PATH} ./create_pond.sh $(PONDHOST) $(PONDPORT) $(PONDUSER) $(TEMPLATEDB) create
 
-ponds:	template
+ponds:	reconfig template
 	@echo
 	@echo "DETECTED $(CPUS) CORES: CREATING DATABASES pond1 .. pond$(CPUS)"
 	@echo

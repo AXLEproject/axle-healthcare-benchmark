@@ -47,7 +47,6 @@ $(PGTUNE):
 $(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
 	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T $(PGTUNEDBTYPE) -P $(PGTUNESYSTEMTYPE) -c $(PGTUNEMAXCONN) || rm -rf $(PGDATA)
-	@echo "$$NONDEFAULTPOSTGRESQLCONF" >> $(PGDATA)/postgresql.conf
 
 # Start cluster
 start: $(PGDATA)

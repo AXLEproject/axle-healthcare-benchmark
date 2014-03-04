@@ -5,14 +5,18 @@
 #
 # Copyright (c) 2014, MGRID BV Netherlands
 #
-.PHONY: dropdb createdb all opaque
+.PHONY: reconfig dropdb createdb all lake opaque
 
 include ../default_settings
 
 SHAREDIR=$(shell pg_config --sharedir)
 EXTENSIONDIR= $(SHAREDIR)/extension
 
-all: datawarehouse
+all: lake
+
+reconfig:
+	@echo "$$NONDEFAULTPOSTGRESQLCONFLAKE" >> $(PGDATA)/postgresql.conf
+	PATH=$(PGSERVER)/bin:${PATH} pg_ctl reload -D $(PGDATA)
 
 # create databases
 createdb:
@@ -21,7 +25,7 @@ createdb:
 dropdb:
 	./create_lake.sh $(LAKELOCALHOST) $(LAKEPORT) $(LAKEUSER) $(LAKEDB) drop
 
-datawarehouse: createdb opaque
+lake: reconfig createdb opaque
 
 # load some generated cdas
 opaque:

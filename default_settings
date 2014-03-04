@@ -66,11 +66,25 @@ PGTUNEMAXCONN=$(shell expr 10 + `grep MHz /proc/cpuinfo | wc -l`)
 PGTUNEDBTYPE=DW
 PGTUNESYSTEMTYPE=Linux
 
-# Add non default parameters for the postgresql.conf here
-define NONDEFAULTPOSTGRESQLCONF
+# Add non default parameters for the pond postgresql.conf here
+define NONDEFAULTPOSTGRESQLCONFPOND
 
 #------------------------------------------------------------------------------
-# Settings from default_settings NONDEFAULTPOSTGRESQLCONF
+# Settings from default_settings NONDEFAULTPOSTGRESQLCONFPOND
+#------------------------------------------------------------------------------
+
+shared_preload_libraries = 'pg_stat_statements'
+pg_stat_statements.max = 1000
+pg_stat_statements.track = all
+autovacuum = off
+endef
+export NONDEFAULTPOSTGRESQLCONFPOND
+
+# Add non default parameters for the lake postgresql.conf here
+define NONDEFAULTPOSTGRESQLCONFLAKE
+
+#------------------------------------------------------------------------------
+# Settings from default_settings NONDEFAULTPOSTGRESQLCONFLAKE
 #------------------------------------------------------------------------------
 
 shared_preload_libraries = 'pg_stat_statements'
@@ -79,5 +93,5 @@ pg_stat_statements.track = all
 from_collapse_limit = 12
 join_collapse_limit = 12
 endef
-export NONDEFAULTPOSTGRESQLCONF
+export NONDEFAULTPOSTGRESQLCONFLAKE
 
