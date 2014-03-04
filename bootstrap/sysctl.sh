@@ -10,7 +10,7 @@ AUTOVACW=10
 MAXCONN=$(expr 10 + $(grep MHz /proc/cpuinfo | wc -l))
 SEMMSL=250
 SEMOPM=100
-SEMMNI=`echo "((${MAXCONN}+${AUTOVACW}+4)/16)*2" | bc`
+SEMMNI=128
 SEMMNS=`echo "${SEMMNI}*${SEMMSL}" | bc`
 
 ## Update PostgreSQL sysctl settings
