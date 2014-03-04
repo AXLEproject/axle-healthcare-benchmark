@@ -49,6 +49,9 @@ rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sb
 sudo -u ${USER} sh -c "cd $MESSAGING_DIR && sbt clean compile stage \
   || _error 'Could not build loader messaging software'"
 
+# setup shared memory parameters
+sh ${AXLE}/bootstrap/sysctl.sh
+
 # bootstrap the database server software and cluster
 sudo -u ${USER} sh -c -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
 
@@ -65,7 +68,7 @@ respawn
 script
   exec su -l -c "autossh -M 0 -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 \
     -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}" \
-    ${USER} 
+    ${USER}
 end script
 EOF
 

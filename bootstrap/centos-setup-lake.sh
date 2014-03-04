@@ -37,6 +37,9 @@ yum install -y git gcc bison flex gdb make readline-devel zlib-devel uuid-devel
 # packages for profiling
 yum install -y perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel
 
+# setup shared memory parameters
+sh ${AXLE}/bootstrap/sysctl.sh
+
 # bootstrap the database server software and cluster
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
 
