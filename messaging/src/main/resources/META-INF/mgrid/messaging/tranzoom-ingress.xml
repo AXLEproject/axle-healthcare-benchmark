@@ -174,8 +174,25 @@
   </int:service-activator>
 
   <!-- RabbitMQ infrastructure -->
+  
+  <!-- We split publisher and consumer connections such that consumers can continue
+  if the broker starts blocking connections for flow control.
+  
+  Note that when a high watermark is hit and all connections are blocked for publishing
+  this still starves the consumers because the ingress and xfm components wait for a 
+  completed publish (publish confirm) to ack the consumed message and continue.
+   -->
+  
+  <rabbit:connection-factory id="consumeConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/messaging"
+    publisher-confirms="false"
+    publisher-returns="false"/>
 
-  <rabbit:connection-factory id="rabbitConnectionFactory"
+  <rabbit:connection-factory id="publishConnectionFactory"
     host="${config.rabbitmq.host}"
     port="${config.rabbitmq.port}"
     username="${config.rabbitmq.user}"
@@ -192,7 +209,7 @@
     -->
 
   <rabbit:listener-container
-    connection-factory="rabbitConnectionFactory"
+    connection-factory="consumeConnectionFactory"
     acknowledge="manual"
     concurrency="${config.rabbitmq.concurrent-consumers}"
     prefetch="${config.rabbitmq.prefetch-count}">
@@ -216,7 +233,7 @@
     <bean class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener" />
   </int:service-activator>
 
-  <rabbit:template id="errorTemplate" connection-factory="rabbitConnectionFactory" />
+  <rabbit:template id="errorTemplate" connection-factory="publishConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
     id="errorOutboundAdapter"
@@ -229,7 +246,7 @@
     confirm-nack-channel="publishResultChannel"
     />
 
-  <rabbit:template id="transformTemplate" connection-factory="rabbitConnectionFactory" />
+  <rabbit:template id="transformTemplate" connection-factory="publishConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
     id="transformOutboundAdapter"

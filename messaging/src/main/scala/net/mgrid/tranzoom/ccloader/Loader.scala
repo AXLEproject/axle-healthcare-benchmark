@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Required
 import org.springframework.beans.factory.annotation.Autowired
 import java.sql.SQLException
 import java.sql.Statement
+import javax.annotation.Resource
 
 /**
  * Load SQL in database.
@@ -78,7 +79,7 @@ class Loader {
   @Autowired @Required
   var confirmListener: PublishConfirmListener = _
 
-  @Autowired @Required
+  @Resource(name="consumeConnectionFactory") @Required
   var rabbitConnectionFactory: RabbitConnectionFactory = _
 
   @Autowired @Required

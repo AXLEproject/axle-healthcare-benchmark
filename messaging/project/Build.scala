@@ -13,7 +13,7 @@ object B extends Build
       )
 
   def unitFilter(name: String): Boolean = (name endsWith "Spec") && !itFilter(name)
-  def itFilter(name: String): Boolean = { println(name); name endsWith "IntegrationSpec" }
+  def itFilter(name: String): Boolean = name endsWith "IntegrationSpec"
 
   lazy val IntTest = config("inttest") extend(Test)
 }

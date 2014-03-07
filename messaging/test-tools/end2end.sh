@@ -3,8 +3,6 @@
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
 
-set -x
-
 function usage() {
 cat << EOF
 usage: $0 [OPTIONS]

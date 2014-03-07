@@ -122,8 +122,25 @@
   </int:service-activator>
 
   <!-- RabbitMQ infrastructure -->
+  
+  <!-- We split publisher and consumer connections such that consumers can continue
+  if the broker starts blocking connections for flow control.
+  
+  Note that when a high watermark is hit and all connections are blocked for publishing
+  this still starves the consumers because the ingress and xfm components wait for a 
+  completed publish (publish confirm) to ack the consumed message and continue.
+   -->
+  
+  <rabbit:connection-factory id="consumeConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/messaging"
+    publisher-confirms="false"
+    publisher-returns="false"/>
 
-  <rabbit:connection-factory id="ccloaderConnectionFactory"
+  <rabbit:connection-factory id="publishConnectionFactory"
     host="${config.rabbitmq.host}"
     port="${config.rabbitmq.port}"
     username="${config.rabbitmq.user}"
@@ -140,7 +157,7 @@
     -->
 
   <rabbit:listener-container
-    connection-factory="ccloaderConnectionFactory"
+    connection-factory="consumeConnectionFactory"
     acknowledge="manual"
     prefetch="${config.group-size}"
     requeue-rejected="false">
@@ -161,7 +178,7 @@
 
   <bean id="publishConfirmListenerBean" class="net.mgrid.tranzoom.rabbitmq.PublishConfirmListener" />
 
-  <rabbit:template id="errorTemplate" connection-factory="ccloaderConnectionFactory" />
+  <rabbit:template id="errorTemplate" connection-factory="publishConnectionFactory" />
 
   <int-amqp:outbound-channel-adapter
     id="errorOutboundAdapter"
