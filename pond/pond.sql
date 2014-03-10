@@ -117,7 +117,10 @@ BEGIN
            AND sequence_schema = ''' || seqschema || ''''
         INTO result;
 
-        /* Ensure no new records can be inserted after we are through */
+        /*
+         * Ensure no new records can be inserted after we are through by
+         * exhausting all values from the sequence.
+         */
         PERFORM pond_setseq(1, 2);
         EXECUTE 'SELECT nextval(''' || t || ''')';
         EXECUTE 'SELECT nextval(''' || t || ''')';
@@ -136,22 +139,17 @@ $$ LANGUAGE plpgsql;
  * - have an _id attribute
  * - are visible
  */
-CREATE OR REPLACE FUNCTION pond_tables()
-RETURNS TABLE (sname name) AS
-$$
-BEGIN
-        RETURN QUERY
+CREATE OR REPLACE VIEW pond_tables
+AS
         SELECT c.relname as sname
           FROM pg_catalog.pg_class c
-     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-     LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
          WHERE c.relkind = 'r'
            AND n.nspname = 'public'
            AND a.attname = '_id'
            AND pg_catalog.pg_table_is_visible(c.oid)
       ORDER BY 1;
-END
-$$ LANGUAGE plpgsql;
 
 /*
  * Determine all ids that were inserted into this pond, and store them in
@@ -169,7 +167,7 @@ DECLARE
 BEGIN
         total := 0;
 
-        FOR tblname IN SELECT pond_tables()
+        FOR tblname IN SELECT * FROM pond_tables
         LOOP
                 EXECUTE 'CREATE TABLE pond."' || tblname || '" AS SELECT _id FROM ONLY "' || tblname || '"';
                 GET DIAGNOSTICS current = ROW_COUNT;
@@ -193,7 +191,7 @@ DECLARE
 BEGIN
         total := 0;
 
-        FOR tblname IN SELECT pond_tables()
+        FOR tblname IN SELECT * FROM pond_tables
         LOOP
                 EXECUTE 'DROP TABLE IF EXISTS pond."' || tblname || '"';
                 EXECUTE 'TRUNCATE TABLE "' || tblname || '" CASCADE';
@@ -230,7 +228,7 @@ BEGIN
 
         rt := rt || 'CREATE TABLE IF NOT EXISTS pond."_Info" (ts timestamp, hostname text, seqstart bigint, seqend bigint);';
 
-        FOR tblname IN SELECT pond_tables()
+        FOR tblname IN SELECT * FROM pond_tables
         LOOP
                 rt := rt || 'CREATE TABLE IF NOT EXISTS pond."' || tblname || '" (_id bigint);';
         END LOOP;

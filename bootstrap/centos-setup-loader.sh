@@ -96,7 +96,7 @@ script
     -Dconfig.lake.dbport=${LAKELOCALPORT} \
     -Dconfig.lake.dbuser=${LAKEUSER} \
     net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i)" \
-    ${USER} 
+    ${USER}
 end script
 EOF
 
