@@ -7,15 +7,6 @@
  */
 
 /* Pre-RIM230 style C / conduction indicator based context conduction */
-DO $$
-BEGIN
-    ALTER TABLE "Participation"
-        ADD COLUMN origin bigint; /* REFERENCES "Participation" ON DELETE CASCADE */
-EXCEPTION
-    WHEN duplicate_column THEN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
 WITH cp AS
 (
     SELECT
@@ -31,12 +22,12 @@ WITH cp AS
         WHERE p."contextControlCode" IS NOT NULL
         -- The construct to prevent propagation of > 1 level for not-propagating Participations
         -- in the queries below is only valid when this function is run from the original Participation.
-        -- In the case that we're called from a ActRelationship trigger with a conducted (origin != NULL)
+        -- In the case that we're called from a ActRelationship trigger with a conducted (_origin != NULL)
         -- Participation, we may not further propagate non-propagating Participations.
-        AND (p.origin IS NULL OR '_ContextControlPropagating:2.16.840.1.113883.5.1057' >> p."contextControlCode")
+        AND (p._origin IS NULL OR '_ContextControlPropagating:2.16.840.1.113883.5.1057' >> p."contextControlCode")
     ) p
     JOIN "Participation" op
-    ON op._id = COALESCE(p.origin,p._id)
+    ON op._id = COALESCE(p._origin,p._id)
 ),
 insert_new AS
 (
@@ -44,7 +35,7 @@ insert_new AS
          (act, role, _mif, _clonename, "typeCode", "functionCode", "contextControlCode", "sequenceNumber",
          "negationInd", "noteText", time, "modeCode", "awarenessCode", "signatureCode",
          "signatureText", "performInd", "substitutionConditionCode", "subsetCode",
-          origin)
+          _origin)
     WITH RECURSIVE act(cpid, propagating, act_of_origin, id, level, path) AS (
          SELECT cp._id, propagating, act_of_origin, cp.act, 1, ARRAY[cp.act] FROM cp
          UNION ALL
