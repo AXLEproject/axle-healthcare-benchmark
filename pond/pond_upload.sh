@@ -61,6 +61,12 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
+# Execute all pre-processing SQL files first.
+for i in $(ls $(dirname $0)/preprocess_*sql)
+do
+    psql -1 -U ${DPUSER} -d ${DPDB} -f ${i}
+done
+
 psql -d ${DPDB} -c "SELECT pond_recordids()"
 
 # TODO: lake must have db, pond_ddl and cc_ddl!
