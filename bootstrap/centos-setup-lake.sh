@@ -43,8 +43,8 @@ sh ${AXLE}/bootstrap/sysctl.sh
 # bootstrap the database server software and cluster
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make && echo \"export PATH=\\\${PATH}:${PGSERVER}/bin\" >> ~/.bashrc"
 
-# create data warehouse
-sudo -iu ${USER} sh -c "cd ${AXLE}/$LAKEDIR && make datawarehouse"
+# create data lake
+sudo -iu ${USER} sh -c "cd ${AXLE}/${LAKEDIR} && make lake"
 
 cat > /etc/init/pgserver.conf <<EOF
 description "PostgreSQL server"

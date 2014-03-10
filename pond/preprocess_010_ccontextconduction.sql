@@ -7,8 +7,6 @@
  */
 
 /* Pre-RIM230 style C / conduction indicator based context conduction */
-BEGIN;
-
 DO $$
 BEGIN
     ALTER TABLE "Participation"
@@ -91,4 +89,3 @@ insert_new AS
 SELECT 'Conduction indicator based context conduction: ' || count(*) FROM insert_new
 ;
 
-COMMIT;

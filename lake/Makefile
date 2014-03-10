@@ -9,6 +9,7 @@
 
 include ../default_settings
 
+BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 SHAREDIR=$(shell pg_config --sharedir)
 EXTENSIONDIR= $(SHAREDIR)/extension
 

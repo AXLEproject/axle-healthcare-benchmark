@@ -67,7 +67,7 @@ do
     psql -1 -U ${DPUSER} -d ${DPDB} -f ${i}
 done
 
-psql -d ${DPDB} -c "SELECT pond_recordids()"
+psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
 
 # TODO: lake must have db, pond_ddl and cc_ddl!
 
