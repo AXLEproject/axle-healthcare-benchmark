@@ -61,8 +61,9 @@ sudo -iu ${USER} sh -c "cd ${AXLE}/pond && make ponds"
 # setup tunnel to lake
 cat > /etc/init/axle-laketunnel.conf <<EOF
 description "AXLE Data Pond to Lake Tunneling"
-start on runlevel [2345]
+start on (local-filesystems and net-device-up IFACE!=lo)
 stop on runlevel [016]
+
 respawn
 
 script
@@ -80,7 +81,7 @@ for i in $(seq $CPUS)
 do
 cat > /etc/init/axle-loader$i.conf <<EOF
 description "AXLE Messaging Loader"
-start on runlevel [2345]
+start on started axle-laketunnel
 stop on runlevel [016]
 respawn
 expect fork
