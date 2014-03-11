@@ -35,7 +35,10 @@ cat > /etc/rabbitmq/rabbitmq.config <<EOF
 [
   {rabbit,
    [
-     {tcp_listeners, [{"0.0.0.0", 5672}]}
+     {tcp_listeners, [{"0.0.0.0", 5672}]},
+     {vm_memory_high_watermark, 0.4},
+     {vm_memory_high_watermark_paging_ratio, 0.75},
+     {disk_free_limit, 1500000000}
    ]}
 ].
 EOF

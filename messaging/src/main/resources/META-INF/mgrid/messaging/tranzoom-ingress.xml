@@ -65,6 +65,8 @@
 
   <!-- Channels, routing and transformation -->
 
+  <int:channel id="ingressChannel" />
+  <int:channel id="flowControlledChannel" />
   <int:channel id="hl7v3ValidateChannel" />
   <int:channel id="fhirValidateChannel" />
   <int:channel id="publishResultChannel" />
@@ -76,13 +78,16 @@
   IMPORTANT NOTE!
 
   All channels which are connected to an outbound-channel-adapter with publisher confirms
-  enabled should make sure that the adapter reads messages in a single thread. Because of
-  the way RabbitMQ implements publisher confirms (set the delivery tag by per-channel counting
-  of messages) sending is not thread-safe at the connection factory level (CachingConnectionFactory
-  by default).
+  enabled should make sure that the adapter reads messages in a single thread. In general,
+  this is true for all code interacting with the same caching connection factory.
+  
+  Because of the way RabbitMQ implements publisher confirms (set the delivery tag by per-channel counting
+  of messages) and the Spring AMQP CachingConnectionFactory implementation sending is not thread-safe at 
+  the connection factory level.
 
   Here we need to attach the publishErrorChannel and toTransformersChannel to the same
-  singleTaskExecutor dispatcher.
+  singleTaskExecutor dispatcher, as well as the flowControllerBean which uses the same connection
+  factory to query for queue sizes.
 
   -->
 
@@ -93,6 +98,13 @@
   <int:channel id="toTransformersChannel">
     <int:dispatcher task-executor="singleTaskExecutor" />
   </int:channel>
+  
+  <bean id="flowControllerBean" class="net.mgrid.tranzoom.rabbitmq.FlowController">
+    <property name="outputChannel" ref="flowControlledChannel"/>
+    <property name="queues" value="#{{'transform-hl7v3','transform-sql'}}"/>
+    <property name="flowThreshold" value="${config.rabbitmq.tranzoom.flow-threshold}"/>
+    <property name="rabbitExecutor" ref="singleTaskExecutor"/>
+  </bean>
 
   <task:executor id="singleTaskExecutor"
     pool-size="1"
@@ -110,7 +122,24 @@
     id="globalErrorHandler"
     input-channel="errorChannel"
     ref="errorHandler" />
+    
+  <!-- Flow control -->
+    
+  <task:executor id="flowExecutor" pool-size="1"/>
+  <task:scheduler id="flowScheduler" pool-size="1"/>
+  
+  <task:scheduled-tasks scheduler="flowScheduler">
+    <task:scheduled ref="flowControllerBean" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
+  </task:scheduled-tasks>
+  
+  <int:service-activator
+    id="flowController"
+    input-channel="ingressChannel" 
+    output-channel="flowControlledChannel"
+    ref="flowControllerBean" />
 
+  
+    
   <!-- Schema validation
 
   If XML validation fails we include the source message in the error message.
@@ -175,6 +204,8 @@
 
   <!-- RabbitMQ infrastructure -->
   
+  
+  
   <!-- We split publisher and consumer connections such that consumers can continue
   if the broker starts blocking connections for flow control.
   
@@ -184,19 +215,19 @@
    -->
   
   <rabbit:connection-factory id="consumeConnectionFactory"
-    host="${config.rabbitmq.ingress.host}"
-    port="${config.rabbitmq.ingress.port}"
-    username="${config.rabbitmq.ingress.user}"
-    password="${config.rabbitmq.ingress.password}"
-    virtual-host="/messaging"
+    host="${config.rabbitmq.gateway.host}"
+    port="${config.rabbitmq.gateway.port}"
+    username="${config.rabbitmq.gateway.user}"
+    password="${config.rabbitmq.gateway.password}"
+    virtual-host="/gateway"
     publisher-confirms="false"
     publisher-returns="false"/>
 
   <rabbit:connection-factory id="publishConnectionFactory"
-    host="${config.rabbitmq.host}"
-    port="${config.rabbitmq.port}"
-    username="${config.rabbitmq.user}"
-    password="${config.rabbitmq.password}"
+    host="${config.rabbitmq.tranzoom.host}"
+    port="${config.rabbitmq.tranzoom.port}"
+    username="${config.rabbitmq.tranzoom.user}"
+    password="${config.rabbitmq.tranzoom.password}"
     virtual-host="/messaging"
     publisher-confirms="true"
     publisher-returns="false"/>
@@ -211,20 +242,20 @@
   <rabbit:listener-container
     connection-factory="consumeConnectionFactory"
     acknowledge="manual"
-    concurrency="${config.rabbitmq.concurrent-consumers}"
-    prefetch="${config.rabbitmq.prefetch-count}">
+    concurrency="${config.rabbitmq.gateway.concurrent-consumers}"
+    prefetch="${config.rabbitmq.gateway.prefetch-count}">
 
-    <rabbit:listener queue-names="ingress-hl7v3" ref="hl7v3ListenerBean"/>
-    <rabbit:listener queue-names="ingress-fhir" ref="fhirListenerBean"/>
+    <rabbit:listener queue-names="ingress-hl7v3, ingress-fhir" ref="ingressListenerBean"/>
   </rabbit:listener-container>
 
-  <bean id="hl7v3ListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
-    <property name="outputChannel" ref="hl7v3ValidateChannel"/>
+  <bean id="ingressListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
+    <property name="outputChannel" ref="ingressChannel"/>
   </bean>
-
-  <bean id="fhirListenerBean" class="net.mgrid.tranzoom.ingress.IngressListener">
-    <property name="outputChannel" ref="fhirValidateChannel"/>
-  </bean>
+  
+  <int:recipient-list-router id="ingressRouter" input-channel="flowControlledChannel">
+    <int:recipient channel="hl7v3ValidateChannel" selector-expression="headers['tz-ingress-routingkey'] matches '.*\.hl7v3\..*'"/>
+    <int:recipient channel="fhirValidateChannel" selector-expression="headers['tz-ingress-routingkey'] matches '.*\.fhir\..*'"/>
+  </int:recipient-list-router>
 
   <int:service-activator 
     id="publishConfirmer"

@@ -50,12 +50,13 @@ abstract class MessageListener[T] extends ChannelAwareMessageListener {
   def onMessage(amqpMessage: AmqpMessage, channel: Channel): Unit =
     try {
       val tag = amqpMessage.getMessageProperties().getDeliveryTag()
+      val routingKey = amqpMessage.getMessageProperties().getReceivedRoutingKey()
       val ref: SourceRef = (amqpMessage.getBody, tag, channel)
       val headers = headerMapper.toHeadersFromRequest(amqpMessage.getMessageProperties)
 
       try {
-        val message = buildMessage(convert(amqpMessage.getBody), ref)
-
+        val message = buildMessage(convert(amqpMessage.getBody), routingKey, ref)
+        
         if (logger.isDebugEnabled) {
           logger.debug(s"Received $amqpMessage with tag $tag from RabbitMQ channel $channel, converted to $message; forward to spring message channel.")
         }
@@ -65,7 +66,7 @@ abstract class MessageListener[T] extends ChannelAwareMessageListener {
       } catch {
         case ex: SAXException => {
           // build message without conversion
-          val message = buildMessage(amqpMessage.getBody(), ref)
+          val message = buildMessage(amqpMessage.getBody(), routingKey, ref)
           logger.warn(s"Parsing of $amqpMessage failed.", ex)
           errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, s"Parse exception; ${ex.getMessage}")
         }
@@ -75,6 +76,7 @@ abstract class MessageListener[T] extends ChannelAwareMessageListener {
         logger.error(s"Unexpected error during processing AMQP message: ${ex.getMessage}", ex)
         errorHandler.fatal(ex)
     }
+    
 }
 
 object MessageListener {
@@ -83,9 +85,10 @@ object MessageListener {
 
   private val logger = LoggerFactory.getLogger(MessageListener.getClass)
 
-  def buildMessage[T](payload: T, ref: SourceRef) =
+  def buildMessage[T](payload: T, routingKey: String, ref: SourceRef) =
     MessageBuilder.withPayload(payload)
       .setHeader(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP, System.currentTimeMillis.toString)
+      .setHeader(TranzoomHeaders.HEADER_INGRESS_ROUTINGKEY, routingKey)
       .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref)
       .build()
 

@@ -48,7 +48,7 @@ class LoaderIntegrationSpec extends FlatSpec with Matchers {
     
     when(channel.basicGet("pond-seq", false)).thenReturn(response)
     
-    loader.rabbitConnectionFactory = connFactory
+    loader.rabbitFactory = connFactory
     
     isPondReady should be (false)
     loader.start
@@ -123,7 +123,7 @@ class LoaderIntegrationSpec extends FlatSpec with Matchers {
     val loader = initLoader
     val (connFactory, channel) = rabbitMock
     
-    loader.rabbitConnectionFactory = connFactory
+    loader.rabbitFactory = connFactory
     
     isPondReady should be (true)
     

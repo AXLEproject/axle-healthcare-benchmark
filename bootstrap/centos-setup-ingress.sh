@@ -54,7 +54,7 @@ expect fork
 
 script
   exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && \
-    ./target/start -Dconfig.rabbitmq.ingress.host=$INGRESSBROKERHOST -Dconfig.rabbitmq.host=$BROKERHOST \
+    ./target/start -Dconfig.rabbitmq.gateway.host=$INGRESSBROKERHOST -Dconfig.rabbitmq.tranzoom.host=$BROKERHOST \
     net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i)" \
     ${USER}
 end script

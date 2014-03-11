@@ -13,5 +13,5 @@ object IngressApplication extends App {
   val configFiles = Array("/META-INF/mgrid/messaging/tranzoom-ingress.xml")
   
   val ac = new ClassPathXmlApplicationContext(configFiles, IngressApplication.getClass)
-
+  
 }
