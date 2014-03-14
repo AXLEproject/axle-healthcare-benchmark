@@ -29,6 +29,7 @@ class FHIR2V3TransformSpec extends FlatSpec {
   
   it should "transform Patient updates" in {
     testFile("fhir2v3_0004_pat_input_OK.xml")
+    testFile("fhir2v3_0005_pat_input_invalidresref.xml")
   }
   
   // shared variables and helpers

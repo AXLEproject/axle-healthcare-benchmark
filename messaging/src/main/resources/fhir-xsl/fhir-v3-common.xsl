@@ -101,6 +101,10 @@
   </xsl:template>
 
   <xsl:template name="convert-resource">
+    <xsl:variable name="resource-id" select="fhir:extension[@url = 'http://portavita.eu/fhir/Identifier']/fhir:valueIdentifier"/>
+    <xsl:if test="count($resource-id) = 0">
+      <xsl:message terminate="yes">For resource references the extension http://portavita.eu/fhir/Identifier is required to enable mapping to HL7v3 identifiers.</xsl:message>
+    </xsl:if>
     <xsl:call-template name="convert-identifier">
       <xsl:with-param name="node" select="fhir:extension[@url = 'http://portavita.eu/fhir/Identifier']/fhir:valueIdentifier" />
     </xsl:call-template>

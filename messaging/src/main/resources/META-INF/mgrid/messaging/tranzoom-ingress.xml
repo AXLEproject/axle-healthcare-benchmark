@@ -176,7 +176,7 @@
   </bean>
 
   <bean id="fhirXmlValidatingMessageSelector" class="org.springframework.integration.xml.selector.XmlValidatingMessageSelector">
-    <constructor-arg name="schema" value="fhir-xsd/fhir-all.xsd"/>
+    <constructor-arg name="schema" value="fhir-xsd/fhir-tranzoom.xsd"/>
     <constructor-arg name="schemaType" value="http://www.w3.org/2001/XMLSchema"/>
     <property name="throwExceptionOnRejection" value="true"/>
   </bean>

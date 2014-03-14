@@ -32,7 +32,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" xmlns:xhtml="http://www.w3.org/1999/xhtml" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="0.12">
   <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
   <xs:import namespace="http://www.w3.org/1999/xhtml" schemaLocation="xhtml1-strict.xsd"/>
-  <xs:include schemaLocation="fhir-all.xsd"/>
+  <xs:include schemaLocation="fhir-tranzoom.xsd"/>
   <!-- change this to xs:IDREF and all id attributes to type xs:ID to enforce internal references by schema,
        but note that this can't work in bundles (see comments in Resource Format section) -->
   <xs:simpleType name="xmlIdRef">
@@ -541,55 +541,9 @@ Related resources tie this event to the authorizing prescription, and the specif
   </xs:simpleType>
   <xs:complexType name="Resource.Inline">
     <xs:choice minOccurs="1" maxOccurs="1">
-      <xs:element ref="Binary"/>
-      <xs:element ref="Provenance"/>
-      <xs:element ref="Condition"/>
-      <xs:element ref="CarePlan"/>
-      <xs:element ref="Supply"/>
-      <xs:element ref="Device"/>
-      <xs:element ref="Query"/>
-      <xs:element ref="Order"/>
       <xs:element ref="Organization"/>
-      <xs:element ref="Procedure"/>
-      <xs:element ref="Substance"/>
-      <xs:element ref="DiagnosticReport"/>
-      <xs:element ref="Group"/>
-      <xs:element ref="ValueSet"/>
-      <xs:element ref="Medication"/>
-      <xs:element ref="MessageHeader"/>
-      <xs:element ref="ImmunizationRecommendation"/>
-      <xs:element ref="DocumentManifest"/>
-      <xs:element ref="MedicationDispense"/>
-      <xs:element ref="MedicationPrescription"/>
-      <xs:element ref="MedicationAdministration"/>
-      <xs:element ref="Encounter"/>
-      <xs:element ref="SecurityEvent"/>
-      <xs:element ref="MedicationStatement"/>
-      <xs:element ref="List"/>
-      <xs:element ref="Questionnaire"/>
-      <xs:element ref="Composition"/>
-      <xs:element ref="DeviceObservationReport"/>
-      <xs:element ref="OperationOutcome"/>
-      <xs:element ref="Conformance"/>
-      <xs:element ref="Media"/>
-      <xs:element ref="FamilyHistory"/>
-      <xs:element ref="Other"/>
-      <xs:element ref="Profile"/>
-      <xs:element ref="Location"/>
-      <xs:element ref="Observation"/>
-      <xs:element ref="AllergyIntolerance"/>
-      <xs:element ref="DocumentReference"/>
-      <xs:element ref="Immunization"/>
-      <xs:element ref="RelatedPerson"/>
-      <xs:element ref="Specimen"/>
-      <xs:element ref="OrderResponse"/>
-      <xs:element ref="Alert"/>
-      <xs:element ref="ConceptMap"/>
       <xs:element ref="Patient"/>
       <xs:element ref="Practitioner"/>
-      <xs:element ref="AdverseReaction"/>
-      <xs:element ref="ImagingStudy"/>
-      <xs:element ref="DiagnosticOrder"/>
     </xs:choice>
   </xs:complexType>
   <xs:complexType name="Resource">

@@ -29,6 +29,9 @@
 
   Generated on Wed, Dec 11, 2013 15:13+1100 for FHIR v0.12 
 -->
+<!-- 
+ Modified to match schemas as supported in tranzoom.  
+ -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" xmlns:xhtml="http://www.w3.org/1999/xhtml" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="0.12">
   <xs:include schemaLocation="fhir-base.xsd"/>
   <xs:element name="Practitioner" type="Practitioner">
@@ -74,19 +77,9 @@
               <xs:documentation>The date and time of birth for the practitioner.</xs:documentation>
            </xs:annotation>
           </xs:element>
-          <xs:element name="photo" minOccurs="0" maxOccurs="unbounded" type="Attachment">
-            <xs:annotation>
-              <xs:documentation>Image of the person.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
           <xs:element name="organization" minOccurs="0" maxOccurs="1" type="ResourceReference">
             <xs:annotation>
               <xs:documentation>The organization that the practitioner represents.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="role" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept">
-            <xs:annotation>
-              <xs:documentation>Roles which this practitioner is authorized perform for the organization.</xs:documentation>
            </xs:annotation>
           </xs:element>
           <xs:element name="specialty" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept">
@@ -97,47 +90,6 @@
           <xs:element name="period" minOccurs="0" maxOccurs="1" type="Period">
             <xs:annotation>
               <xs:documentation>The period during which the person is authorized to act as a practitioner in these role(s) for the organization.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="location" minOccurs="0" maxOccurs="unbounded" type="ResourceReference">
-            <xs:annotation>
-              <xs:documentation>The location(s) at which this practitioner provides care.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="qualification" type="Practitioner.Qualification" minOccurs="0" maxOccurs="unbounded">
-            <xs:annotation>
-              <xs:documentation>Qualifications obtained by training and certification.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="communication" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept">
-            <xs:annotation>
-              <xs:documentation>A language the practitioner is able to use in patient communication.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-        </xs:sequence>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:complexType name="Practitioner.Qualification">
-    <xs:annotation>
-      <xs:documentation>Demographics and qualification information for an individual who is directly or indirectly involved in the provisioning of healthcare.</xs:documentation>
-    </xs:annotation>
-    <xs:complexContent>
-      <xs:extension base="BackboneElement">
-        <xs:sequence>
-          <xs:element name="code" minOccurs="1" maxOccurs="1" type="CodeableConcept">
-            <xs:annotation>
-              <xs:documentation>Coded representation of the qualification.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="period" minOccurs="0" maxOccurs="1" type="Period">
-            <xs:annotation>
-              <xs:documentation>Period during which the qualification is valid.</xs:documentation>
-           </xs:annotation>
-          </xs:element>
-          <xs:element name="issuer" minOccurs="0" maxOccurs="1" type="ResourceReference">
-            <xs:annotation>
-              <xs:documentation>Organization that regulates and issues the qualification.</xs:documentation>
            </xs:annotation>
           </xs:element>
         </xs:sequence>

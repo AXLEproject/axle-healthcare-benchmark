@@ -62,10 +62,10 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
       lastMessageCount = count
       val state = flowState()
 
-      if (logger.isDebugEnabled()) {
+      if (logger.isInfoEnabled()) {
         val qList = queues.mkString(",")
         val FlowState(_, cache) = state
-        logger.debug(s"Watched queues: $qList, message count: $lastMessageCount, threshold: $flowThreshold, cache size: ${cache.size}, $state")
+        logger.info(s"Watched queues: $qList, message count: $lastMessageCount, threshold: $flowThreshold, cache size: ${cache.size}, $state")
       }
 
       state
@@ -98,6 +98,7 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
         errorHandler.fatal(ex)
     }
 
+  // use this method in a synchronized block for accessing the cache
   private def flowState(): FlowState =
     if (lastMessageCount < flowThreshold) {
       FlowState(true, messageCache.dequeueAll(_ => true))
@@ -116,7 +117,7 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
     withRabbitChannel { channel =>
       queues.toList.foldLeft(0)(_ + channel.queueDeclarePassive(_).getMessageCount())
     }
-  }, Duration(1, SECONDS))
+  }, Duration(1, SECONDS)) // 1 second is quite arbitrary, actually
 
   def rabbitConnectionFactory = rabbitFactory
 }

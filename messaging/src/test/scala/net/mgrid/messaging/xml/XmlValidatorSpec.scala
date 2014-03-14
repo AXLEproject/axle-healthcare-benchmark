@@ -14,14 +14,15 @@ import org.scalatest.Matchers
 import net.mgrid.tranzoom.TranzoomHeaders
 import com.rabbitmq.client.Channel
 import net.mgrid.tranzoom.error.GlobalErrorHandler
+import org.springframework.xml.validation.XmlValidatorFactory
+import org.springframework.core.io.DefaultResourceLoader
+import scala.io.Source
 
 class XmlValidatorSpec extends FlatSpec with Matchers {
   
   import org.mockito.Mockito._
   import org.mockito.Matchers._
   
-  val source = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
-
   "XML Validator" should "return validated messages" in {
     val f = fixture; import f._
 
@@ -59,7 +60,9 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
   }
   
   def fixture = new {
+    val resourceLoader = new DefaultResourceLoader()
     val errorHandler = mock(classOf[GlobalErrorHandler])
+    val source = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
     val selector = mock(classOf[XmlValidatingMessageSelector])
     val msg = MessageBuilder
       .withPayload("TEST")

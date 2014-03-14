@@ -29,77 +29,70 @@
 
   Generated on Wed, Dec 11, 2013 15:13+1100 for FHIR v0.12 
 -->
+<!-- 
+ Modified to match schemas as supported in tranzoom.  
+ -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" xmlns:xhtml="http://www.w3.org/1999/xhtml" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="0.12">
   <xs:include schemaLocation="fhir-base.xsd"/>
-  <xs:element name="Alert" type="Alert">
+  <xs:element name="Patient" type="Patient">
     <xs:annotation>
-      <xs:documentation>Prospective warnings of potential issues when providing care to the patient.</xs:documentation>
+      <xs:documentation>Demographics and other administrative information about a person or animal receiving care or other health-related services.</xs:documentation>
     </xs:annotation>
   </xs:element>
-  <xs:complexType name="Alert">
+  <xs:complexType name="Patient">
     <xs:annotation>
-      <xs:documentation>Prospective warnings of potential issues when providing care to the patient.</xs:documentation>
+      <xs:documentation>Demographics and other administrative information about a person or animal receiving care or other health-related services.</xs:documentation>
       <xs:documentation>If the element is present, it must have either a @value, an @id, or extensions</xs:documentation>
     </xs:annotation>
     <xs:complexContent>
       <xs:extension base="Resource">
         <xs:sequence>
-          <xs:element name="category" minOccurs="0" maxOccurs="1" type="CodeableConcept">
+          <xs:element name="identifier" minOccurs="0" maxOccurs="unbounded" type="Identifier">
             <xs:annotation>
-              <xs:documentation>Allows an alert to be divided into different categories like clinical, administrative etc.</xs:documentation>
+              <xs:documentation>An identifier that applies to this person as a patient.</xs:documentation>
            </xs:annotation>
           </xs:element>
-          <xs:element name="status" minOccurs="1" maxOccurs="1" type="AlertStatus">
+          <xs:element name="name" minOccurs="0" maxOccurs="unbounded" type="HumanName">
             <xs:annotation>
-              <xs:documentation>Supports basic workflow.</xs:documentation>
+              <xs:documentation>A name associated with the individual.</xs:documentation>
            </xs:annotation>
           </xs:element>
-          <xs:element name="subject" minOccurs="1" maxOccurs="1" type="ResourceReference">
+          <xs:element name="telecom" minOccurs="0" maxOccurs="unbounded" type="Contact">
             <xs:annotation>
-              <xs:documentation>The person who this alert concerns.</xs:documentation>
+              <xs:documentation>A contact detail (e.g. a telephone number or an email address) by which the individual may be contacted.</xs:documentation>
            </xs:annotation>
           </xs:element>
-          <xs:element name="author" minOccurs="0" maxOccurs="1" type="ResourceReference">
+          <xs:element name="gender" minOccurs="0" maxOccurs="1" type="CodeableConcept">
             <xs:annotation>
-              <xs:documentation>The person or device that created the alert.</xs:documentation>
+              <xs:documentation>Administrative Gender - the gender that the patient is considered to have for administration and record keeping purposes.</xs:documentation>
            </xs:annotation>
           </xs:element>
-          <xs:element name="note" minOccurs="1" maxOccurs="1" type="string">
+          <xs:element name="birthDate" minOccurs="0" maxOccurs="1" type="dateTime">
             <xs:annotation>
-              <xs:documentation>The textual component of the alert to display to the user.</xs:documentation>
+              <xs:documentation>The date and time of birth for the individual.</xs:documentation>
+           </xs:annotation>
+          </xs:element>
+          <xs:element name="deceasedBoolean" type="boolean" minOccurs="0" maxOccurs="1">
+            <xs:annotation>
+              <xs:documentation>Indicates if the individual is deceased or not.</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="address" minOccurs="0" maxOccurs="unbounded" type="Address">
+            <xs:annotation>
+              <xs:documentation>Addresses for the individual.</xs:documentation>
+           </xs:annotation>
+          </xs:element>
+          <xs:element name="careProvider" minOccurs="0" maxOccurs="unbounded" type="ResourceReference">
+            <xs:annotation>
+              <xs:documentation>Patient's nominated care provider.</xs:documentation>
+           </xs:annotation>
+          </xs:element>
+          <xs:element name="managingOrganization" minOccurs="0" maxOccurs="1" type="ResourceReference">
+            <xs:annotation>
+              <xs:documentation>Organization that is the custodian of the patient record.</xs:documentation>
            </xs:annotation>
           </xs:element>
         </xs:sequence>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:simpleType name="AlertStatus-list">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="active">
-        <xs:annotation>
-          <xs:documentation>A current alert that should be displayed to a user. A system may use the category to determine which roles should view the alert.</xs:documentation>
-        </xs:annotation>
-      </xs:enumeration>
-      <xs:enumeration value="inactive">
-        <xs:annotation>
-          <xs:documentation>The alert does not need to be displayed any more.</xs:documentation>
-        </xs:annotation>
-      </xs:enumeration>
-      <xs:enumeration value="entered in error">
-        <xs:annotation>
-          <xs:documentation>The alert was added in error, and should no longer be displayed.</xs:documentation>
-        </xs:annotation>
-      </xs:enumeration>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:complexType name="AlertStatus">
-    <xs:annotation>
-      <xs:documentation>Indicates whether this alert is active and needs to be displayed to a user, or whether it is no longer needed or entered in error</xs:documentation>
-      <xs:documentation>If the element is present, it must have either a @value, an @id, or extensions</xs:documentation>
-    </xs:annotation>
-    <xs:complexContent>
-      <xs:extension base="Element">
-        <xs:attribute name="value" type="AlertStatus-list" use="optional"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
