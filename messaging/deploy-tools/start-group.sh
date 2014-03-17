@@ -114,6 +114,8 @@ echo "=============== LAKE RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
     ${LOADTYPE} ${GROUPNAME} "loader-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
     ${LOADTYPE} ${GROUPNAME} "loader-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${LOADTYPE} ${GROUPNAME} "loader-3" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-3.log  &
 
 FAIL=0
 for job in `jobs -p`

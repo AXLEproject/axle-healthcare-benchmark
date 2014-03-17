@@ -75,7 +75,7 @@ EOF
 
 initctl start axle-laketunnel
 
-CPUS=`grep MHz /proc/cpuinfo | wc -l`
+CPUS=$(expr `grep MHz /proc/cpuinfo | wc -l` + 2)
 
 for i in $(seq $CPUS)
 do
