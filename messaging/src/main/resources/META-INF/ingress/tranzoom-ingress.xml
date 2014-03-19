@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:p="http://www.springframework.org/schema/p"
+  xmlns:c="http://www.springframework.org/schema/c"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:int="http://www.springframework.org/schema/integration"
+  xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
+  xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+  xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+  xmlns:task="http://www.springframework.org/schema/task"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/xml http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
+    http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+    http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+    http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+  <context:annotation-config/>
+
+  <context:property-placeholder
+    location="classpath:META-INF/ingress/ingress.properties"
+    system-properties-mode="OVERRIDE"/>
+
+  <!-- Channels, routing and transformation -->
+
+  <int:channel id="ingressChannel" />
+  <int:channel id="flowControlledChannel" />
+  <int:channel id="hl7v3ValidateChannel" />
+  <int:channel id="fhirValidateChannel" />
+  <int:channel id="prepareRoutingChannel"/>
+  <int:channel id="fhirTransformChannel" />
+  <int:channel id="toTransformersChannel" />
+
+  <task:executor id="taskExecutor"
+    pool-size="10"
+    queue-capacity="100"
+    rejection-policy="CALLER_RUNS"
+    />
+
+  <!-- Global error channel and handler -->
+
+  <bean id="errorHandler"
+    class="net.mgrid.tranzoom.error.GlobalErrorHandler"
+    p:publishErrorChannel-ref="publishErrorChannel"
+    />
+
+  <int:channel id="errorChannel" />
+  <int:channel id="publishErrorChannel" />
+
+  <int:service-activator id="globalErrorHandler"
+    input-channel="errorChannel"
+    ref="errorHandler"
+    />
+
+  <!-- Flow control -->
+
+  <bean id="flowControllerBean"
+    class="net.mgrid.tranzoom.rabbitmq.FlowController"
+    p:outputChannel-ref="flowControlledChannel"
+    p:queues="#{{'transform-hl7v3','transform-sql'}}"
+    p:flowThreshold="${config.rabbitmq.tranzoom.flow-threshold}"
+  />
+
+  <int:service-activator
+    id="flowController"
+    input-channel="ingressChannel"
+    output-channel="flowControlledChannel"
+    ref="flowControllerBean"
+    />
+
+  <task:scheduler id="flowScheduler" pool-size="1"/>
+
+  <task:scheduled-tasks scheduler="flowScheduler">
+    <task:scheduled ref="flowControllerBean" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
+  </task:scheduled-tasks>
+
+  <!-- Ingress routing -->
+
+  <int:recipient-list-router id="ingressRouter"
+    input-channel="flowControlledChannel">
+
+    <int:recipient channel="hl7v3ValidateChannel" selector-expression="headers['amqp_receivedRoutingKey'] matches '.*\.hl7v3\..*'"/>
+    <int:recipient channel="fhirValidateChannel" selector-expression="headers['amqp_receivedRoutingKey'] matches '.*\.fhir\..*'"/>
+  </int:recipient-list-router>
+
+  <!-- Schema validation
+
+  If XML validation fails we include the source message in the error message.
+
+  We use a custom xml validator instead of the int-xml:validating-filter because we need
+  access to both the validation exception and source message.
+
+  -->
+
+  <int:service-activator id="hl7v3Validator"
+    input-channel="hl7v3ValidateChannel"
+    output-channel="prepareRoutingChannel">
+
+    <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
+      <property name="selector">
+        <bean class="org.springframework.integration.xml.selector.XmlValidatingMessageSelector"
+          c:schema="CDA_R2_NE2010/infrastructure/cda/CDA.xsd"
+          c:schemaType="http://www.w3.org/2001/XMLSchema"
+          p:throwExceptionOnRejection="true"
+          />
+      </property>
+    </bean>
+  </int:service-activator>
+
+  <int:service-activator id="fhirValidator"
+    input-channel="fhirValidateChannel"
+    output-channel="fhirTransformChannel">
+
+    <bean class="net.mgrid.tranzoom.ingress.xml.XmlValidator">
+      <property name="selector">
+        <bean class="org.springframework.integration.xml.selector.XmlValidatingMessageSelector"
+          c:schema="fhir-xsd/fhir-tranzoom.xsd"
+          c:schemaType="http://www.w3.org/2001/XMLSchema"
+          p:throwExceptionOnRejection="true"
+          />
+      </property>
+    </bean>
+  </int:service-activator>
+
+  <!-- Transform FHIR messages -->
+
+  <int-xml:xslt-transformer id="fhirTransformer"
+    input-channel="fhirTransformChannel"
+    output-channel="prepareRoutingChannel"
+    xsl-resource="classpath:fhir-xsl/fhir-v3-transform.xsl"
+    result-transformer="resultToSource"/>
+
+  <bean id="resultToSource"
+    class="net.mgrid.tranzoom.ingress.xml.ResultToSourceTransformer"
+    />
+
+  <!-- Prepare message for routing -->
+
+  <int:service-activator id="interactionMapper"
+    input-channel="prepareRoutingChannel"
+    output-channel="toTransformersChannel">
+
+    <bean class="net.mgrid.tranzoom.ingress.ContentTypeMapper" />
+  </int:service-activator>
+
+  <!-- RabbitMQ infrastructure -->
+
+  <rabbit:connection-factory id="consumeConnectionFactory"
+    host="${config.rabbitmq.gateway.host}"
+    port="${config.rabbitmq.gateway.port}"
+    username="${config.rabbitmq.gateway.user}"
+    password="${config.rabbitmq.gateway.password}"
+    virtual-host="/gateway"
+    executor="taskExecutor"
+    />
+
+  <rabbit:connection-factory id="publishConnectionFactory"
+    host="${config.rabbitmq.tranzoom.host}"
+    port="${config.rabbitmq.tranzoom.port}"
+    username="${config.rabbitmq.tranzoom.user}"
+    password="${config.rabbitmq.tranzoom.password}"
+    virtual-host="/messaging"
+    executor="taskExecutor"
+    publisher-returns="true"
+    />
+
+  <bean id="rabbitTxAttribute"
+    class="org.springframework.transaction.interceptor.DefaultTransactionAttribute"
+    />
+
+  <bean id="rabbitTxManager"
+    class="org.springframework.amqp.rabbit.transaction.RabbitTransactionManager"
+    p:connectionFactory-ref="consumeConnectionFactory"
+    />
+
+  <bean id="ingressMessageConverter"
+    class="net.mgrid.tranzoom.ingress.IngressMessageConverter"
+    />
+
+  <int-amqp:inbound-channel-adapter id="inboundAdapter"
+    channel="ingressChannel"
+    error-channel="errorChannel"
+    message-converter="ingressMessageConverter"
+    listener-container="inboundListenerContainer"
+    />
+
+  <bean id="inboundListenerContainer"
+    class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer"
+    p:connectionFactory-ref="consumeConnectionFactory"
+    p:channelTransacted="true"
+    p:acknowledgeMode="AUTO"
+    p:errorHandler-ref="errorHandler"
+    p:exposeListenerChannel="true"
+    p:queueNames="ingress-hl7v3, ingress-fhir"
+    p:concurrentConsumers="1"
+    p:defaultRequeueRejected="false"
+    p:prefetchCount="1"
+    p:receiveTimeout="1000"
+    p:recoveryInterval="5000"
+    p:shutdownTimeout="5000"
+    p:taskExecutor-ref="taskExecutor"
+    p:transactionAttribute-ref="rabbitTxAttribute"
+    p:transactionManager-ref="rabbitTxManager"
+    p:txSize="1"
+    />
+
+  <rabbit:template id="outboundTemplate"
+    connection-factory="publishConnectionFactory"
+    channel-transacted="true"
+    encoding="UTF-8"
+    mandatory="true"
+    return-callback="outboundReturnCallback"
+    />
+
+  <bean id="outboundReturnCallback"
+    class="net.mgrid.tranzoom.rabbitmq.RabbitReturnHandler"
+    />
+
+  <int-amqp:outbound-channel-adapter id="errorOutboundAdapter"
+    channel="publishErrorChannel"
+    amqp-template="outboundTemplate"
+    exchange-name="errors"
+    routing-key="ingress"
+    />
+
+  <int-amqp:outbound-channel-adapter id="transformOutboundAdapter"
+    channel="toTransformersChannel"
+    amqp-template="outboundTemplate"
+    exchange-name="transform"
+    routing-key="hl7v3"
+    mapped-request-headers="tz-content-type, tz-ingress-timestamp"
+    />
+
+</beans>

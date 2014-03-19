@@ -11,9 +11,9 @@ scalaVersion := "2.10.3"
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 libraryDependencies ++= Seq(
-  "org.springframework.integration" % "spring-integration-core" % "3.0.0.RELEASE",
-  "org.springframework.integration" % "spring-integration-xml" % "3.0.0.RELEASE",
-  "org.springframework.integration" % "spring-integration-amqp" % "3.0.0.RELEASE",
+  "org.springframework.integration" % "spring-integration-core" % "3.0.1.RELEASE",
+  "org.springframework.integration" % "spring-integration-xml" % "3.0.1.RELEASE",
+  "org.springframework.integration" % "spring-integration-amqp" % "3.0.1.RELEASE",
   "org.postgresql" % "postgresql" % "9.3-1100-jdbc41",
   "commons-dbcp" % "commons-dbcp" % "1.4",
   "commons-pool" % "commons-pool" % "1.5.4",

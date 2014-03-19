@@ -10,7 +10,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext
  */
 object LoaderApplication extends App {
   
-  val configFiles = Array("/META-INF/mgrid/messaging/tranzoom-ccloader.xml")
+  val configFiles = Array("/META-INF/loader/tranzoom-loader.xml")
   
   val ac = new ClassPathXmlApplicationContext(configFiles, LoaderApplication.getClass)
   

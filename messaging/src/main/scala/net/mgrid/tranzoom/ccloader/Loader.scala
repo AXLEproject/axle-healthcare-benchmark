@@ -20,9 +20,8 @@ import org.springframework.integration.annotation.ServiceActivator
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import javax.annotation.Resource
-import net.mgrid.tranzoom.error.ErrorHandler
+import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import net.mgrid.tranzoom.error.ErrorUtils
-import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
 import net.mgrid.tranzoom.rabbitmq.RabbitResourceProvider
 import net.mgrid.tranzoom.rabbitmq.RabbitUtils
 
@@ -65,10 +64,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   var lakeUser: String = System.getProperty("user.name")
 
   @Autowired @Required
-  var confirmListener: PublishConfirmListener = _
-
-  @Autowired @Required
-  var errorHandler: ErrorHandler = _
+  var errorHandler: TranzoomErrorHandler = _
   
   @Resource(name="consumeConnectionFactory") @Required
   var rabbitFactory: RabbitConnectionFactory = _
@@ -142,26 +138,18 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
             val uploadEnd = System.currentTimeMillis()
             val uploadDelta = uploadEnd - uploadStart
             logger.debug(s"Upload script finished, running time $uploadDelta ms, exit code $exitCode, stderr[${stderr.mkString}], stdout[${stdout.mkString}]")
+            
+            messages.headOption map { m =>
+              val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp").asInstanceOf[String]
+              val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
+              val loadDelta = uploadEnd - loadStart
+              val total = uploadEnd - ingressStart
+              logger.debug(s"Loading complete: ingress time $ingressTimestamp, total $total ms")
+            }
           }
           
           if (exitCode != 0) {
             throw new Exception(s"Upload to data lake failed: ${stderr.mkString}")
-          }
-
-      } map { // uploaded, confirm to broker
-
-        _ =>
-          messages.foreach(confirmListener.deliverConfirm(_))
-
-          if (logger.isDebugEnabled()) {
-            val loadEnd = System.currentTimeMillis
-            messages.headOption map { m =>
-              val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp").asInstanceOf[String]
-              val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
-              val loadDelta = loadEnd - loadStart
-              val total = loadEnd - ingressStart
-              logger.debug(s"Loading complete: ingress time $ingressTimestamp, total $total ms")
-            }
           }
 
       } recover { // handle fail

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:p="http://www.springframework.org/schema/p"
+  xmlns:c="http://www.springframework.org/schema/c"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:int="http://www.springframework.org/schema/integration"
+  xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+  xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+  xmlns:task="http://www.springframework.org/schema/task"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+    http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+    http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+  <context:annotation-config />
+
+  <context:property-placeholder
+    location="classpath:META-INF/loader/loader.properties"
+    system-properties-mode="OVERRIDE"/>
+
+  <!-- Channels, routing and transformation -->
+
+  <int:channel id="sqlAggregateChannel"/>
+  <int:channel id="toDatabaseChannel"/>
+  <int:channel id="publishResultChannel"/>
+
+
+  <task:executor id="taskExecutor"
+    pool-size="10"
+    queue-capacity="100"
+    rejection-policy="CALLER_RUNS"
+    />
+
+  <!-- Global error channel and handler -->
+
+  <bean id="errorHandler"
+    class="net.mgrid.tranzoom.error.GlobalErrorHandler"
+    p:publishErrorChannel-ref="publishErrorChannel"
+    />
+
+  <int:channel id="errorChannel" />
+  <int:channel id="publishErrorChannel" />
+
+  <int:service-activator id="globalErrorHandler"
+    input-channel="errorChannel"
+    ref="errorHandler"/>
+
+  <!--
+    To keep state the aggregator uses an in-memory map by default.
+    For the correlation strategy we use a constant expression because in the current implementation
+    there is no discrimination between messages (i.e. all belong to the same group).
+  -->
+
+  <int:aggregator id="aggregator"
+    input-channel="sqlAggregateChannel"
+    output-channel="toDatabaseChannel"
+    message-store="aggregatorStore"
+    method="aggregate"
+    send-partial-result-on-expiry="true"
+    correlation-strategy-expression="1"
+    release-strategy-expression="size() == ${config.group-size}"
+    expire-groups-upon-completion="true">
+
+    <bean class="net.mgrid.tranzoom.ccloader.AggregatorLogicProcessor" />
+  </int:aggregator>
+
+  <bean id="aggregatorStore"
+    class="org.springframework.integration.store.SimpleMessageStore"
+    />
+
+  <bean id="aggregatorReaper"
+    class="org.springframework.integration.store.MessageGroupStoreReaper"
+    p:messageGroupStore-ref="aggregatorStore"
+    p:timeout="${config.group-timeout}"
+    />
+
+  <task:scheduler id="aggregatorScheduler" pool-size="1" />
+
+  <task:scheduled-tasks scheduler="aggregatorScheduler">
+    <task:scheduled ref="aggregatorReaper" method="run" fixed-rate="${config.group-timeout}"/>
+  </task:scheduled-tasks>
+
+  <int:service-activator
+    id="loader"
+    input-channel="toDatabaseChannel">
+
+    <bean class="net.mgrid.tranzoom.ccloader.Loader"
+      p:pondUploadScript="${config.pond.uploadscript}"
+      p:pondHost="${config.pond.dbhost}"
+      p:pondPort="${config.pond.dbport}"
+      p:pondDatabase="${config.pond.dbname}"
+      p:pondUser="${config.pond.dbuser}"
+      p:lakeHost="${config.lake.dbhost}"
+      p:lakePort="${config.lake.dbport}"
+      p:lakeDatabase="${config.lake.dbname}"
+      p:lakeUser="${config.lake.dbuser}"
+      />
+  </int:service-activator>
+
+  <!-- RabbitMQ infrastructure -->
+
+  <rabbit:connection-factory id="consumeConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/messaging"
+    executor="taskExecutor"
+    />
+
+  <rabbit:connection-factory id="publishConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/messaging"
+    executor="taskExecutor"
+    publisher-returns="true"/>
+
+  <bean id="rabbitTxAttribute"
+    class="org.springframework.transaction.interceptor.DefaultTransactionAttribute"
+    />
+
+  <bean id="rabbitTxManager"
+    class="org.springframework.amqp.rabbit.transaction.RabbitTransactionManager"
+    p:connectionFactory-ref="consumeConnectionFactory"
+    />
+
+  <int-amqp:inbound-channel-adapter id="inboundAdapter"
+    channel="sqlAggregateChannel"
+    error-channel="errorChannel"
+    listener-container="inboundListenerContainer"
+    />
+
+  <bean id="inboundListenerContainer"
+    class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer"
+    p:connectionFactory-ref="consumeConnectionFactory"
+    p:channelTransacted="true"
+    p:acknowledgeMode="AUTO"
+    p:errorHandler-ref="errorHandler"
+    p:exposeListenerChannel="true"
+    p:queueNames="transform-sql"
+    p:concurrentConsumers="1"
+    p:defaultRequeueRejected="false"
+    p:prefetchCount="${config.group-size}"
+    p:receiveTimeout="1000"
+    p:recoveryInterval="5000"
+    p:shutdownTimeout="5000"
+    p:taskExecutor-ref="taskExecutor"
+    p:transactionAttribute-ref="rabbitTxAttribute"
+    p:transactionManager-ref="rabbitTxManager"
+    p:txSize="${config.group-size}"
+    />
+
+  <rabbit:template id="errorTemplate"
+    connection-factory="publishConnectionFactory"
+    channel-transacted="true"
+    encoding="UTF-8"
+    mandatory="true"
+    return-callback="outboundReturnCallback"
+    />
+
+  <bean id="outboundReturnCallback"
+    class="net.mgrid.tranzoom.rabbitmq.RabbitReturnHandler"
+    />
+
+  <int-amqp:outbound-channel-adapter
+    id="errorOutboundAdapter"
+    channel="publishErrorChannel"
+    amqp-template="errorTemplate"
+    exchange-name="errors"
+    routing-key="sql"
+    />
+
+</beans>

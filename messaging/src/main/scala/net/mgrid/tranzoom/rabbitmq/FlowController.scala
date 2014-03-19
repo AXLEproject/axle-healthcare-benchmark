@@ -10,7 +10,7 @@ import javax.annotation.Resource
 import org.springframework.integration.annotation.ServiceActivator
 import org.springframework.integration.MessageChannel
 import org.springframework.beans.factory.annotation.Autowired
-import net.mgrid.tranzoom.error.ErrorHandler
+import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import java.util.concurrent.Executor
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -41,17 +41,11 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
   var rabbitFactory: ConnectionFactory = _
 
   @Autowired @Required
-  var errorHandler: ErrorHandler = _
-
-  private implicit var rabbitExecutorService: ExecutionContextExecutor = _
+  var errorHandler: TranzoomErrorHandler = _
 
   private var lastMessageCount: Int = 0
 
   private val messageCache = scala.collection.mutable.Queue[Message[_]]()
-
-  @Required
-  def setRabbitExecutor(executor: Executor): Unit =
-    rabbitExecutorService = ExecutionContext.fromExecutor(executor)
 
   @ServiceActivator
   def send(message: Message[_]): Message[_] = accept(message).orNull
@@ -76,17 +70,23 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
     }
   }
 
-  private def accept(message: Message[_]): Option[Message[_]] = synchronized {
-    flowState() match {
-      case FlowState(active, cache) if active => Some(cache)
-      case _ => {
-        messageCache.enqueue(message)
-        None
-      }
+  private def accept(message: Message[_]): Option[Message[_]] = {
+    if (logger.isDebugEnabled()) {
+      logger.debug(s"Incoming $message")
     }
-  } map { cache =>
-    flushCache(cache)
-    message
+
+    synchronized {
+      flowState() match {
+        case FlowState(active, cache) if active => Some(cache)
+        case _ => {
+          messageCache.enqueue(message)
+          None
+        }
+      }
+    } map { cache =>
+      flushCache(cache)
+      message
+    }
   }
 
   private def flushCache(cache: Seq[Message[_]]): Unit =
@@ -106,18 +106,9 @@ class FlowController extends RabbitResourceProvider with RabbitUtils {
       FlowState(false, Seq())
     }
 
-  /**
-   * Ask the broker for the message count. Because of the use of publisher confirms we make sure that
-   * all broker communication through the same connection factory happens in a single thread,
-   * see the implicit execution context defined in this class.
-   * 
-   * We use a blocking Await.result to make sure the result is returned on the calling thread.
-   */
-  private def countMessages: Int = Await.result(future {
-    withRabbitChannel { channel =>
-      queues.toList.foldLeft(0)(_ + channel.queueDeclarePassive(_).getMessageCount())
-    }
-  }, Duration(1, SECONDS)) // 1 second is quite arbitrary, actually
+  private def countMessages: Int = withRabbitChannel { channel =>
+    queues.toList.foldLeft(0)(_ + channel.queueDeclarePassive(_).getMessageCount())
+  }
 
   def rabbitConnectionFactory = rabbitFactory
 }

@@ -18,9 +18,8 @@ import scala.util.Success
 import org.slf4j.LoggerFactory
 import scala.beans.BeanProperty
 import net.mgrid.tranzoom.TranzoomHeaders
-import net.mgrid.tranzoom.rabbitmq.MessageListener
 import org.springframework.beans.factory.annotation.Required
-import net.mgrid.tranzoom.error.ErrorHandler
+import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import org.springframework.integration.annotation.ServiceActivator
 
 /**
@@ -29,10 +28,9 @@ import org.springframework.integration.annotation.ServiceActivator
 class XmlValidator {
 
   import XmlValidator._
-  import MessageListener.SourceRef
 
   @Autowired @Required
-  var errorHandler: ErrorHandler = _
+  var errorHandler: TranzoomErrorHandler = _
 
   @BeanProperty @Required
   var selector: XmlValidatingMessageSelector = _
@@ -53,17 +51,13 @@ class XmlValidator {
   }
 
   private def error(message: Message[_], cause: Throwable): Message[_] = {
-    import scala.collection.JavaConverters.asScalaIteratorConverter
+    import scala.collection.JavaConverters._
     import net.mgrid.tranzoom.error.ErrorUtils
     
-    val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) match {
-      case ref: SourceRef => ref
-    }
-
     cause match {
       case ex: MessageRejectedException => ex.getCause match {
         case xmlException: AggregatedXmlMessageValidationException => {
-          val reason = xmlException.exceptionIterator.asScala.map(_.getMessage).mkString("\n")
+          val reason = xmlException.getExceptions.asScala.map(_.getMessage).mkString("\n")
           logger.info(s"Schema validation failed for message $message: $reason.")
           errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, reason)
         }

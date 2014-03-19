@@ -13,6 +13,8 @@ import javax.xml.transform.dom.DOMResult
 import javax.xml.transform.TransformerFactory
 import org.springframework.integration.xml.transformer.ResultTransformer
 import javax.xml.transform.Result
+import org.springframework.integration.support.converter.MessageConverter
+import org.springframework.integration.Message
 
 /**
  * Convert to and from XML compatible types.

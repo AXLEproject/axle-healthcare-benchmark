@@ -14,11 +14,10 @@ import org.springframework.integration.MessageChannel
 import scala.beans.BeanProperty
 import net.mgrid.tranzoom.error.ErrorUtils
 import net.mgrid.tranzoom.TranzoomHeaders
-import net.mgrid.tranzoom.rabbitmq.MessageListener
 import net.mgrid.tranzoom.ingress.xml.XmlConverter
 import javax.xml.transform.dom.DOMSource
 import org.springframework.beans.factory.annotation.Required
-import net.mgrid.tranzoom.error.ErrorHandler
+import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import org.springframework.integration.annotation.ServiceActivator
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -28,10 +27,9 @@ import org.springframework.beans.factory.annotation.Autowired
 class ContentTypeMapper {
 
   import ContentTypeMapper._
-  import MessageListener.SourceRef
 
   @Autowired @Required
-  var errorHandler: ErrorHandler = _
+  var errorHandler: TranzoomErrorHandler = _
 
   /**
    * Add a content type header used for downstream processing. The type is the interaction as described
@@ -59,7 +57,6 @@ class ContentTypeMapper {
       val payload = XmlConverter.toBytes(message.getPayload)
       MessageBuilder.withPayload(payload).copyHeaders(message.getHeaders()).setHeader(CONTENT_TYPE_HEADER, ct).build()
     } orElse {
-      val ref = message.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
       logger.info(s"Determine content type failed for message $message: Unknown interaction.")
       errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, "Unsupported interaction.")
       None

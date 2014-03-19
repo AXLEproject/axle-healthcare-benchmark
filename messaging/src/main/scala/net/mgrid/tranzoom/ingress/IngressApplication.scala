@@ -10,7 +10,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext
  */
 object IngressApplication extends App {
   
-  val configFiles = Array("/META-INF/mgrid/messaging/tranzoom-ingress.xml")
+  val configFiles = Array("/META-INF/ingress/tranzoom-ingress.xml")
   
   val ac = new ClassPathXmlApplicationContext(configFiles, IngressApplication.getClass)
   
