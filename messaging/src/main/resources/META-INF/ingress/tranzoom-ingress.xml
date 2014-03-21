@@ -26,7 +26,6 @@
   <!-- Channels, routing and transformation -->
 
   <int:channel id="ingressChannel" />
-  <int:channel id="flowControlledChannel" />
   <int:channel id="hl7v3ValidateChannel" />
   <int:channel id="fhirValidateChannel" />
   <int:channel id="prepareRoutingChannel"/>
@@ -54,32 +53,10 @@
     ref="errorHandler"
     />
 
-  <!-- Flow control -->
-
-  <bean id="flowControllerBean"
-    class="net.mgrid.tranzoom.rabbitmq.FlowController"
-    p:outputChannel-ref="flowControlledChannel"
-    p:queues="#{{'transform-hl7v3','transform-sql'}}"
-    p:flowThreshold="${config.rabbitmq.tranzoom.flow-threshold}"
-  />
-
-  <int:service-activator
-    id="flowController"
-    input-channel="ingressChannel"
-    output-channel="flowControlledChannel"
-    ref="flowControllerBean"
-    />
-
-  <task:scheduler id="flowScheduler" pool-size="1"/>
-
-  <task:scheduled-tasks scheduler="flowScheduler">
-    <task:scheduled ref="flowControllerBean" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
-  </task:scheduled-tasks>
-
   <!-- Ingress routing -->
 
   <int:recipient-list-router id="ingressRouter"
-    input-channel="flowControlledChannel">
+    input-channel="ingressChannel">
 
     <int:recipient channel="hl7v3ValidateChannel" selector-expression="headers['amqp_receivedRoutingKey'] matches '.*\.hl7v3\..*'"/>
     <int:recipient channel="fhirValidateChannel" selector-expression="headers['amqp_receivedRoutingKey'] matches '.*\.fhir\..*'"/>
@@ -173,11 +150,35 @@
   <bean id="rabbitTxManager"
     class="org.springframework.amqp.rabbit.transaction.RabbitTransactionManager"
     p:connectionFactory-ref="consumeConnectionFactory"
+    p:transactionSynchronization="#{T(org.springframework.transaction.support.AbstractPlatformTransactionManager).SYNCHRONIZATION_ON_ACTUAL_TRANSACTION}"
     />
 
   <bean id="ingressMessageConverter"
     class="net.mgrid.tranzoom.ingress.IngressMessageConverter"
     />
+
+  <bean id="synchronizationActivatingInterceptor"
+    class="net.mgrid.tranzoom.rabbitmq.SynchronizationActivatingInterceptor"
+    p:transactionSynchronization-ref="blockingFlowController"
+    />
+
+  <bean id="blockingFlowController"
+    class="net.mgrid.tranzoom.rabbitmq.BlockingFlowController"
+    p:flowPeriod="${config.rabbitmq.tranzoom.flow-period}"
+    />
+
+  <bean id="flowControlSupervisor"
+    class="net.mgrid.tranzoom.rabbitmq.FlowControlSupervisor"
+    p:flowController-ref="blockingFlowController"
+    p:queues="#{{'transform-hl7v3','transform-sql'}}"
+    p:flowThreshold="${config.rabbitmq.tranzoom.flow-threshold}"
+    />
+
+  <task:scheduler id="flowScheduler" pool-size="1"/>
+
+  <task:scheduled-tasks scheduler="flowScheduler">
+    <task:scheduled ref="flowControlSupervisor" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
+  </task:scheduled-tasks>
 
   <int-amqp:inbound-channel-adapter id="inboundAdapter"
     channel="ingressChannel"
@@ -190,32 +191,32 @@
     class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer"
     p:connectionFactory-ref="consumeConnectionFactory"
     p:channelTransacted="true"
+    p:adviceChain="#{new org.aopalliance.aop.Advice[]{@synchronizationActivatingInterceptor}}"
     p:acknowledgeMode="AUTO"
     p:errorHandler-ref="errorHandler"
     p:exposeListenerChannel="true"
     p:queueNames="ingress-hl7v3, ingress-fhir"
-    p:concurrentConsumers="1"
+    p:concurrentConsumers="${config.rabbitmq.gateway.concurrent-consumers}"
     p:defaultRequeueRejected="false"
-    p:prefetchCount="1"
+    p:prefetchCount="${config.rabbitmq.gateway.prefetch-count}"
     p:receiveTimeout="1000"
     p:recoveryInterval="5000"
     p:shutdownTimeout="5000"
     p:taskExecutor-ref="taskExecutor"
     p:transactionAttribute-ref="rabbitTxAttribute"
     p:transactionManager-ref="rabbitTxManager"
-    p:txSize="1"
+    p:txSize="${config.rabbitmq.gateway.prefetch-count}"
     />
+
+  <!--
+       The mandatory flag is not set because the behaviour of tx is not defined otherwise,
+       see https://www.rabbitmq.com/amqp-0-9-1-reference.html#class.tx
+  -->
 
   <rabbit:template id="outboundTemplate"
     connection-factory="publishConnectionFactory"
     channel-transacted="true"
     encoding="UTF-8"
-    mandatory="true"
-    return-callback="outboundReturnCallback"
-    />
-
-  <bean id="outboundReturnCallback"
-    class="net.mgrid.tranzoom.rabbitmq.RabbitReturnHandler"
     />
 
   <int-amqp:outbound-channel-adapter id="errorOutboundAdapter"
