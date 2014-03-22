@@ -27,7 +27,7 @@ _error() {
     exit 1
 }
 
-MESSAGING_DIR=${AXLE}/messaging
+AXLEMESSAGING_DIR=${AXLE}/messaging
 
 # Add EPEL repository
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -46,8 +46,8 @@ yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
-sudo -u ${USER} sh -c "cd $MESSAGING_DIR && sbt clean compile stage \
-  || _error 'Could not build loader messaging software'"
+sudo -u ${USER} sh -c "cd $AXLEMESSAGING_DIR && sbt clean compile stage" \
+  || _error 'Could not build loader messaging software'
 
 # setup shared memory parameters
 sh ${AXLE}/bootstrap/sysctl.sh
@@ -116,9 +116,9 @@ stop on stopping axle-laketunnel or runlevel [016]
 respawn
 
 script
-  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- $MESSAGING_DIR/target/start \
+  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- $AXLEMESSAGING_DIR/target/start \
     -Dconfig.rabbitmq.host=${BROKERHOST} \
-    -Dconfig.pond.uploadscript=${AXLE}/pond/pond_upload.sh
+    -Dconfig.pond.uploadscript=${AXLE}/pond/pond_upload.sh \
     -Dconfig.pond.dbhost=${PONDHOST} \
     -Dconfig.pond.dbname=${PONDDBPREFIX}${i} \
     -Dconfig.pond.dbuser=${PONDUSER} \

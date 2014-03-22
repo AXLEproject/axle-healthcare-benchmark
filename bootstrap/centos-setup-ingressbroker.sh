@@ -54,6 +54,7 @@ curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhos
 
 yum install -y java-1.7.0-openjdk
 
+# Maven
 cd /home/${USER}
 wget http://apache.cs.uu.nl/dist/maven/maven-3/3.2.1/binaries/apache-maven-3.2.1-bin.tar.gz
 tar xf apache-maven-3.2.1-bin.tar.gz
