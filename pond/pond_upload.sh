@@ -18,11 +18,16 @@ usage() {
   OPTIONS:
      -h      Show this message
      -n      Pond database name
+     -u      Pond database username
      -H      Lake database host
      -N      Lake database name
      -U      Lake database username
+     -P      Lake database port
 EOF
 }
+
+# Set PATH
+source $HOME/.bashrc
 
 DPDB=test
 DPUSER=mgrid
@@ -64,7 +69,7 @@ done
 # Execute all pre-processing SQL files first.
 for i in $(ls $(dirname $0)/preprocess_*sql)
 do
-    psql -1 -U ${DPUSER} -d ${DPDB} -f ${i}
+    psql -1 -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}
 done
 
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
