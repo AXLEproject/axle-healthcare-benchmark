@@ -64,10 +64,7 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
     val errorHandler = mock(classOf[GlobalErrorHandler])
     val source = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
     val selector = mock(classOf[XmlValidatingMessageSelector])
-    val msg = MessageBuilder
-      .withPayload("TEST")
-      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, source)
-      .build
+    val msg = MessageBuilder.withPayload("TEST").build()
 
     val validator = new XmlValidator
     validator.errorHandler = errorHandler

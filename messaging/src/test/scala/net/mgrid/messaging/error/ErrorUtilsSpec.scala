@@ -38,21 +38,9 @@ class ErrorUtilsSpec extends FlatSpec with Matchers {
     validator.accept(outArgument.getValue) should be (true)
   }
 
-  it should "add the source reference as header" in {
-    val f = fixture; import f._
-
-    handler.error(msg, "type", "reason")
-    
-    val outArgument = ArgumentCaptor.forClass(classOf[Message[_]])
-    verify(errorChannel).send(outArgument.capture())
-    val result = outArgument.getValue
-
-    result.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) should be (ref)
-  }
-  
   def fixture = new {
     val ref = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
-    val msg = MessageBuilder.withPayload("message").setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref).build()
+    val msg = MessageBuilder.withPayload("message").build()
     val errorChannel = mock(classOf[MessageChannel])
     val handler = new GlobalErrorHandler()
     

@@ -90,7 +90,7 @@ class ContentTypeMapperSpec extends FlatSpec with Matchers {
     val sourceBytes = source.toString.getBytes
     val payload = XmlConverter.toDOMSource(sourceBytes)
     val sourceRef = (sourceBytes, 1L, mock(classOf[Channel]))
-    MessageBuilder.withPayload(payload).setHeader(TranzoomHeaders.HEADER_SOURCE_REF, sourceRef).build
+    MessageBuilder.withPayload(payload).build
     }
 
     val mapper = new ContentTypeMapper

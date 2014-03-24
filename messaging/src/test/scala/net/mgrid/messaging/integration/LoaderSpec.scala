@@ -15,19 +15,17 @@ import com.rabbitmq.client.GetResponse
 import com.rabbitmq.client.Envelope
 import org.mockito.ArgumentCaptor
 import org.springframework.integration.support.MessageBuilder
-import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
 import org.springframework.integration.Message
 import scala.io.Source
 import java.sql.DriverManager
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
-import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
 import org.springframework.amqp.rabbit.connection.Connection
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.sys.process.stringToProcess
-import net.mgrid.tranzoom.error.ErrorHandler
 import com.rabbitmq.client.AMQP.BasicProperties
 import net.mgrid.messaging.testutils.DatabaseUtils
+import net.mgrid.tranzoom.error.TranzoomErrorHandler
 
 /**
  * Requires RIM database server on localhost, used for test pond and lake.
@@ -60,12 +58,9 @@ class LoaderIntegrationSpec extends FlatSpec with Matchers {
     import scala.collection.JavaConverters._
     
     val loader = initLoader
-    val confirmListener = mock(classOf[PublishConfirmListener])
     val sql = Source.fromFile("test-data/fhir_0001_prac.sql").mkString
     val msg  = MessageBuilder.withPayload(sql).build()
     val group = MessageBuilder.withPayload(seqAsJavaListConverter(Seq(msg)).asJava).build()
-    
-    loader.confirmListener = confirmListener
     
     isPondReady should be (true)
     
@@ -79,24 +74,18 @@ class LoaderIntegrationSpec extends FlatSpec with Matchers {
     hasPerson(pondJdbc(pondName)) should be (false)
     hasPerson(lakeJdbc(lakeName)) should be (true)
     
-    val outArgument = ArgumentCaptor.forClass(classOf[Message[String]])
-    verify(confirmListener).deliverConfirm(outArgument.capture())
-    val confirm = outArgument.getValue()
-    confirm should be (msg)
   }
   
   it should "send message to errorHandler on upload fail" in {
     import scala.collection.JavaConverters._
     
     val loader = initLoader
-    val confirmListener = mock(classOf[PublishConfirmListener])
-    val errorHandler = mock(classOf[ErrorHandler])
+    val errorHandler = mock(classOf[TranzoomErrorHandler])
     val sql = Source.fromFile("test-data/fhir_0001_prac.sql").mkString
     val msg  = MessageBuilder.withPayload(sql).build()
     val group = MessageBuilder.withPayload(seqAsJavaListConverter(Seq(msg)).asJava).build()
     
     loader.pondUploadScript = "doesnotexist"
-    loader.confirmListener = confirmListener
     loader.errorHandler = errorHandler
     
     isPondReady should be (true)
@@ -115,7 +104,6 @@ class LoaderIntegrationSpec extends FlatSpec with Matchers {
     val errMessage = outArgument.getValue()
     errMessage should be (msg)
     
-    verify(confirmListener, never()).deliverConfirm(anyObject())
   }
   
   // this test should come at the end as it assumes a ready pond and stops it
