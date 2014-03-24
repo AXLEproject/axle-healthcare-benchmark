@@ -157,6 +157,10 @@
     class="net.mgrid.tranzoom.ingress.IngressMessageConverter"
     />
 
+  <bean id="ingressHeaderMapper"
+    class="net.mgrid.tranzoom.ingress.IngressHeaderMapper"
+    />
+
   <bean id="synchronizationActivatingInterceptor"
     class="net.mgrid.tranzoom.rabbitmq.SynchronizationActivatingInterceptor"
     p:transactionSynchronization-ref="blockingFlowController"
@@ -184,6 +188,7 @@
     channel="ingressChannel"
     error-channel="errorChannel"
     message-converter="ingressMessageConverter"
+    header-mapper="ingressHeaderMapper"
     listener-container="inboundListenerContainer"
     />
 

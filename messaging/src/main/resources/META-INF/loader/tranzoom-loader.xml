@@ -27,7 +27,6 @@
   <int:channel id="toDatabaseChannel"/>
   <int:channel id="publishResultChannel"/>
 
-
   <task:executor id="taskExecutor"
     pool-size="10"
     queue-capacity="100"
@@ -70,18 +69,6 @@
   <bean id="aggregatorStore"
     class="org.springframework.integration.store.SimpleMessageStore"
     />
-
-  <bean id="aggregatorReaper"
-    class="org.springframework.integration.store.MessageGroupStoreReaper"
-    p:messageGroupStore-ref="aggregatorStore"
-    p:timeout="${config.group-timeout}"
-    />
-
-  <task:scheduler id="aggregatorScheduler" pool-size="1" />
-
-  <task:scheduled-tasks scheduler="aggregatorScheduler">
-    <task:scheduled ref="aggregatorReaper" method="run" fixed-rate="${config.group-timeout}"/>
-  </task:scheduled-tasks>
 
   <int:service-activator
     id="loader"
@@ -127,18 +114,36 @@
   <bean id="rabbitTxManager"
     class="org.springframework.amqp.rabbit.transaction.RabbitTransactionManager"
     p:connectionFactory-ref="consumeConnectionFactory"
+    p:transactionSynchronization="#{T(org.springframework.transaction.support.AbstractPlatformTransactionManager).SYNCHRONIZATION_ON_ACTUAL_TRANSACTION}"
+    />
+
+  <bean id="synchronizationActivatingInterceptor"
+    class="net.mgrid.tranzoom.rabbitmq.SynchronizationActivatingInterceptor"
+    p:transactionSynchronization-ref="loaderSynchronization"
+    />
+
+  <bean id="loaderSynchronization"
+    class="net.mgrid.tranzoom.rabbitmq.LoaderSynchronization"
+    p:messageStore-ref="aggregatorStore"
     />
 
   <int-amqp:inbound-channel-adapter id="inboundAdapter"
     channel="sqlAggregateChannel"
     error-channel="errorChannel"
+    mapped-request-headers="tz-ingress-timestamp"
     listener-container="inboundListenerContainer"
     />
+
+  <!--
+       IMPORTANT: concurrent consumers should 1 because we have to make sure all 
+       aggregated messages are part of the same (thread-bound) transaction.
+  -->
 
   <bean id="inboundListenerContainer"
     class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer"
     p:connectionFactory-ref="consumeConnectionFactory"
     p:channelTransacted="true"
+    p:adviceChain="#{new org.aopalliance.aop.Advice[]{@synchronizationActivatingInterceptor}}"
     p:acknowledgeMode="AUTO"
     p:errorHandler-ref="errorHandler"
     p:exposeListenerChannel="true"
@@ -155,16 +160,15 @@
     p:txSize="${config.group-size}"
     />
 
+  <!--
+       The mandatory flag is not set because the behaviour of tx is not defined otherwise,
+       see https://www.rabbitmq.com/amqp-0-9-1-reference.html#class.tx
+  -->
+
   <rabbit:template id="errorTemplate"
     connection-factory="publishConnectionFactory"
     channel-transacted="true"
     encoding="UTF-8"
-    mandatory="true"
-    return-callback="outboundReturnCallback"
-    />
-
-  <bean id="outboundReturnCallback"
-    class="net.mgrid.tranzoom.rabbitmq.RabbitReturnHandler"
     />
 
   <int-amqp:outbound-channel-adapter

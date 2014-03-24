@@ -17,28 +17,6 @@ trait FlowController {
   def state(active: Boolean): Unit
 }
 
-class SynchronizationActivatingInterceptor extends MethodInterceptor {
-
-  private val logger = LoggerFactory.getLogger(classOf[SynchronizationActivatingInterceptor])
-
-  @BeanProperty @Required
-  var transactionSynchronization: TransactionSynchronization = _
-
-  override def invoke(invocation: MethodInvocation): Object = {
-    if (TransactionSynchronizationManager.isSynchronizationActive()) {
-      
-      if (logger.isDebugEnabled()) {
-        val t = Thread.currentThread().getName()
-        val synchronizations = TransactionSynchronizationManager.getSynchronizations()
-        logger.debug(s"Register transaction synchronization $transactionSynchronization for thread $t (${synchronizations.size()} active)")
-      }
-      
-      TransactionSynchronizationManager.registerSynchronization(transactionSynchronization)
-    }
-    invocation.proceed()
-  }
-}
-
 class FlowControlSupervisor extends RabbitResourceProvider with RabbitUtils {
 
   import scala.collection.JavaConversions._

@@ -9,14 +9,12 @@ import scala.collection.JavaConversions.asScalaBuffer
 import scala.sys.process.ProcessLogger
 import scala.sys.process.stringToProcess
 import scala.util.Try
-
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.connection.{ConnectionFactory => RabbitConnectionFactory}
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Required
 import org.springframework.integration.Message
 import org.springframework.integration.annotation.ServiceActivator
-
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import javax.annotation.Resource
@@ -24,6 +22,7 @@ import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import net.mgrid.tranzoom.error.ErrorUtils
 import net.mgrid.tranzoom.rabbitmq.RabbitResourceProvider
 import net.mgrid.tranzoom.rabbitmq.RabbitUtils
+import net.mgrid.tranzoom.TranzoomHeaders
 
 /**
  * Load SQL in database.
@@ -140,7 +139,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
             logger.debug(s"Upload script finished, running time $uploadDelta ms, exit code $exitCode, stderr[${stderr.mkString}], stdout[${stdout.mkString}]")
             
             messages.headOption map { m =>
-              val ingressTimestamp = m.getHeaders.get("tz-ingress-timestamp").asInstanceOf[String]
+              val ingressTimestamp = m.getHeaders.get(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP).asInstanceOf[String]
               val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
               val loadDelta = uploadEnd - loadStart
               val total = uploadEnd - ingressStart
