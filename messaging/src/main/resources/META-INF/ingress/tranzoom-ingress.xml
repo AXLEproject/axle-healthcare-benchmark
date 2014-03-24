@@ -201,7 +201,7 @@
     p:errorHandler-ref="errorHandler"
     p:exposeListenerChannel="true"
     p:queueNames="ingress-hl7v3, ingress-fhir"
-    p:concurrentConsumers="${config.rabbitmq.gateway.concurrent-consumers}"
+    p:concurrentConsumers="1"
     p:defaultRequeueRejected="false"
     p:prefetchCount="${config.rabbitmq.gateway.prefetch-count}"
     p:receiveTimeout="1000"

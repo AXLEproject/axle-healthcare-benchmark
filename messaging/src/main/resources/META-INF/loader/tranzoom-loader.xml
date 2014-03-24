@@ -105,7 +105,8 @@
     password="${config.rabbitmq.password}"
     virtual-host="/messaging"
     executor="taskExecutor"
-    publisher-returns="true"/>
+    publisher-returns="true"
+    />
 
   <bean id="rabbitTxAttribute"
     class="org.springframework.transaction.interceptor.DefaultTransactionAttribute"
