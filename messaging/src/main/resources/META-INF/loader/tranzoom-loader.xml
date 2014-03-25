@@ -24,14 +24,30 @@
   <!-- Channels, routing and transformation -->
 
   <int:channel id="sqlAggregateChannel"/>
-  <int:channel id="toDatabaseChannel"/>
-  <int:channel id="publishResultChannel"/>
+  
+  <int:channel id="toDatabaseChannel">
+    <int:interceptors>
+      <ref bean="messageCounter" />
+    </int:interceptors>
+  </int:channel>
+  
+  <bean id="messageCounter"
+    class="net.mgrid.tranzoom.monitoring.MessageCounter"
+    p:processType="loader"
+    p:rabbitTemplate-ref="monitoringTemplate"
+    />
 
   <task:executor id="taskExecutor"
     pool-size="10"
     queue-capacity="100"
     rejection-policy="CALLER_RUNS"
     />
+    
+  <task:scheduler id="taskScheduler" pool-size="1"/>
+
+  <task:scheduled-tasks scheduler="taskScheduler">
+    <task:scheduled ref="messageCounter" method="publish" fixed-delay="5000"/>
+  </task:scheduled-tasks>
 
   <!-- Global error channel and handler -->
 
@@ -106,6 +122,22 @@
     virtual-host="/messaging"
     executor="taskExecutor"
     publisher-returns="true"
+    />
+    
+  <rabbit:connection-factory id="monitoringConnectionFactory"
+    host="${config.rabbitmq.host}"
+    port="${config.rabbitmq.port}"
+    username="${config.rabbitmq.user}"
+    password="${config.rabbitmq.password}"
+    virtual-host="/monitoring"
+    executor="taskExecutor"
+    publisher-returns="true"
+    />
+    
+  <rabbit:template id="monitoringTemplate"
+    connection-factory="monitoringConnectionFactory"
+    channel-transacted="false"
+    encoding="UTF-8"
     />
 
   <bean id="rabbitTxAttribute"

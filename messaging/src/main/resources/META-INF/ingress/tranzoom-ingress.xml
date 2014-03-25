@@ -30,13 +30,31 @@
   <int:channel id="fhirValidateChannel" />
   <int:channel id="prepareRoutingChannel"/>
   <int:channel id="fhirTransformChannel" />
-  <int:channel id="toTransformersChannel" />
+  
+  <int:channel id="toTransformersChannel">
+    <int:interceptors>
+      <ref bean="messageCounter" />
+    </int:interceptors>
+  </int:channel>
+  
+  <bean id="messageCounter"
+    class="net.mgrid.tranzoom.monitoring.MessageCounter"
+    p:processType="ingress"
+    p:rabbitTemplate-ref="monitoringTemplate"
+    />
 
   <task:executor id="taskExecutor"
     pool-size="10"
     queue-capacity="100"
     rejection-policy="CALLER_RUNS"
     />
+    
+  <task:scheduler id="taskScheduler" pool-size="2"/>
+
+  <task:scheduled-tasks scheduler="taskScheduler">
+    <task:scheduled ref="flowControlSupervisor" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
+    <task:scheduled ref="messageCounter" method="publish" fixed-delay="5000"/>
+  </task:scheduled-tasks>
 
   <!-- Global error channel and handler -->
 
@@ -142,6 +160,22 @@
     executor="taskExecutor"
     publisher-returns="true"
     />
+    
+  <rabbit:connection-factory id="monitoringConnectionFactory"
+    host="${config.rabbitmq.tranzoom.host}"
+    port="${config.rabbitmq.tranzoom.port}"
+    username="${config.rabbitmq.tranzoom.user}"
+    password="${config.rabbitmq.tranzoom.password}"
+    virtual-host="/monitoring"
+    executor="taskExecutor"
+    publisher-returns="true"
+    />
+    
+  <rabbit:template id="monitoringTemplate"
+    connection-factory="monitoringConnectionFactory"
+    channel-transacted="false"
+    encoding="UTF-8"
+    />
 
   <bean id="rabbitTxAttribute"
     class="org.springframework.transaction.interceptor.DefaultTransactionAttribute"
@@ -177,12 +211,6 @@
     p:queues="#{{'transform-hl7v3','transform-sql'}}"
     p:flowThreshold="${config.rabbitmq.tranzoom.flow-threshold}"
     />
-
-  <task:scheduler id="flowScheduler" pool-size="1"/>
-
-  <task:scheduled-tasks scheduler="flowScheduler">
-    <task:scheduled ref="flowControlSupervisor" method="checkFlow" fixed-delay="${config.rabbitmq.tranzoom.flow-period}"/>
-  </task:scheduled-tasks>
 
   <int-amqp:inbound-channel-adapter id="inboundAdapter"
     channel="ingressChannel"

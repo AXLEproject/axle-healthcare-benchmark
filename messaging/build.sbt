@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
   "org.postgresql" % "postgresql" % "9.3-1100-jdbc41",
   "commons-dbcp" % "commons-dbcp" % "1.4",
   "commons-pool" % "commons-pool" % "1.5.4",
+  "net.liftweb" %% "lift-json" % "2.5.1",
   "org.slf4j" % "slf4j-api" % "1.7.5",
   "org.slf4j" % "slf4j-log4j12" % "1.7.5",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",

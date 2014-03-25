@@ -19,9 +19,11 @@ class SynchronizationActivatingInterceptor extends MethodInterceptor {
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       
       if (logger.isDebugEnabled()) {
+        import scala.collection.JavaConversions._
         val t = Thread.currentThread().getName()
         val synchronizations = TransactionSynchronizationManager.getSynchronizations()
         logger.debug(s"Register transaction synchronization $transactionSynchronization for thread $t (${synchronizations.size()} active)")
+        synchronizations.toList.foreach { s => logger.debug(s"Active synchronization: $s") }
       }
       
       TransactionSynchronizationManager.registerSynchronization(transactionSynchronization)
