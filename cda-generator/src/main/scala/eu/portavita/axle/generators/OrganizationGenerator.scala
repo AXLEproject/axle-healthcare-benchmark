@@ -29,7 +29,7 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 
 	def receive = {
 		case TopLevelOrganizationRequest =>
-			System.err.println("TOP LEVEL ORGANIZATION REQUEST")
+//			System.err.println("TOP LEVEL ORGANIZATION REQUEST")
 			generateTopLevelOrganization()
 
 		case x =>

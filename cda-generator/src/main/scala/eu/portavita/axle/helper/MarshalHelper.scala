@@ -1,7 +1,8 @@
 package eu.portavita.axle.helper
 
-import eu.portavita.databus.messagebuilder.messagecontents.IMessageContent
 import java.io.StringWriter
+
+import eu.portavita.databus.message.contents.IMessageContent
 import javax.xml.bind.Marshaller
 
 object MarshalHelper {

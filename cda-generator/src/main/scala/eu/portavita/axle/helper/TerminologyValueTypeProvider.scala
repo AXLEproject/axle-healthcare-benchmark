@@ -3,12 +3,12 @@
  */
 package eu.portavita.axle.helper
 
+import java.util.concurrent.ConcurrentHashMap
+
 import eu.portavita.databus.messagebuilder.cda.IValueTypeProvider
 import eu.portavita.databus.messagebuilder.cda.ValueType
-import eu.portavita.databus.messagebuilder.cda.Code
-import eu.portavita.terminology.LocalTerminologyCache
 import eu.portavita.terminology.CodeSystem
-import java.util.concurrent.ConcurrentHashMap
+import eu.portavita.terminology.LocalTerminologyCache
 
 class TerminologyValueTypeProvider(terminology: LocalTerminologyCache) extends IValueTypeProvider {
 

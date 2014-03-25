@@ -4,14 +4,62 @@
 package eu.portavita.axle.generatable
 
 import java.util.Date
-
 import eu.portavita.axle.GeneratorConfig
 import eu.portavita.databus.data.model.PortavitaAct
+import eu.portavita.terminology.CodeSystem
+import scala.util.matching.Regex
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 
 /**
  * Represents a single observation event.
  */
 abstract class Observation {
+
+	val intervalRegex = Pattern.compile("^\\s*" +
+		"(?<LEFT>\\d+([,\\.]\\d+)?)?" +
+		"\\s*" +
+		"(?<OPERATOR>-|<|>)?" +
+		"\\s*" +
+		"(?<RIGHT>\\d+([,\\.]\\d+)?)?" +
+		"\\s*" +
+		"[^\\s]*$")
+
+	protected def extractInterval(value: String): (Option[Double], Option[Double]) = {
+		def parseDouble(stringValue: String): Option[Double] = {
+			if (stringValue == null || stringValue.isEmpty()) return None
+
+			val valueCorrectFormat = stringValue.replaceAll(",", ".")
+			try {
+				Some(valueCorrectFormat.toDouble)
+			} catch {
+				case _: Throwable => None
+			}
+		}
+
+		val m: Matcher = intervalRegex.matcher(value)
+		if (m.matches()) {
+			val operator = m.group("OPERATOR")
+			val left = m.group("LEFT")
+			val right = m.group("RIGHT")
+
+			if ("-".equals(operator) || "<".equals(operator)) {
+				return (parseDouble(left), parseDouble(right))
+			} else if (">".equals(operator)) {
+				return (parseDouble(right), parseDouble(left))
+			} else if (operator == null || operator.isEmpty()) {
+				if (left != null) {
+					val parsedLeft = parseDouble(left)
+					return (parsedLeft, parsedLeft)
+				} else {
+					val parsedRight = parseDouble(right)
+					return (parsedRight, parsedRight)
+				}
+			}
+		}
+
+		(None, None)
+	}
 
 	/**
 	 * Returns the act code of this observation.
@@ -94,6 +142,12 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 		act.setFromTime(date)
 		act.setValue(value)
 		act.setStatusCode("completed")
+
+		if (code.contains("Portavita336") || code.contains("Portavita315")) {
+			val (lower, upper) = extractInterval(value)
+			if (lower.isDefined) act.setNumericValue1(lower.get)
+			if (upper.isDefined) act.setNumericValue1(upper.get)
+		}
 
 		Some(act)
 	}

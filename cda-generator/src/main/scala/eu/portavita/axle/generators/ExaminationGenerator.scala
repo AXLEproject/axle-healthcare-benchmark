@@ -5,11 +5,9 @@ package eu.portavita.axle.generators
 
 import java.io.File
 import java.util.Date
-
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -30,10 +28,10 @@ import eu.portavita.axle.json.AsMap
 import eu.portavita.axle.publisher.PublishHelper
 import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.ExaminationBuilder
-import eu.portavita.databus.messagebuilder.messagecontents.ExaminationMessageContent
 import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.HierarchyNode
 import javax.xml.bind.Marshaller
+import eu.portavita.databus.message.contents.ExaminationMessageContent
 
 sealed trait ExaminationMessage
 case class ExaminationGenerationRequest(val patient: Patient, val performanceDates: IndexedSeq[Date]) extends ExaminationMessage
