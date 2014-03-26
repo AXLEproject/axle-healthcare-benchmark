@@ -27,9 +27,6 @@ fi
 
 USERDIR="$1"
 USER=$(basename ${USERDIR})
-BROKERHOST=localhost
-LAKEEXTERNALHOST=localhost
-INGRESSBROKERHOST=localhost
 
 AXLE=${USERDIR}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -39,6 +36,11 @@ sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n
 source /tmp/default_settings_bash
 
 pushd ${USERDIR}
+
+BROKERHOST=localhost
+LAKEEXTERNALHOST=localhost
+LAKELOCALPORT=5432
+INGRESSBROKERHOST=localhost
 
 # test assumptions
 
@@ -83,7 +85,7 @@ cat > /etc/rabbitmq/rabbitmq.config <<EOF
 [
   {rabbit,
    [
-     {tcp_listeners, [{"0.0.0.0", 5672}]}
+     {tcp_listeners, [{"127.0.0.1", 5672}]}
    ]}
 ].
 EOF
@@ -119,7 +121,7 @@ for i in $(seq $TRANSFORMERS)
 do
   cat > /etc/init/axle-xfm$i.conf <<EOF
 description "AXLE Messaging Transformer"
-start on (local-filesystems and net-device-up IFACE!=lo)
+start on runlevel [2345]
 stop on runlevel [016]
 
 respawn
@@ -130,7 +132,7 @@ script
 end script
 EOF
 
-  initctl restart axle-xfm$i || echo 'already running'
+  initctl start axle-xfm$i || echo 'already running'
 done
 
 # Ingress
@@ -145,7 +147,7 @@ for i in $(seq $INGRESSORS)
 do
   cat > /etc/init/axle-ingress$i.conf <<EOF
 description "AXLE Messaging Ingress"
-start on (local-filesystems and net-device-up IFACE!=lo)
+start on runlevel [2345]
 stop on runlevel [016]
 
 respawn
