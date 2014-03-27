@@ -66,10 +66,16 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
+# If there are no organizations we can exit
+R=`psql -U ${DPUSER} -d ${DPDB} -tAc 'SELECT 1 FROM "Organization" LIMIT 1'`
+test "X${R}" = "X1" || exit 0
+#logger -t axle-pond-upload "database is empty"
+
 # Execute all pre-processing SQL files first.
 for i in $(ls $(dirname $0)/preprocess_*sql)
 do
-    psql -1 -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}
+    SECS=`TIME="%e" psql -1 -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}`
+    logger -t axle-pond-upload "${i} execution time ${SECONDS} seconds"
 done
 
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
