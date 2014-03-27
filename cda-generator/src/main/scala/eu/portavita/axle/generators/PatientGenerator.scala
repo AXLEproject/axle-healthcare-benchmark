@@ -41,7 +41,7 @@ class PatientGenerator(
 
 	def receive = {
 		case request @ PatientRequest(organization, numberOfPatients) =>
-			InPipeline.waitUntilReady
+			InPipeline.waitGeneratingPatients
 			for (i <- 0 to numberOfPatients) {
 				generate(organization)
 			}
