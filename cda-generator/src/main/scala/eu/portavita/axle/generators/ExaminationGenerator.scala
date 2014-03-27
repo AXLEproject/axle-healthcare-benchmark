@@ -54,9 +54,10 @@ class ExaminationGenerator(
 	 */
 	def receive = {
 		case request @ ExaminationGenerationRequest(patient, performanceDates) =>
+			InPipeline.waitGeneratingExaminations
 			for (performanceDate <- performanceDates) generate(patient, performanceDate)
 			val inPipeline = InPipeline.examinationRequests.finishRequest
-//			if (inPipeline % 500 == 0) log.info("Finished an examination, now %d examination requests in pipeline".format(inPipeline))
+			if (inPipeline % 500 == 0) log.info("Finished an examination, now %d examination requests in pipeline".format(inPipeline))
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)

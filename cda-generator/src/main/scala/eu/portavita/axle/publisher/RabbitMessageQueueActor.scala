@@ -15,7 +15,7 @@ class RabbitMessageQueueActor extends Actor with ActorLogging {
 		case PublishMessageRequest(content, routingKey) =>
 			publisher.publish(content, routingKey)
 			val inPipeline = InPipeline.publishRequests.finishRequest
-//			if (inPipeline > 0 && inPipeline % 500 == 0) log.info("%d publish requests in pipeline".format(inPipeline))
+			if (inPipeline > 0 && inPipeline % 500 == 0) log.info("%d publish requests in pipeline".format(inPipeline))
 
 		case x => log.warning("Received message that I cannot handle: " + x.toString)
 	}

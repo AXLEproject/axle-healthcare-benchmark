@@ -15,13 +15,13 @@ class InPipelineSuite extends Suite {
 		assert(!InPipeline.pause.get())
 
 		maxOut(InPipeline.publishRequests, maxPublishRequests)
-		assert(InPipeline.publishRequests.paused)
+		assert(InPipeline.publishRequests.isPaused)
 		assert(isPaused)
 
 		InPipeline.publishRequests.setCurrent(maxPublishRequests / 2)
 		InPipeline.publishRequests.finishRequest
 		assert(!isPaused)
-		assert(!InPipeline.publishRequests.paused)
+		assert(!InPipeline.publishRequests.isPaused)
 	}
 
 	@Test
@@ -44,7 +44,7 @@ class InPipelineSuite extends Suite {
 		requestsInProgress.setCurrent(max)
 		requestsInProgress.newRequest
 		assert(isPaused)
-		assert(requestsInProgress.paused)
+		assert(requestsInProgress.isPaused)
 	}
 
 	private def isPaused = InPipeline.pause.get()

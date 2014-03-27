@@ -55,7 +55,8 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 	}
 
 	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
-		InPipeline.waitUntilReady
+		InPipeline.waitGeneratingOrganizations
+//		InPipeline.waitUntilReady
 		val organization = Organization.sample(partOf)
 		queue.publish(organization)
 		generatePatients(organization)
