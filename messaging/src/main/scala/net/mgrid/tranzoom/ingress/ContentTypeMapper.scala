@@ -55,7 +55,7 @@ class ContentTypeMapper {
 
     val result = contentType map { ct =>
       val payload = XmlConverter.toBytes(message.getPayload)
-      MessageBuilder.withPayload(payload).copyHeaders(message.getHeaders()).setHeader(CONTENT_TYPE_HEADER, ct).build()
+      MessageBuilder.withPayload(payload).copyHeaders(message.getHeaders()).setHeader(TranzoomHeaders.CONTENT_TYPE_HEADER, ct).build()
     } orElse {
       logger.info(s"Determine content type failed for message $message: Unknown interaction.")
       errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, "Unsupported interaction.")
@@ -74,15 +74,13 @@ class ContentTypeMapper {
 
 }
 
-private object ContentTypeMapper {
+object ContentTypeMapper {
   private val logger = LoggerFactory.getLogger(ContentTypeMapper.getClass)
 
-  private val CONTENT_TYPE_HEADER = "tz-content-type"
-
-  private val HL7V3_CDAR2_CONTENT_TYPE = "CDA_R2"
-  private val FHIR_ORGA_CONTENT_TYPE = "TZDU_IN000001UV"
-  private val FHIR_PRAC_CONTENT_TYPE = "TZDU_IN000002UV"
-  private val FHIR_PAT_CONTENT_TYPE = "TZDU_IN000003UV"
+  val HL7V3_CDAR2_CONTENT_TYPE = "CDA_R2"
+  val FHIR_ORGA_CONTENT_TYPE = "TZDU_IN000001UV"
+  val FHIR_PRAC_CONTENT_TYPE = "TZDU_IN000002UV"
+  val FHIR_PAT_CONTENT_TYPE = "TZDU_IN000003UV"
 
   private val converter = new DefaultXmlPayloadConverter()
   private val messageTypeExpression = XPathExpressionFactory.createXPathExpression("local-name(/*[1])")

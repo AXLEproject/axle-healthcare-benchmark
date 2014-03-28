@@ -14,11 +14,14 @@ import net.liftweb.json.NoTypeHints
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 import java.util.UUID
+import net.mgrid.tranzoom.TranzoomHeaders
+import net.mgrid.tranzoom.ingress.ContentTypeMapper
 
-private case class MonitoringUpdate(processType: String, processName: String, count: Int, size: Long)
+private case class MonitoringUpdate(processType: String, processName: String, metrics: Map[String, Long])
 
 class MessageCounter extends ChannelInterceptorAdapter {
   
+  import MessageCounter._
   import scala.collection.JavaConversions._
   
   private val logger = LoggerFactory.getLogger(classOf[MessageCounter])
@@ -34,8 +37,10 @@ class MessageCounter extends ChannelInterceptorAdapter {
   @BeanProperty @Required
   var rabbitTemplate: RabbitTemplate = _
   
-  private val counter = new AtomicInteger()
-  private val bytes = new AtomicLong()
+  private val msgCountCda = new AtomicLong()
+  private val msgCountTotal = new AtomicLong()
+  private val msgSizeBytes = new AtomicLong()
+  private val avgTime = new AtomicLong()
   
   override def postSend(message: Message[_], channel: MessageChannel, sent: Boolean): Unit = {
     if (sent) {
@@ -43,13 +48,24 @@ class MessageCounter extends ChannelInterceptorAdapter {
         case lst: java.util.List[_] => lst.toList.foreach(m => updateCounters(m.asInstanceOf[Message[_]]))
         case _ => updateCounters(message)
       }
+      val ptime = System.currentTimeMillis() - message.getHeaders().getTimestamp()
+      val avg = avgTime.get()
+      avgTime.set((avg+ptime)/2)
     }
   }
   
   def publish(): Unit = {
-    val count = counter.getAndSet(0)
-    val size = bytes.getAndSet(0)
-    val payload = Serialization.write(MonitoringUpdate(processType, processName, count, size))
+    val numCda = msgCountCda.getAndSet(0)
+    val numTotal = msgCountTotal.getAndSet(0)
+    val numBytes = msgSizeBytes.getAndSet(0)
+    val delta = avgTime.getAndSet(0)
+    
+    val payload = Serialization.write(MonitoringUpdate(processType, processName, Map(
+        METRIC_MESSAGESPERSECOND_CDA -> numCda,
+        METRIC_MESSAGESPERSECOND_TOTAL -> numTotal,
+        METRIC_BYTESPERSECOND -> numBytes,
+        METRIC_AVERAGETIME -> delta
+    )))
     val message = new RabbitMessage(payload.getBytes(), new MessageProperties())
     
     logger.info(s"Publishing monitoring update $payload to broker")
@@ -64,9 +80,20 @@ class MessageCounter extends ChannelInterceptorAdapter {
           logger.warn(s"Unable to determine payload size for $c")
           0
       }
-      counter.incrementAndGet()
-      bytes.getAndAdd(numBytes)
+    
+      if (message.getHeaders().get(TranzoomHeaders.CONTENT_TYPE_HEADER) == ContentTypeMapper.HL7V3_CDAR2_CONTENT_TYPE) {
+        msgCountCda.incrementAndGet()
+      }
+      
+      msgCountTotal.incrementAndGet()
+      msgSizeBytes.getAndAdd(numBytes)
   }
 
 }
 
+private object MessageCounter {
+  val METRIC_MESSAGESPERSECOND_TOTAL = "mpsTotal"
+  val METRIC_MESSAGESPERSECOND_CDA = "mpsCda"
+  val METRIC_BYTESPERSECOND = "bps"
+  val METRIC_AVERAGETIME = "avgTime"
+}

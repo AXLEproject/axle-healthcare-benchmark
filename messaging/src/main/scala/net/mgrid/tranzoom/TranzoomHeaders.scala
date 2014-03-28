@@ -8,4 +8,5 @@ package net.mgrid.tranzoom
  */
 object TranzoomHeaders {
   val HEADER_INGRESS_TIMESTAMP = "tz-ingress-timestamp"
+  val CONTENT_TYPE_HEADER = "tz-content-type"
 }
