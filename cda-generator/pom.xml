@@ -74,11 +74,6 @@
 			<systemPath>${basedir}/lib/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
 		</dependency>
 		<dependency>
-			<groupId>eu.portavita.databus</groupId>
-			<artifactId>message-content</artifactId>
-			<version>1.0-SNAPSHOT</version>
-		</dependency>
-		<dependency>
 			<groupId>com.rabbitmq</groupId>
 			<artifactId>amqp-client</artifactId>
 			<version>3.2.1</version>
