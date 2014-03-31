@@ -18,7 +18,7 @@ psql $DB -qc "CREATE EXTENSION hl7v3vocab_edition2010"
 psql $DB -qc "CREATE EXTENSION hl7v3datatypes_r1"
 psql $DB -qc "CREATE EXTENSION hl7v3rim_edition2010"
 psql $DB -qc "CREATE EXTENSION hl7v3crud_edition2010"
-#psql $DB -qf "../mgrid-hdm/hl7v3/rim_dropforeignkeys.sql"
+psql $DB -qf "../pond/rim_dropforeignkeys.sql"
 
 # load pond functions
-psql $DB < ./loader-tools/pond.sql
+psql $DB < ../pond/pond.sql

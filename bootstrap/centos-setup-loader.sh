@@ -69,8 +69,8 @@ stop on runlevel [016]
 respawn
 
 script
-  su -l ${USER} -c "(source /home/$USER/.bashrc; \ cd $MESSAGING_DIR && ./target/start \
-    -Dconfig.rabbitmq.host=$BROKERHOST \
+  su -l ${USER} -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start \
+    -Dconfig.rabbitmq.host=${BROKERHOST} \
     -Dconfig.pond.dbhost=${PONDHOST} \
     -Dconfig.pond.dbname=${PONDDBPREFIX}${i} \
     -Dconfig.pond.dbuser=${PONDUSER} \

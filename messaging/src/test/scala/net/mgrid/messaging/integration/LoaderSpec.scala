@@ -1,4 +1,4 @@
-package net.mgrid.messaging.ccloader
+package net.mgrid.messaging.integration
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
@@ -10,14 +10,18 @@ import org.springframework.amqp.rabbit.connection.Connection
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.GetResponse
 import com.rabbitmq.client.Envelope
-import com.rabbitmq.client.AMQP
-import org.scalatest.BeforeAndAfter
 import org.mockito.ArgumentCaptor
 import org.springframework.integration.support.MessageBuilder
 import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
 import org.springframework.integration.Message
 import scala.io.Source
 import java.sql.DriverManager
+import javax.annotation.PostConstruct
+import javax.annotation.PreDestroy
+import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
+import org.springframework.amqp.rabbit.connection.Connection
+import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.sys.process.stringToProcess
 
 /**
  * Requires RIM database server on localhost, used for test pond and lake.
@@ -46,7 +50,7 @@ class LoaderSpec extends FlatSpec with Matchers {
     
   }
   
-  ignore should "upload message group to the lake" in {
+  it should "upload message group to the lake" in {
     import scala.collection.JavaConverters._
     
     val loader = initLoader
@@ -60,20 +64,19 @@ class LoaderSpec extends FlatSpec with Matchers {
     isPondReady(loader) should be (true)
     
     // no person should be in the pond and lake before load
-    pondHasPerson(loader) should be (false)
-    lakeHasPerson(loader) should be (false)
+    hasPerson(loader, pondJdbc) should be (false)
+    hasPerson(loader, lakeJdbc) should be (false)
 
     loader.loadGroup(group)
     
-    val outArgument = ArgumentCaptor.forClass(classOf[Message[String]])
-    //verify(confirmListener).deliverConfirm(outArgument.capture())
-    //val confirm = outArgument.getValue()
-    
     // no person should be in the pond but does in the lake after load
-    pondHasPerson(loader) should be (false)
-    lakeHasPerson(loader) should be (true)
+    hasPerson(loader, pondJdbc) should be (false)
+    hasPerson(loader, lakeJdbc) should be (true)
     
-    //confirm should be (msg)
+    val outArgument = ArgumentCaptor.forClass(classOf[Message[String]])
+    verify(confirmListener).deliverConfirm(outArgument.capture())
+    val confirm = outArgument.getValue()
+    confirm should be (msg)
   }
   
   // this test should come at the end as it assumes a ready pond
@@ -135,18 +138,8 @@ private object LoaderSpec {
     }
   }
   
-  def pondHasPerson(loader: Loader): Boolean = withDatabaseConnection(pondJdbc) { conn =>
-    query[String](conn, "SELECT \"name\" FROM \"Person\"") match {
-      case Some(_) => true
-      case None => false
-    }
-  }
-  
-  def lakeHasPerson(loader: Loader): Boolean = withDatabaseConnection(lakeJdbc) { conn =>
-    query[String](conn, "SELECT \"name\" FROM \"Person\"") match {
-      case Some(_) => true
-      case None => false
-    }
+  def hasPerson(loader: Loader, jdbcUri: String): Boolean = withDatabaseConnection(jdbcUri) { conn =>
+    query[String](conn, "SELECT \"name\" FROM \"Person\"").nonEmpty
   }
   
   def withDatabaseConnection[A](jdbcUri: String)(f: java.sql.Connection => A): A = {

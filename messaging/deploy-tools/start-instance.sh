@@ -27,14 +27,14 @@ INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERHOST="$9"
-LAKEEXTERNALHOST="$10"
+LAKEEXTERNALHOST="${10}"
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 lakeexternalhost ${10}"
 
 #exit code
 WARN=0

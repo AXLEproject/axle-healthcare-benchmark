@@ -5,9 +5,10 @@ package net.mgrid.messaging.publish
 
 import scala.io.Source
 import scala.sys.process._
-
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.MessageProperties
+import com.rabbitmq.client.Channel
+import com.rabbitmq.client.Connection
 
 object PublishDir extends App {
 
@@ -49,14 +50,7 @@ object PublishDir extends App {
 
     println(s"Running with options $opt")
 
-    val factory = new ConnectionFactory
-    factory.setUsername(opt.getOrElse('username, "guest"))
-    factory.setPassword(opt.getOrElse('password, "guest"))
-    factory.setVirtualHost(opt.getOrElse('vhost, "/"))
-    factory.setHost(opt.getOrElse('hostname, "localhost"))
-    factory.setPort(5672)
-    val conn = factory.newConnection()
-    val channel = conn.createChannel()
+    val (conn, channel) = createChannel(opt)
     val exchangeName = opt.getOrElse('exchange, "amqp.topic")
     val routingKey = opt.getOrElse('key, "key")
     val loop = opt.contains('loop)
@@ -81,7 +75,19 @@ object PublishDir extends App {
     channel.close()
     conn.close()
   }
+  
+  def createChannel(opt: Options): (Connection, Channel) = {
+    val factory = new ConnectionFactory
+    factory.setUsername(opt.getOrElse('username, "guest"))
+    factory.setPassword(opt.getOrElse('password, "guest"))
+    factory.setVirtualHost(opt.getOrElse('vhost, "/"))
+    factory.setHost(opt.getOrElse('hostname, "localhost"))
+    factory.setPort(5672)
+    val conn = factory.newConnection()
+    
+    (conn, conn.createChannel())
+  }
 
   start()
-
+  
 }

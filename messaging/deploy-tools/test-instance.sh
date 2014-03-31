@@ -22,8 +22,8 @@ OPTIONS:
    -K      Private key to use for SSH session
    -U      Username to use on VM
    -B      Broker hostname
-   -N      DWH username
-   -D      DWH hostname
+   -N      LAKE username
+   -D      LAKE hostname
 EOF
 }
 
@@ -33,8 +33,8 @@ INSTANCE="broker"
 KEY="~/.ssh/id_rsa"
 VMUSER="vagrant"
 BROKERHOST="localhost"
-DWHUSER=$VMUSER
-DWHHOST="localhost"
+LAKEUSER=$VMUSER
+LAKEHOST="localhost"
 GROUP="itest"
 
 while getopts ":hH:P:I:K:U:B:N:D:" opt; do
@@ -62,10 +62,10 @@ while getopts ":hH:P:I:K:U:B:N:D:" opt; do
                 BROKERHOST=$OPTARG
         ;;
         N)
-                DWHUSER=$OPTARG
+                LAKEUSER=$OPTARG
         ;;
         D)
-                DWHHOST=$OPTARG
+                LAKEHOST=$OPTARG
         ;;
         \?)
                 echo "Invalid option: -$OPTARG" >&2
@@ -119,4 +119,4 @@ EOF
 
 export SSHPORT=$VMPORT INSTANCEWAIT=0 LOGINWAIT=0
 
-source ./start-instance.sh ami-ce10e0b9 $VMUSER $VMUSER $KEY eu-west-1 c3.large itest $INSTANCE $BROKERHOST $DWHUSER $DWHHOST
+source ./start-instance.sh ami-ce10e0b9 $VMUSER $VMUSER $KEY eu-west-1 c3.large itest $INSTANCE $BROKERHOST $LAKEHOST

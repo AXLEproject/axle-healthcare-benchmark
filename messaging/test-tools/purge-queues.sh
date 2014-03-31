@@ -44,6 +44,6 @@ while getopts ":hn:u:p:" opt; do
         esac
 done
 
-for q in ingress-hl7v3 ingress-fhir transform-sql transform-hl7v3 errors-ingress errors-transform errors-sql; do 
+for q in ingress-fhir ingress-hl7v3 dlx-errors dlx-ingress dlx-transform transform-sql transform-hl7v3 errors-ingress errors-transform errors-sql pond-seq unrouted; do 
   curl -i -u $USERNAME:$PASSWORD -XDELETE http://$HOSTNAME:15672/api/queues/%2fmessaging/$q/contents
 done

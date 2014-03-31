@@ -91,6 +91,11 @@ case "${ACTION}" in
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
         pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
+	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
+	# we need to disable these checks.
+        pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
+        # Load term mappings
+        pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
