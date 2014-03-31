@@ -76,7 +76,7 @@ echo Start components
 echo ====
 echo
 
-run "$MSGDIR/pyenv/bin/python $MSGDIR/integration/rabbitmq/transformer.py"
+run "$MSGDIR/pyenv/bin/python $MSGDIR/integration/rabbitmq/transformer.py ${USERNAME} ${PASSWORD} ${BROKERHOST}"
 
 run "./target/start net.mgrid.tranzoom.ingress.IngressApplication"
 

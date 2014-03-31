@@ -36,7 +36,7 @@ class IngressIntegrationSpec extends FlatSpec with Matchers with BeforeAndAfter 
   
   "Ingress" should "send messages to the error queue when an exception occurs [async task executor]" in {
     
-    val configFiles = Array("/META-INF/mgrid/messaging/tranzoom-ingress.xml")
+    val configFiles = Array("/META-INF/ingress/tranzoom-ingress.xml")
     val ac = new ClassPathXmlApplicationContext(configFiles, classOf[IngressIntegrationSpec])
     
     // stop and detach outbound adapter (we want to replace it with our test handler)

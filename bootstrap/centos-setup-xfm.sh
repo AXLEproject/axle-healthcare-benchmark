@@ -55,7 +55,7 @@ respawn
 
 script
   exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- python ${MESSAGING_DIR}/integration/rabbitmq/transformer.py \
-    -n ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
+    ${RABBITMQUSER} ${RABBITMQPASSWORD} ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
 end script
 EOF
 

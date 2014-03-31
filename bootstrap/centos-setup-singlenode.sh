@@ -49,6 +49,9 @@ then
     _error "axle-healthcare-benchmark should be placed in the home directory of the unprivileged user."
 fi
 
+
+yum install -y bc
+
 # setup shared memory parameters
 sh ${AXLE}/bootstrap/sysctl.sh
 
@@ -93,12 +96,19 @@ EOF
 rabbitmq-plugins enable rabbitmq_management
 service rabbitmq-server restart
 chkconfig rabbitmq-server on --level 2345
+
+# Give rabbit some time to setup
+sleep 1
+
 curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhost:15672/api/definitions \
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
 # Load loader sequences in queue
 pip install importlib kombu
 python axle-healthcare-benchmark/pond/rabbitmq_seed_pond_seq.py
+
+# initialize cda generator
+(cd ${AXLE}/${CDAGENERATOR} && ./initialize.sh)
 
 # create upstart job for cda generator to be started manually
 cat > /etc/init/axle-cdagen.conf <<EOF
@@ -128,7 +138,7 @@ respawn
 
 script
   exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- python ${MESSAGING_DIR}/integration/rabbitmq/transformer.py \
-    -n ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
+     ${RABBITMQUSER} ${RABBITMQPASSWORD} ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
 end script
 EOF
 

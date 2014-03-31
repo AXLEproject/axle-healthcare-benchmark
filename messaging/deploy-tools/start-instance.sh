@@ -141,7 +141,7 @@ EOF
 
 pushd $(git rev-parse --show-cdup)
 git remote add ${GROUPNAME}-${INSTANCENAME} ssh://${GROUPNAME}-${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
-git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/messaging
+git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/10TB
 git remote rm ${GROUPNAME}-${INSTANCENAME}
 popd
 
@@ -149,7 +149,7 @@ popd
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd axle-healthcare-benchmark
-git checkout topic/fawork/messaging
+git checkout topic/fawork/10TB
 git reset --hard
 exit
 EOF
