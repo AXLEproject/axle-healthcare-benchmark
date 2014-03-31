@@ -21,11 +21,11 @@ INSTANCETYPE="${INSTANCETYPE:-m1.large}"
 KEYPAIRNAME="axle"
 KEYPAIR="/home/${USER}/.aws/axle.pem"
 
-BROKERTYPE="t1.micro"
-INGRESSTYPE="t1.micro"
-XFMTYPE="t1.micro"
-LOADTYPE="t1.micro"
-DWHTYPE="t1.micro"
+BROKERTYPE="m3.medium"
+INGRESSTYPE="m3.medium"
+XFMTYPE="m3.medium"
+LOADTYPE="m3.medium"
+DWHTYPE="m3.medium"
 
 # Error handlers
 _error() {
@@ -49,20 +49,16 @@ echo "Start broker first (we need to propagate its IP address to the other insta
     ${BROKERTYPE} ${GROUPNAME} "broker-1" "0.0.0.0" \
     || _error "Could not start the broker, stop further processing"
 
-BROKERIP=`euca-describe-instances --filter instance-id=broker1 | tr '\n' ' ' | awk '{print $7}'`
+BROKERIP=`euca-describe-instances --filter tag-value=broker-1 | tr '\n' ' ' | awk '{print $7}'`
 
 echo "Broker running on ip ${BROKERIP}"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP} &
+    ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERIP}
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP} &
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERIP}
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERIP} &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP} &
-./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERIP} &
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERIP}
 
 FAIL=0
 for job in `jobs -p`

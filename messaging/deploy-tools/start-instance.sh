@@ -28,8 +28,6 @@ GROUPNAME="$7"
 INSTANCENAME="$8"
 BROKERIP=$9
 
-TEMP_REPO="ssh://vagrant@217.21.198.42:2222/home/vagrant/Development/axle-healthcare-benchmark"
-
 #exit code
 WARN=0
 
@@ -83,16 +81,27 @@ do
 	sleep 2
 done
 
-# Copy SSH keys for temp repo access
-scp -i ${KEYPAIR} axle_tmp_rsa ${AMIUSERNAME}@${IP}:~/.ssh/id_rsa || _error "Could not copy SSH key"
-
 # The double -t is necessary to not cause sudo to given an error about
 # incorrect terminal settings
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 sudo yum install -y git
-git clone $TEMP_REPO
+git init axle-healthcare-benchmark
 exit
 EOF
+
+cat >> ~/.ssh/config <<EOF
+
+Host ${INSTANCENAME}
+  HostName ${IP}
+  User ${AMIUSERNAME}
+  IdentityFile ${KEYPAIR}
+EOF
+
+cd $(git rev-parse --show-cdup)
+git remote add ${INSTANCENAME} ssh://${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
+git push ${INSTANCENAME} topic/fawork/messaging
+
+git remote remove ${INSTANCENAME}
 
 # Need to copy the password before bootstrapping, since the axle / cdagenpwd is necessary
 # to download the HDL installer
@@ -101,7 +110,11 @@ EOF
 # choose the setup script based on the instance name
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
 ssh -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
+cd axle-healthcare-benchmark
+git checkout topic/fawork/messaging
+cd
 sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERIP}
+exit
 EOF
 
 exit $WARN
