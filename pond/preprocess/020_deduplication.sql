@@ -8,10 +8,11 @@
 BEGIN;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 WITH
- /* Group organizations on equality of the SET_II id field.
-    For CDA generator documents this is sufficient, for other
-    sources an overlap operator is better. */
- unio AS (SELECT DISTINCT ON (id) * FROM "Organization"),
+ /* Group organizations on equality of the SET_II id field per message type.
+    This will not de-duplicate Organizations that have a different yet
+    overlapping id. Those cases will be taken care of by lake de-duplication.
+    The pond de-duplication is for low hanging fruit only. */
+ unio AS (SELECT DISTINCT ON (_mif, id) * FROM "Organization"),
  dupo AS (SELECT m._id AS oldid, u._id AS newid
               FROM "Organization" m
               JOIN UNIO u
