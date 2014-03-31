@@ -51,6 +51,10 @@ _error() {
 
 test "x$EC2_URL" = "x" && _error "source AWS credentials file first"
 
+# make sure the group name is not already present in the ssh config
+grep -q "^Host ${GROUPNAME}.*" ~/.ssh/config && _error "There already exist hosts with the ${GROUPNAME} prefix in your ssh config, \
+  please choose another groupname or clean up you ssh config to avoid clashes."
+
 echo "Starting group ${GROUPNAME}"
 
 # NOTE the instance name is used to determine the name of the setup script,
@@ -58,19 +62,24 @@ echo "Starting group ${GROUPNAME}"
 # xfm, loader} and ID is an arbitrary identifier (e.g., a number).
 # Example: broker-1
 
-echo "Start broker first (we need to propagate its IP address to the other instances)"
+echo "Start brokers first (we need to propagate their IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "broker-1" "localhost" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > broker.log &
+    ${BROKERTYPE} ${GROUPNAME} "ingressbroker-1" "localhost" "dontcare" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > ingressbroker-1.log &
+
+./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "dontcare" "localhost" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > broker-1.log &
 
 # It takes about 30 seconds to start the instance
 sleep 25
 
-while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
-  echo "Waiting for the broker to become running"
+while ! test "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=ingressbroker-1 | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning" -a \
+    "X`euca-describe-instances --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $9}'`" = "Xrunning"; do
+  echo "Waiting for the ingress broker to become running"
   sleep 5
 done
 
+INGRESSBROKERHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=ingressbroker-1 | tr '\n' ' ' | awk '{print $7}'`
 BROKERHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $7}'`
 
 if [ "x${LAKEEXTERNALHOST}" = "x" ];
@@ -78,7 +87,7 @@ then
   echo "No lake host provided, creating new lake instance of type ${LAKETYPE}"
 
   ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-      ${LAKETYPE} ${GROUPNAME} "lake" ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > lake.log  &
+      ${LAKETYPE} ${GROUPNAME} "lake" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > lake.log  &
 
   # It takes about 30 seconds to start the instance
   sleep 25
@@ -91,19 +100,20 @@ then
   LAKEEXTERNALHOST=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=lake | tr '\n' ' ' | awk '{print $7}'`
 fi
 
+echo "============= INGRESS BROKER RUNNING ON HOST ${INGRESSBROKERHOST} ============="
 echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
 echo "=============== LAKE RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${BROKERHOST} ${LAKEEXTERNALHOST} 2>&1 > ingress-1.log &
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} 2>&1 > ingress-1.log &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-1.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-1.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-2.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
 
 FAIL=0
 for job in `jobs -p`

@@ -12,9 +12,9 @@
 # - copy the password
 #
 
-if [ $# -ne 10 ];
+if [ $# -ne 11 ];
 then
-    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <broker-host> <lake-external-host>"
+    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <ingress-broker-host> <broker-host> <lake-external-host>"
     exit 127
 fi
 
@@ -26,15 +26,16 @@ EC2_REGION="$5"
 INSTANCETYPE="$6"
 GROUPNAME="$7"
 INSTANCENAME="$8"
-BROKERHOST="$9"
-LAKEEXTERNALHOST="${10}"
+INGRESSBROKERHOST="$9"
+BROKERHOST="${10}"
+LAKEEXTERNALHOST="${11}"
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 brokerhost $9 lakeexternalhost ${10}"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 ingressbrokerhost $9 brokerhost ${10} lakeexternalhost ${11}"
 
 #exit code
 WARN=0
@@ -157,7 +158,7 @@ EOF
 # password before bootstrapping, since the axle / cdagenpwd is necessary to
 # download the HDL installer We also need the password to download mgrid
 # software, so just copy it to all machines.
-if [ "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xxfm" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xlake" ];
+if [ "x$STARTTYPE" = "xingressbroker" -o "x$STARTTYPE" = "xingress" -o "x$STARTTYPE" = "xxfm" -o "x$STARTTYPE" = "xloader" -o "x$STARTTYPE" = "xlake" ];
 then
     echo "Copying axle password for type $STARTTYPE"
     pwd
@@ -196,7 +197,7 @@ fi
 # Start the setup script based on the instance name
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd
-sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${BROKERHOST} ${LAKEEXTERNALHOST} ${AMIUSERNAME}
+sudo ./axle-healthcare-benchmark/bootstrap/centos-setup-${STARTTYPE}.sh ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${AMIUSERNAME}
 exit
 EOF
 

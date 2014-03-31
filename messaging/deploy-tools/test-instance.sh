@@ -21,6 +21,7 @@ OPTIONS:
    -I      Instance name to test
    -K      Private key to use for SSH session
    -U      Username to use on VM
+   -I      Ingress broker hostname
    -B      Broker hostname
    -N      LAKE username
    -D      LAKE hostname
@@ -32,6 +33,7 @@ VMPORT="22"
 INSTANCE="broker"
 KEY="~/.ssh/id_rsa"
 VMUSER="vagrant"
+INGRESSBROKERHOST="localhost"
 BROKERHOST="localhost"
 LAKEUSER=$VMUSER
 LAKEHOST="localhost"
@@ -57,6 +59,9 @@ while getopts ":hH:P:I:K:U:B:N:D:" opt; do
         ;;
         U)
                 VMUSER=$OPTARG
+        ;;
+        I)
+                INGRESSBROKERHOST=$OPTARG
         ;;
         B)
                 BROKERHOST=$OPTARG
@@ -119,4 +124,4 @@ EOF
 
 export SSHPORT=$VMPORT INSTANCEWAIT=0 LOGINWAIT=0
 
-source ./start-instance.sh ami-ce10e0b9 $VMUSER $VMUSER $KEY eu-west-1 c3.large itest $INSTANCE $BROKERHOST $LAKEHOST
+source ./start-instance.sh ami-ce10e0b9 $VMUSER $VMUSER $KEY eu-west-1 c3.large itest $INSTANCE $INGRESSBROKERHOST $BROKERHOST $LAKEHOST

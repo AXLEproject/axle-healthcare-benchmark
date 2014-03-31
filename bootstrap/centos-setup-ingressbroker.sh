@@ -1,7 +1,7 @@
 #
 # axle-healthcare-benchmark
 #
-# install broker prerequisites on CentOS 6.
+# install ingress broker prerequisites on CentOS 6.
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
@@ -15,6 +15,13 @@ INGRESSBROKERHOST=$1
 BROKERHOST=$2
 LAKEEXTERNALHOST=$3
 USER=$4
+
+AXLE=/home/${USER}/axle-healthcare-benchmark
+BASEDIR=${AXLE}/database
+
+# ingest part of the default_settings include makefile
+sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n '/^define/,$!p'  > /tmp/default_settings_bash
+source /tmp/default_settings_bash
 
 # Add EPEL repository
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -40,10 +47,32 @@ service rabbitmq-server restart
 curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhost:15672/api/definitions \
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
-# Load loader sequences in queue
-yum install -y python-pip python-lxml
-pip install importlib kombu
-python axle-healthcare-benchmark/pond/rabbitmq_seed_pond_seq.py
+yum install -y java-1.7.0-openjdk
+
+cd /home/${USER}
+wget http://apache.cs.uu.nl/dist/maven/maven-3/3.2.1/binaries/apache-maven-3.2.1-bin.tar.gz
+tar xf apache-maven-3.2.1-bin.tar.gz
+mkdir bin
+mv apache-maven-3.2.1 bin
+rm -f apache-maven-3.2.1-bin.tar.gz
+cat >> .bashrc <<EOF
+export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1 
+export M2=\${M2_HOME}/bin 
+export PATH=\${M2}:\${PATH}
+EOF
+
+# initialize cda generator
+(cd $AXLE/cda-generator && ./initialize.sh)
+
+# create upstart job for cda generator to be started manually
+cat > /etc/init/axle-cdagen.conf <<EOF
+description "AXLE CDA Generator"
+stop on runlevel [016]
+
+script
+  exec su -l -c "cd ${AXLE}/cda-generator && CDAGEN_RABBITHOST=${INGRESSBROKERHOST} ./start.sh" ${USER}
+end script
+EOF
 
 # Add symon
 yum install -y httpd rrdtool php

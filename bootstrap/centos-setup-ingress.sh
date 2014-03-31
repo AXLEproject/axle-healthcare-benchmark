@@ -5,15 +5,16 @@
 #
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
-if [ $# -ne 3 ];
+if [ $# -ne 4 ];
 then
-  echo "Usage: $0 <broker-host> <lake-external-host> <user>"
+  echo "Usage: $0 <ingress-broker-host> <broker-host> <lake-external-host> <user>"
   exit 127
 fi
 
-BROKERHOST=$1
-LAKEEXTERNALHOST=$2
-USER=$3
+INGRESSBROKERHOST=$1
+BROKERHOST=$2
+LAKEEXTERNALHOST=$3
+USER=$4
 
 AXLE=/home/${USER}/axle-healthcare-benchmark
 BASEDIR=${AXLE}/database
@@ -37,18 +38,6 @@ yum install -y java-1.7.0-openjdk
 
 rpm -Uvh http://repo.scala-sbt.org/scalasbt/sbt-native-packages/org/scala-sbt/sbt/0.13.1/sbt.rpm
 
-cd /home/${USER}
-wget http://apache.cs.uu.nl/dist/maven/maven-3/3.2.1/binaries/apache-maven-3.2.1-bin.tar.gz
-tar xf apache-maven-3.2.1-bin.tar.gz
-mkdir bin
-mv apache-maven-3.2.1 bin
-rm -f apache-maven-3.2.1-bin.tar.gz
-cat >> .bashrc <<EOF
-export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1 
-export M2=\${M2_HOME}/bin 
-export PATH=\${M2}:\${PATH}
-EOF
-
 sudo -u ${USER} sh -c "cd $MESSAGING_DIR && sbt clean compile stage \
   || _error 'Could not build ingress messaging software'"
 
@@ -64,7 +53,8 @@ respawn
 expect fork
 
 script
-  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start -Dconfig.rabbitmq.host=$BROKERHOST \
+  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && \
+    ./target/start -Dconfig.rabbitmq.ingress.host=$INGRESSBROKERHOST -Dconfig.rabbitmq.host=$BROKERHOST \
     net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i)" \
     ${USER}
 end script

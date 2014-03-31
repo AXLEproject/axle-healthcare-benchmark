@@ -47,6 +47,9 @@ while getopts ":hr:f:v:e:n:u:p:" opt; do
         e)
                 EXCHANGE=$OPTARG
         ;;
+        n)
+                HOSTNAME=$OPTARG
+        ;;
         u)
                 USERNAME=$OPTARG
         ;;

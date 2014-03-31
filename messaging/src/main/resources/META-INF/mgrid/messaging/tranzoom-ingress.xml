@@ -184,10 +184,10 @@
    -->
   
   <rabbit:connection-factory id="consumeConnectionFactory"
-    host="${config.rabbitmq.host}"
-    port="${config.rabbitmq.port}"
-    username="${config.rabbitmq.user}"
-    password="${config.rabbitmq.password}"
+    host="${config.rabbitmq.ingress.host}"
+    port="${config.rabbitmq.ingress.port}"
+    username="${config.rabbitmq.ingress.user}"
+    password="${config.rabbitmq.ingress.password}"
     virtual-host="/messaging"
     publisher-confirms="false"
     publisher-returns="false"/>
