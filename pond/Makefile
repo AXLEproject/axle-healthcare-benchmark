@@ -12,7 +12,8 @@ include ../default_settings
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 
 TEMPLATEDB=pondtemplate
-PONDCOUNT=$(shell expr `grep MHz /proc/cpuinfo | wc -l` + 2)
+# PONDCOUNT should equal LOADERCOUNT in bootstrap/centos-setup-loader.sh
+PONDCOUNT=$(shell expr 2 + `grep MHz /proc/cpuinfo | wc -l`)
 
 reconfig:
 	@echo "$$NONDEFAULTPOSTGRESQLCONFPOND" >> $(PGDATA)/postgresql.conf

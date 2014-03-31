@@ -37,6 +37,8 @@ rabbitmq-plugins enable rabbitmq_management
 
 service rabbitmq-server restart
 
+chkconfig rabbitmq-server on --level 2345
+
 curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhost:15672/api/definitions \
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 

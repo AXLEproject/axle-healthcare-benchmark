@@ -48,15 +48,18 @@ for i in $(seq $CPUS)
 do
 cat > /etc/init/axle-xfm$i.conf <<EOF
 description "AXLE Messaging Transformer"
-start on runlevel [2345]
+start on (local-filesystems and net-device-up IFACE!=lo)
 stop on runlevel [016]
+
 respawn
 
 script
-  exec su -l -c "(cd $MESSAGING_DIR && python integration/rabbitmq/transformer.py -n $BROKERHOST 2>&1 | logger -t axle-xfm$i)" ${USER}
+  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- python ${MESSAGING_DIR}/integration/rabbitmq/transformer.py \
+    -n ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
 end script
 EOF
 
 initctl start axle-xfm$i
+
 done
 

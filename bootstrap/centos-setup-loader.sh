@@ -67,28 +67,58 @@ stop on runlevel [016]
 respawn
 
 script
-  exec su -l -c "autossh -M 0 -N -i ~/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 \
-    -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=4 ${LAKEUSER}@${LAKEEXTERNALHOST}" \
-    ${USER}
+  TIMEOUT=5
+  ATTEMPTS=5
+  PID=0
+
+  while [ \$ATTEMPTS -gt 0 ]
+  do
+    su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- /usr/bin/autossh -M 0 -N -i /home/${USER}/.ssh/loader-key -L${LAKELOCALPORT}:${LAKELOCALHOST}:5432 \
+        -o ConnectTimeout=\${TIMEOUT} -o StrictHostKeyChecking=no -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=1 \
+        ${LAKEUSER}@${LAKEEXTERNALHOST} &
+
+    PID=\$!
+
+    # give ssh its time to setup a tunnel
+    sleep \$(( TIMEOUT+1 ))
+
+    case "\$(ps -p \$PID -o comm= | wc -w)" in
+      0)
+        # decrement attempts and sleep before retrying
+        ATTEMPTS=\$(( ATTEMPTS - 1 ))
+        echo "autossh failed, \$ATTEMPTS attempts left..."
+        ;;
+      1)
+        echo "autossh successfully started..."
+        initctl emit --no-wait axle-laketunnel-up
+        break
+        ;;
+    esac
+
+  done
+
+  wait \$PID
 end script
 EOF
 
 initctl start axle-laketunnel
 
-CPUS=$(expr `grep MHz /proc/cpuinfo | wc -l` + 2)
+# LOADERCOUNT should equal PONDCOUNT in pond/Makefile
+LOADERCOUNT=$(expr 2 + `grep MHz /proc/cpuinfo | wc -l`)
 
-for i in $(seq $CPUS)
+for i in $(seq $LOADERCOUNT)
 do
 cat > /etc/init/axle-loader$i.conf <<EOF
 description "AXLE Messaging Loader"
-start on started axle-laketunnel
-stop on runlevel [016]
+start on axle-laketunnel-up
+stop on stopping axle-laketunnel or runlevel [016]
+
 respawn
-expect fork
 
 script
-  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && ./target/start \
+  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- $MESSAGING_DIR/target/start \
     -Dconfig.rabbitmq.host=${BROKERHOST} \
+    -Dconfig.pond.uploadscript=${AXLE}/pond/pond_upload.sh
     -Dconfig.pond.dbhost=${PONDHOST} \
     -Dconfig.pond.dbname=${PONDDBPREFIX}${i} \
     -Dconfig.pond.dbuser=${PONDUSER} \
@@ -96,12 +126,10 @@ script
     -Dconfig.lake.dbname=${LAKEDB} \
     -Dconfig.lake.dbport=${LAKELOCALPORT} \
     -Dconfig.lake.dbuser=${LAKEUSER} \
-    net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i)" \
-    ${USER}
+    net.mgrid.tranzoom.ccloader.LoaderApplication 2>&1 | logger -t axle-loader$i
 end script
 EOF
 
-  initctl start axle-loader$i
 done
 
 # pgserver is already started but make sure it survives reboot

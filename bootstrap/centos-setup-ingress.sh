@@ -47,18 +47,19 @@ for i in $(seq $CPUS)
 do
 cat > /etc/init/axle-ingress$i.conf <<EOF
 description "AXLE Messaging Ingress"
-start on runlevel [2345]
+start on (local-filesystems and net-device-up IFACE!=lo)
 stop on runlevel [016]
+
 respawn
-expect fork
 
 script
-  exec su -l -c "(source /home/$USER/.bashrc; cd $MESSAGING_DIR && \
-    ./target/start -Dconfig.rabbitmq.gateway.host=$INGRESSBROKERHOST -Dconfig.rabbitmq.tranzoom.host=$BROKERHOST \
-    net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i)" \
-    ${USER}
+  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- $MESSAGING_DIR/target/start \
+    -Dconfig.rabbitmq.gateway.host=$INGRESSBROKERHOST \
+    -Dconfig.rabbitmq.tranzoom.host=$BROKERHOST \
+    net.mgrid.tranzoom.ingress.IngressApplication 2>&1 | logger -t axle-ingress$i
 end script
 EOF
 
 initctl start axle-ingress$i
+
 done

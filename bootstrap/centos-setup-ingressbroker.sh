@@ -47,6 +47,8 @@ rabbitmq-plugins enable rabbitmq_management
 
 service rabbitmq-server restart
 
+chkconfig rabbitmq-server on --level 2345
+
 curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhost:15672/api/definitions \
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
@@ -73,7 +75,8 @@ description "AXLE CDA Generator"
 stop on runlevel [016]
 
 script
-  exec su -l -c "cd ${AXLE}/cda-generator && CDAGEN_RABBITHOST=${INGRESSBROKERHOST} ./start.sh" ${USER}
+  export CDAGEN_RABBITHOST=${INGRESSBROKERHOST}
+  exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- ${AXLE}/${CDAGENERATOR}/start.sh
 end script
 EOF
 
