@@ -25,17 +25,12 @@ class ErrorUtilsSpec extends FlatSpec with Matchers {
   val resourceLoader = new DefaultResourceLoader
 
   "Error messages" should "adhere to the xml schema" in {
-    val ref = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
-    val message = MessageBuilder.withPayload("message").setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref).build()
+    val f = fixture; import f._
+    
     val validator = new XmlValidatingMessageSelector(resourceLoader.getResource("error-xsd/error.xsd"), "http://www.w3.org/2001/XMLSchema")
     validator.setThrowExceptionOnRejection(true)
     
-    val errorChannel = mock(classOf[MessageChannel])
-    
-    val handler = new GlobalErrorHandler()
-    handler.setPublishErrorChannel(errorChannel)
-
-    handler.error(message, "type", "reason")
+    handler.error(msg, "type", "reason")
     
     val outArgument = ArgumentCaptor.forClass(classOf[Message[_]])
     verify(errorChannel).send(outArgument.capture())
@@ -44,20 +39,23 @@ class ErrorUtilsSpec extends FlatSpec with Matchers {
   }
 
   it should "add the source reference as header" in {
-    val ref = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
-    val message = MessageBuilder.withPayload("message").setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref).build()
+    val f = fixture; import f._
 
-    val errorChannel = mock(classOf[MessageChannel])
-    
-    val handler = new GlobalErrorHandler()
-    handler.setPublishErrorChannel(errorChannel)
-
-    handler.error(message, "type", "reason")
+    handler.error(msg, "type", "reason")
     
     val outArgument = ArgumentCaptor.forClass(classOf[Message[_]])
     verify(errorChannel).send(outArgument.capture())
     val result = outArgument.getValue
 
     result.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF) should be (ref)
+  }
+  
+  def fixture = new {
+    val ref = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
+    val msg = MessageBuilder.withPayload("message").setHeader(TranzoomHeaders.HEADER_SOURCE_REF, ref).build()
+    val errorChannel = mock(classOf[MessageChannel])
+    val handler = new GlobalErrorHandler()
+    
+    handler.setPublishErrorChannel(errorChannel)
   }
 }

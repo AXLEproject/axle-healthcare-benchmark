@@ -3,6 +3,8 @@
 # Copyright (c) 2013, 2014, MGRID BV Netherlands
 #
 
+set -x
+
 function usage() {
 cat << EOF
 usage: $0 [OPTIONS]
@@ -28,15 +30,19 @@ store_pid() {
   pids=("${pids[@]}" "$1")
 }
 
+run() {
+  bash -c "$1" &
+  store_pid "$!"
+}
+
 trap onexit SIGINT SIGTERM EXIT
 
 BROKERHOST="localhost"
 USERNAME="guest"
 PASSWORD="guest"
-MDIR="../../mgrid-messaging"
-DBTOOLS="../database"
+MSGDIR="../../mgrid-messaging"
 
-while getopts ":hu:p:M:D:" opt; do
+while getopts ":hu:p:M:D:G:" opt; do
         case $opt in
         h)
                 usage
@@ -49,10 +55,7 @@ while getopts ":hu:p:M:D:" opt; do
                 PASSWORD=$OPTARG
         ;;
         M)
-                MDIR=$OPTARG
-        ;;
-        D)
-                DBTOOLSDIR=$OPTARG
+                MSGDIR=$OPTARG
         ;;
         \?)
                 echo "Invalid option: -$OPTARG" >&2
@@ -60,31 +63,25 @@ while getopts ":hu:p:M:D:" opt; do
         esac
 done
 
-source $MDIR/pyenv/bin/activate
+source $MSGDIR/pyenv/bin/activate
 
 ./test-tools/makepond.sh pond
 ./test-tools/makelake.sh lake
 
 ./test-tools/purge-queues.sh -u admin -p tr4nz00m
 
-python ../pond/rabbitmq_seed_pond_seq.py
+$MSGDIR/pyenv/bin/python ../pond/rabbitmq_seed_pond_seq.py
 
-bash -c "python $MDIR/integration/rabbitmq/transformer.py -n ${BROKERHOST}" &
-store_pid "$!"
+echo
+echo ====
+echo Start components
+echo ====
+echo
 
-bash -c "./target/start -Dconfig.rabbitmq.host=${BROKERHOST} net.mgrid.tranzoom.ingress.IngressApplication" &
-store_pid "$!"
+run "$MSGDIR/pyenv/bin/python $MSGDIR/integration/rabbitmq/transformer.py"
 
-bash -c "./target/start \
-    -Dconfig.rabbitmq.host=${BROKERHOST} \
-    -Dconfig.pond.dbhost=localhost \
-    -Dconfig.pond.dbname=pond \
-    -Dconfig.pond.dbuser=${USER} \
-    -Dconfig.lake.dbhost=localhost \
-    -Dconfig.lake.dbname=lake \
-    -Dconfig.lake.dbport=5432 \
-    -Dconfig.lake.dbuser=${USER} \
-    net.mgrid.tranzoom.ccloader.LoaderApplication" &
-store_pid "$!"
+run "./target/start net.mgrid.tranzoom.ingress.IngressApplication"
+
+run "./target/start -Dconfig.pond.dbuser=${USER} -Dconfig.pond.dbname=pond -Dconfig.lake.dbuser=${USER} -Dconfig.lake.dbname=lake net.mgrid.tranzoom.ccloader.LoaderApplication"
 
 wait

@@ -30,7 +30,7 @@ class GlobalErrorHandler extends ErrorHandler with XmlErrorFormat with ForceExit
   var publishErrorChannel: MessageChannel = _
 
   override def error(source: Message[_], errorType: String, reason: String): Unit =
-    handle(sendError(source, errorType, reason))
+    handle(sendError(source, errorType, Option(reason)))
 
   override def fatal(ex: Throwable): Unit = {
     logger.error(s"Unrecoverable error occurred: ${ex.getMessage}", ex)
@@ -39,7 +39,7 @@ class GlobalErrorHandler extends ErrorHandler with XmlErrorFormat with ForceExit
 
   @ServiceActivator
   def globalError(ex: MessagingException): Unit =
-    handle(sendError(ex.getFailedMessage(), ErrorUtils.ERROR_TYPE_INTERNAL, ex.getCause().getMessage()))
+    handle(sendError(ex.getFailedMessage(), ErrorUtils.ERROR_TYPE_INTERNAL, Option(ex.getCause().getMessage())))
 
   private def handle(f: => Unit): Unit =
     try {
@@ -50,11 +50,11 @@ class GlobalErrorHandler extends ErrorHandler with XmlErrorFormat with ForceExit
         fail
     }
 
-  private def sendError(failedMessage: Message[_], errorType: String, reason: String) = {
+  private def sendError(failedMessage: Message[_], errorType: String, reason: Option[String]) = {
     import MessageListener.SourceRef
+    logger.info(s"Message handling failed for $failedMessage: $reason")
     val ref = failedMessage.getHeaders.get(TranzoomHeaders.HEADER_SOURCE_REF).asInstanceOf[SourceRef]
-    val error = errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, reason, ref)
-    logger.info(s"Message handling failed for $failedMessage: $reason. Sending error message: $error")
+    val error = errorMessage(ErrorUtils.ERROR_TYPE_VALIDATION, reason.getOrElse("Unknown"), ref)
     publishErrorChannel.send(error)
   }
 

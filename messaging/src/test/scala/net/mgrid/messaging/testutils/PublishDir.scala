@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013, 2014, MGRID BV Netherlands
  */
-package net.mgrid.messaging.publish
+package net.mgrid.messaging.testutils
 
 import scala.io.Source
 import scala.sys.process._

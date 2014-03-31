@@ -32,78 +32,37 @@ class IngressListenerSpec extends FlatSpec with Matchers {
   import org.mockito.Matchers._
 
   "The ingress listener" should "forward messages to the output channel as DOMSource" in {
-    val outputChannel = mock(classOf[MessageChannel])
-    val errorHandler = mock(classOf[GlobalErrorHandler])
-    val channel = mock(classOf[Channel])
-    val message = mock(classOf[AmqpMessage])
-    val payload = "<test></test>"
-    val props = new MessageProperties
-
-    props.setDeliveryTag(1L)
-    props.setContentType("text/plain")
-    props.setContentEncoding("UTF-8")
-    when(message.getMessageProperties).thenReturn(props)
-    when(message.getBody).thenReturn(payload.getBytes())
-
-    val listener = new IngressListener
-    listener.outputChannel = outputChannel
-    listener.errorHandler = errorHandler
-    listener.onMessage(message, channel)
+    val f = fixture; import f._
+    listener.onMessage(msg, channel)
 
     // ack's should not be sent synchronously
     verify(channel, never()).basicAck(anyLong(), anyBoolean())
     verify(errorHandler, never()).error(anyObject(), anyString(), anyString())
     verify(errorHandler, never()).fatal(anyObject())
+    
     val outArgument = ArgumentCaptor.forClass(classOf[Message[_]])
     verify(outputChannel).send(outArgument.capture())
     val result = outArgument.getValue.getPayload.asInstanceOf[DOMSource]
     val stringResult = new String(XmlConverter.toBytes(result))
+    
     XML.loadString(stringResult) should be (XML.loadString(payload))
   }
   
   it should "send errors to the error channel" in {
-    val outputChannel = mock(classOf[MessageChannel])
-    val errorHandler = mock(classOf[GlobalErrorHandler])
-    val channel = mock(classOf[Channel])
-    val message = mock(classOf[AmqpMessage])
-    val payload = "TEST"
-    val props = new MessageProperties
-
-    props.setDeliveryTag(1L)
-    props.setContentType("text/plain")
-    props.setContentEncoding("UTF-8")
-    when(message.getMessageProperties).thenReturn(props)
-    when(message.getBody).thenReturn(payload.getBytes())
+    val f = fixture; import f._
     when(outputChannel.send(anyObject())).thenThrow(new RuntimeException("Message forwarding failed"))
-
-    val listener = new IngressListener
-    listener.outputChannel = outputChannel
-    listener.errorHandler = errorHandler
-    listener.onMessage(message, channel)
+    
+    listener.onMessage(msg, channel)
 
     // ack's should not be sent synchronously
     verify(channel, never()).basicAck(anyLong(), anyBoolean())
-    verify(errorHandler).error(anyObject(), anyString(), anyString())
-    verify(errorHandler, never()).fatal(anyObject())
+    verify(errorHandler, never()).error(anyObject(), anyString(), anyString())
+    verify(errorHandler).fatal(anyObject())
   }
 
   it should "add timestamp header" in {
-    val outputChannel = mock(classOf[MessageChannel])
-    val channel = mock(classOf[Channel])
-    val message = mock(classOf[AmqpMessage])
-    val payload = "<test></test>"
-    val tag = 1234L
-    val props = new MessageProperties
-
-    props.setDeliveryTag(tag)
-    props.setContentType("text/plain")
-    props.setContentEncoding("UTF-8")
-    when(message.getMessageProperties).thenReturn(props)
-    when(message.getBody).thenReturn(payload.getBytes)
-
-    val listener = new IngressListener
-    listener.outputChannel = outputChannel
-    listener.onMessage(message, channel)
+    val f = fixture; import f._
+    listener.onMessage(msg, channel)
 
     // ack's should not be sent synchronously
     verify(channel, never()).basicAck(anyLong(), anyBoolean())
@@ -111,5 +70,24 @@ class IngressListenerSpec extends FlatSpec with Matchers {
     verify(outputChannel).send(outArgument.capture())
     val header = outArgument.getValue.getHeaders.get(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP).toString
     header should fullyMatch regex """\d+"""
+  }
+  
+  def fixture = new {
+    val outputChannel = mock(classOf[MessageChannel])
+    val errorHandler = mock(classOf[GlobalErrorHandler])
+    val channel = mock(classOf[Channel])
+    val msg = mock(classOf[AmqpMessage])
+    val payload = "<test></test>"
+    val props = new MessageProperties
+
+    props.setDeliveryTag(1L)
+    props.setContentType("text/plain")
+    props.setContentEncoding("UTF-8")
+    when(msg.getMessageProperties).thenReturn(props)
+    when(msg.getBody).thenReturn(payload.getBytes())
+
+    val listener = new IngressListener
+    listener.outputChannel = outputChannel
+    listener.errorHandler = errorHandler
   }
 }

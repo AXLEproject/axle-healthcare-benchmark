@@ -1,3 +1,6 @@
+/**
+ * Copyright (c) 2013, 2014, MGRID BV Netherlands
+ */
 package net.mgrid.messaging.integration
 
 import org.scalatest.Matchers
@@ -22,16 +25,19 @@ import net.mgrid.tranzoom.rabbitmq.PublishConfirmListener
 import org.springframework.amqp.rabbit.connection.Connection
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.sys.process.stringToProcess
+import net.mgrid.tranzoom.error.ErrorHandler
+import com.rabbitmq.client.AMQP.BasicProperties
+import net.mgrid.messaging.testutils.DatabaseUtils
 
 /**
  * Requires RIM database server on localhost, used for test pond and lake.
  */
-class LoaderSpec extends FlatSpec with Matchers {
+class LoaderIntegrationSpec extends FlatSpec with Matchers {
   
-  import LoaderSpec._
+  import LoaderIntegrationSpec._
   
-  makePond
-  makeLake
+  makePond(pondName)
+  makeLake(lakeName)
   
   "Loader" should "initialze pond on start" in {
     val loader = initLoader
@@ -44,9 +50,9 @@ class LoaderSpec extends FlatSpec with Matchers {
     
     loader.rabbitConnectionFactory = connFactory
     
-    isPondReady(loader) should be (false)
+    isPondReady should be (false)
     loader.start
-    isPondReady(loader) should be (true)
+    isPondReady should be (true)
     
   }
   
@@ -61,17 +67,17 @@ class LoaderSpec extends FlatSpec with Matchers {
     
     loader.confirmListener = confirmListener
     
-    isPondReady(loader) should be (true)
+    isPondReady should be (true)
     
     // no person should be in the pond and lake before load
-    hasPerson(loader, pondJdbc) should be (false)
-    hasPerson(loader, lakeJdbc) should be (false)
+    hasPerson(pondJdbc(pondName)) should be (false)
+    hasPerson(lakeJdbc(lakeName)) should be (false)
 
     loader.loadGroup(group)
     
     // no person should be in the pond but does in the lake after load
-    hasPerson(loader, pondJdbc) should be (false)
-    hasPerson(loader, lakeJdbc) should be (true)
+    hasPerson(pondJdbc(pondName)) should be (false)
+    hasPerson(lakeJdbc(lakeName)) should be (true)
     
     val outArgument = ArgumentCaptor.forClass(classOf[Message[String]])
     verify(confirmListener).deliverConfirm(outArgument.capture())
@@ -79,43 +85,77 @@ class LoaderSpec extends FlatSpec with Matchers {
     confirm should be (msg)
   }
   
-  // this test should come at the end as it assumes a ready pond
+  it should "send message to errorHandler on upload fail" in {
+    import scala.collection.JavaConverters._
+    
+    val loader = initLoader
+    val confirmListener = mock(classOf[PublishConfirmListener])
+    val errorHandler = mock(classOf[ErrorHandler])
+    val sql = Source.fromFile("test-data/fhir_0001_prac.sql").mkString
+    val msg  = MessageBuilder.withPayload(sql).build()
+    val group = MessageBuilder.withPayload(seqAsJavaListConverter(Seq(msg)).asJava).build()
+    
+    loader.pondUploadScript = "doesnotexist"
+    loader.confirmListener = confirmListener
+    loader.errorHandler = errorHandler
+    
+    isPondReady should be (true)
+    
+    // no person should be in the pond before load
+    hasPerson(pondJdbc(pondName)) should be (false)
+
+    loader.loadGroup(group)
+    
+    // no person should be in the pond after a failed load
+    hasPerson(pondJdbc(pondName)) should be (false)
+    
+    // message should be passed to the error handler
+    val outArgument = ArgumentCaptor.forClass(classOf[Message[String]])
+    verify(errorHandler).error(outArgument.capture(), anyString(), anyString())
+    val errMessage = outArgument.getValue()
+    errMessage should be (msg)
+    
+    verify(confirmListener, never()).deliverConfirm(anyObject())
+  }
+  
+  // this test should come at the end as it assumes a ready pond and stops it
   it should "return sequence on stop" in {
     val loader = initLoader
     val (connFactory, channel) = rabbitMock
     
     loader.rabbitConnectionFactory = connFactory
     
-    isPondReady(loader) should be (true)
+    isPondReady should be (true)
     
     loader.stop
     
     val outArgument = ArgumentCaptor.forClass(classOf[Array[Byte]])
-    //verify(channel).basicPublish("sequencer", "pond", true, false, null, outArgument.capture())
-    //val range = new String(outArgument.getValue())
+    verify(channel).basicPublish(
+        anyString(), 
+        anyString(), 
+        anyBoolean(), 
+        anyBoolean(), 
+        anyObject(), 
+        outArgument.capture())
+    val range = new String(outArgument.getValue())
     
-    isPondReady(loader) should be (false)
+    range should fullyMatch regex """\d+:\d+"""
+    
+    isPondReady should be (false)
   }
 }
 
-private object LoaderSpec {
-  import sys.process._
+private object LoaderIntegrationSpec extends DatabaseUtils {
   
-  Class.forName("org.postgresql.Driver")
-  
-  val user = System.getProperty("user.name")
-  val pondJdbc = s"jdbc:postgresql://localhost:5432/pondtest?user=$user"
-  val lakeJdbc = s"jdbc:postgresql://localhost:5432/laketest?user=$user"
-  
-  def makePond = "./test-tools/makepond.sh pondtest".!!
-  def makeLake = "./test-tools/makelake.sh laketest".!!
+  val pondName = "pondtest"
+  val lakeName = "laketest"
   
   def initLoader = {
     val loader = new Loader()
-    val user = System.getProperty("user.name")
-    loader.setPondDatabase("pondtest")
+    loader.setPondUploadScript("../pond/pond_upload.sh")
+    loader.setPondDatabase(pondName)
     loader.setPondUser(user)
-    loader.setLakeDatabase("laketest")
+    loader.setLakeDatabase(lakeName)
     loader.setLakeUser(user)
     loader
   }
@@ -131,37 +171,11 @@ private object LoaderSpec {
     (cf, chan)
   }
   
-  def isPondReady(loader: Loader): Boolean = withDatabaseConnection(pondJdbc) { conn =>
+  def isPondReady: Boolean = withDatabaseConnection(pondJdbc(pondName)) { conn =>
     query[Boolean](conn, "SELECT pond_ready()") match {
       case Some(isReady) if isReady => true
       case _ => false
     }
   }
   
-  def hasPerson(loader: Loader, jdbcUri: String): Boolean = withDatabaseConnection(jdbcUri) { conn =>
-    query[String](conn, "SELECT \"name\" FROM \"Person\"").nonEmpty
-  }
-  
-  def withDatabaseConnection[A](jdbcUri: String)(f: java.sql.Connection => A): A = {
-    val conn = DriverManager.getConnection(jdbcUri)
-    try {
-      f(conn)
-    } finally {
-      conn.close()
-    }
-  }
-  
-  def query[T](conn: java.sql.Connection, sql: String): Option[T] = {
-    val s = conn.createStatement()
-    if (s.execute(sql)) {
-      val rs = s.getResultSet()
-      if (rs.next()) {
-        Some(rs.getObject(1).asInstanceOf[T])
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  }
 }

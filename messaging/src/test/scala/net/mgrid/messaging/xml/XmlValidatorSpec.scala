@@ -23,39 +23,23 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
   val source = ("TEST".getBytes(), 1L, mock(classOf[Channel]))
 
   "XML Validator" should "return validated messages" in {
-    val errorHandler = mock(classOf[GlobalErrorHandler])
-    val selector = mock(classOf[XmlValidatingMessageSelector])
-    val message = MessageBuilder
-      .withPayload("TEST")
-      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, source)
-      .build
+    val f = fixture; import f._
 
-    when(selector.accept(message)).thenReturn(true)
+    when(selector.accept(msg)).thenReturn(true)
 
-    val validator = new XmlValidator
-    validator.errorHandler = errorHandler
-    validator.selector= selector
-    val result = validator.validate(message)
+    val result = validator.validate(msg)
 
     verify(errorHandler, never()).error(anyObject(), anyString(), anyString())
     verify(errorHandler, never()).fatal(anyObject())
-    result.getPayload should be (message.getPayload)
+    result.getPayload should be (msg.getPayload)
   }
 
   it should "return null and send an error message on the error channel for invalid messages" in {
-    val errorHandler = mock(classOf[GlobalErrorHandler])
-    val selector = mock(classOf[XmlValidatingMessageSelector])
-    val message = MessageBuilder
-      .withPayload("TEST")
-      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, source)
-      .build
+    val f = fixture; import f._
 
-    when(selector.accept(message)).thenThrow(new MessageRejectedException(message))
+    when(selector.accept(msg)).thenThrow(new MessageRejectedException(msg))
 
-    val validator = new XmlValidator
-    validator.errorHandler = errorHandler
-    validator.selector= selector
-    val result = validator.validate(message)
+    val result = validator.validate(msg)
 
     verify(errorHandler).error(anyObject(), anyString(), anyString())
     verify(errorHandler, never()).fatal(anyObject())
@@ -63,22 +47,27 @@ class XmlValidatorSpec extends FlatSpec with Matchers {
   }
 
   it should "return null and send an error message on the error channel for message exceptions" in {
-    val errorHandler = mock(classOf[GlobalErrorHandler])
-    val selector = mock(classOf[XmlValidatingMessageSelector])
-    val message = MessageBuilder
-      .withPayload("TEST")
-      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, source)
-      .build
+    val f = fixture; import f._
+    
+    when(selector.accept(msg)).thenThrow(new RuntimeException("Random exception during validating"))
 
-    when(selector.accept(message)).thenThrow(new RuntimeException("Random exception during validating"))
-
-    val validator = new XmlValidator
-    validator.errorHandler = errorHandler
-    validator.selector= selector
-    val result = validator.validate(message)
+    val result = validator.validate(msg)
 
     verify(errorHandler).error(anyObject(), anyString(), anyString())
     verify(errorHandler, never()).fatal(anyObject())
     result should be (null)
+  }
+  
+  def fixture = new {
+    val errorHandler = mock(classOf[GlobalErrorHandler])
+    val selector = mock(classOf[XmlValidatingMessageSelector])
+    val msg = MessageBuilder
+      .withPayload("TEST")
+      .setHeader(TranzoomHeaders.HEADER_SOURCE_REF, source)
+      .build
+
+    val validator = new XmlValidator
+    validator.errorHandler = errorHandler
+    validator.selector= selector
   }
 }
