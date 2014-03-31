@@ -29,4 +29,19 @@ WITH
               RETURNING _id)
 SELECT (select count(*) from updr) AS roles_updated,
        (select count(*) from delo) AS organizations_merged;
+
+/* Since we do not have foreign keys to inheritance childs, check that we did not
+   create orphaned Roles. */
+DO $$
+DECLARE orphaned_rows boolean;
+BEGIN
+        SELECT EXISTS(SELECT 1 FROM "Role" WHERE scoper NOT IN (SELECT _id FROM "Entity"))
+                INTO orphaned_rows;
+        IF orphaned_rows THEN
+                RAISE EXCEPTION 'Organization de-duplication caused orphaned rows';
+        END IF;
+END $$ LANGUAGE plpgsql;
+
 END;
+
+
