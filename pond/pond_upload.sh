@@ -29,12 +29,12 @@ EOF
 # Set PATH
 source $HOME/.bashrc
 
-DPDB=test
-DPUSER=mgrid
+DPDB=pond1
+DPUSER=${USER}
 DLHOST=127.0.0.1
 DLPORT=5432
 DLDB=lake
-DLUSER=mgrid
+DLUSER=${USER}
 
 while getopts "hn:u:H:N:U:P:" opt; do
         case $opt in
@@ -72,7 +72,7 @@ test "X${R}" = "X1" || exit 0
 #logger -t axle-pond-upload "database is empty"
 
 # Execute all pre-processing SQL files first.
-for i in $(ls $(dirname $0)/preprocess_*sql)
+for i in $(ls $(dirname $0)/preprocess/*sql)
 do
     SECS=`TIME="%e" psql -1 -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}`
     logger -t axle-pond-upload "${i} execution time ${SECONDS} seconds"
