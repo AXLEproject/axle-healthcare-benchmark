@@ -77,6 +77,6 @@ insert_new AS
         ) /* even though this query is supposed to run once, protect against duplicates */
     RETURNING "Participation"._id
 )
-SELECT 'Conduction indicator based context conduction: ' || count(*) FROM insert_new
+SELECT count(*) AS conduction_indicator_based_conduction FROM insert_new
 ;
 
