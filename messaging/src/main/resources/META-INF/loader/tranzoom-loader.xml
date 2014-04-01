@@ -24,13 +24,13 @@
   <!-- Channels, routing and transformation -->
 
   <int:channel id="sqlAggregateChannel"/>
-  
+
   <int:channel id="toDatabaseChannel">
     <int:interceptors>
       <ref bean="messageCounter" />
     </int:interceptors>
   </int:channel>
-  
+
   <bean id="messageCounter"
     class="net.mgrid.tranzoom.monitoring.MessageCounter"
     p:processType="loader"
@@ -42,7 +42,7 @@
     queue-capacity="100"
     rejection-policy="CALLER_RUNS"
     />
-    
+
   <task:scheduler id="taskScheduler" pool-size="1"/>
 
   <task:scheduled-tasks scheduler="taskScheduler">
@@ -123,7 +123,7 @@
     executor="taskExecutor"
     publisher-returns="true"
     />
-    
+
   <rabbit:connection-factory id="monitoringConnectionFactory"
     host="${config.rabbitmq.host}"
     port="${config.rabbitmq.port}"
@@ -133,7 +133,7 @@
     executor="taskExecutor"
     publisher-returns="true"
     />
-    
+
   <rabbit:template id="monitoringTemplate"
     connection-factory="monitoringConnectionFactory"
     channel-transacted="false"
@@ -168,7 +168,7 @@
     />
 
   <!--
-       IMPORTANT: concurrent consumers should 1 because we have to make sure all 
+       IMPORTANT: concurrent consumers should 1 because we have to make sure all
        aggregated messages are part of the same (thread-bound) transaction.
   -->
 
@@ -183,7 +183,7 @@
     p:queueNames="transform-sql"
     p:concurrentConsumers="1"
     p:defaultRequeueRejected="false"
-    p:prefetchCount="${config.group-size}"
+    p:prefetchCount="#{2 * ${config.group-size}}"
     p:receiveTimeout="1000"
     p:recoveryInterval="5000"
     p:shutdownTimeout="5000"
