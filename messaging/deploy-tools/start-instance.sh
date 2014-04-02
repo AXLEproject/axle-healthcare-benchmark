@@ -12,9 +12,9 @@
 # - copy the password
 #
 
-if [ $# -ne 11 ];
+if [ $# -ne 13 ];
 then
-    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <ingress-broker-host> <broker-host> <lake-external-host>"
+    echo "Usage: $0 <ami> <amiusername> <keypairname> <keypairfile> <region> <instancetype> <groupname> <instancename> <ingress-broker-host> <broker-host> <lake-external-host> <placement-group> <availability-zone>"
     exit 127
 fi
 
@@ -29,13 +29,15 @@ INSTANCENAME="$8"
 INGRESSBROKERHOST="$9"
 BROKERHOST="${10}"
 LAKEEXTERNALHOST="${11}"
+PLACEMENTGROUP=${12}
+AVAILABILITYZONE=${13}
 
 # allow some settings to be passed via the environment (for testing)
 SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
-echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 ingressbrokerhost $9 brokerhost ${10} lakeexternalhost ${11}"
+echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 ingressbrokerhost $9 brokerhost ${10} lakeexternalhost ${11} placementgroup ${12} availabilityzone ${13}"
 
 #exit code
 WARN=0
@@ -53,7 +55,7 @@ _warn() {
 
 test "x$EC2_URL" = "x" && _error "source AWS credentials file first"
 
-RES=`euca-run-instances ${AMI} -k ${KEYPAIRNAME} --region ${EC2_REGION} --instance-type ${INSTANCETYPE}` \
+RES=`ec2-run-instances ${AMI} -k ${KEYPAIRNAME} --region ${EC2_REGION} --availability-zone ${AVAILABILITYZONE} --instance-type ${INSTANCETYPE} --placement-group ${PLACEMENTGROUP}` \
 	|| _error "Could not start instance ${AMI}"
 
 echo ...

@@ -68,7 +68,7 @@ MGRIDMSGVERSION=2.0dev
 PGTUNEGIT=https://github.com/gregs1104/pgtune.git
 
 # Options for PGTune
-PGTUNEMAXCONN=$(shell expr 10 + `grep MHz /proc/cpuinfo | wc -l`)
+PGTUNEMAXCONN=$(shell expr 4 \* `grep MHz /proc/cpuinfo | wc -l`)
 PGTUNEDBTYPE=DW
 PGTUNESYSTEMTYPE=Linux
 

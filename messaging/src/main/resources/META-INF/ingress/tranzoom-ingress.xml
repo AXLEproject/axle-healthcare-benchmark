@@ -30,6 +30,7 @@
   <int:channel id="fhirValidateChannel" />
   <int:channel id="prepareRoutingChannel"/>
   <int:channel id="fhirTransformChannel" />
+  <int:channel id="toHeaderEnricherChannel" />
   
   <int:channel id="toTransformersChannel">
     <int:interceptors>
@@ -133,12 +134,24 @@
 
   <!-- Prepare message for routing -->
 
-  <int:service-activator id="interactionMapper"
-    input-channel="prepareRoutingChannel"
-    output-channel="toTransformersChannel">
+  <bean id="interactionMapperBean" 
+    class="net.mgrid.tranzoom.ingress.InteractionMapper" 
+    p:deliveryMode="${config.rabbitmq.tranzoom.delivery-mode}"
+    />
 
-    <bean class="net.mgrid.tranzoom.ingress.ContentTypeMapper" />
-  </int:service-activator>
+  <int:service-activator id="interactionMapper"
+    ref="interactionMapperBean"
+    input-channel="prepareRoutingChannel"
+    output-channel="toHeaderEnricherChannel"
+    />
+
+  <int:header-enricher id="persistenceMapper"
+      input-channel="toHeaderEnricherChannel"
+      output-channel="toTransformersChannel"
+      default-overwrite="true">
+
+      <int:header name="amqp_deliveryMode" ref="interactionMapperBean" method="deliveryModeHeader"/>
+  </int:header-enricher>
 
   <!-- RabbitMQ infrastructure -->
 
@@ -264,7 +277,7 @@
     amqp-template="outboundTemplate"
     exchange-name="transform"
     routing-key="hl7v3"
-    mapped-request-headers="tz-content-type, tz-ingress-timestamp"
+    mapped-request-headers="amqp_deliveryMode, tz-content-type, tz-ingress-timestamp"
     />
 
 </beans>

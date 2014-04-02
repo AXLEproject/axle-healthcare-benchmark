@@ -10,6 +10,7 @@
     <PatientUpdate classCode="ACTN" moodCode="EVN">
       <recordTarget typeCode="RCT">
         <patient classCode="PAT">
+          <xsl:apply-templates select="fhir:identifier[count(fhir:period) = 0]"/>
           <patientPerson classCode="PSN" determinerCode="INSTANCE">
             <xsl:apply-templates select="fhir:identifier[count(fhir:period) = 0]"/>
             <xsl:apply-templates select="fhir:name" mode="human-name"/>

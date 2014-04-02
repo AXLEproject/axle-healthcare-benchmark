@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 import java.util.UUID
 import net.mgrid.tranzoom.TranzoomHeaders
-import net.mgrid.tranzoom.ingress.ContentTypeMapper
+import net.mgrid.tranzoom.ingress.InteractionMapper
 
 private case class MonitoringUpdate(processType: String, processName: String, metrics: Map[String, Long])
 
@@ -81,7 +81,7 @@ class MessageCounter extends ChannelInterceptorAdapter {
           0
       }
     
-      if (message.getHeaders().get(TranzoomHeaders.CONTENT_TYPE_HEADER) == ContentTypeMapper.HL7V3_CDAR2_CONTENT_TYPE) {
+      if (message.getHeaders().get(TranzoomHeaders.CONTENT_TYPE_HEADER) == InteractionMapper.HL7V3_CDAR2_CONTENT_TYPE) {
         msgCountCda.incrementAndGet()
       }
       

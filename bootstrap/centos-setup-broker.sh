@@ -33,6 +33,13 @@ cat > /etc/rabbitmq/rabbitmq.config <<EOF
 ].
 EOF
 
+mkdir -p /media/ephemeral0/rabbitmq
+chown rabbitmq:rabbitmq /media/ephemeral0/rabbitmq
+
+cat > /etc/rabbitmq/rabbitmq-env.conf <<EOF
+RABBITMQ_MNESIA_BASE=/media/ephemeral0/rabbitmq/mnesia
+EOF
+
 rabbitmq-plugins enable rabbitmq_management
 
 service rabbitmq-server restart

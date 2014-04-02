@@ -20,16 +20,48 @@ import org.springframework.beans.factory.annotation.Required
 import net.mgrid.tranzoom.error.TranzoomErrorHandler
 import org.springframework.integration.annotation.ServiceActivator
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.amqp.core.MessageDeliveryMode
 
 /**
  * Mapping class for content type routing.
  */
-class ContentTypeMapper {
+class InteractionMapper {
 
-  import ContentTypeMapper._
+  import InteractionMapper._
+
+  private var deliveryMode = MessageDeliveryMode.PERSISTENT
+
+  def setDeliveryMode(mode: String): Unit = mode match {
+    case "PERSISTENT" => deliveryMode = MessageDeliveryMode.PERSISTENT
+    case _ => deliveryMode = MessageDeliveryMode.NON_PERSISTENT
+  }
 
   @Autowired @Required
   var errorHandler: TranzoomErrorHandler = _
+
+  @ServiceActivator
+  def process(message: Message[DOMSource]): Message[Array[Byte]]  = {
+    val result = interaction(message) map { i =>
+      val payload = XmlConverter.toBytes(message.getPayload)
+      MessageBuilder.withPayload(payload)
+        .copyHeaders(message.getHeaders())
+        .setHeader(TranzoomHeaders.CONTENT_TYPE_HEADER, i)
+        .build()
+    } orElse {
+      logger.info(s"Determine content type failed for message $message: Unknown interaction.")
+      errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, "Unsupported interaction.")
+      None
+    }
+
+    if (logger.isDebugEnabled) {
+      result map { m =>
+        val p = new String(m.getPayload)
+        logger.debug(s"Added interaction to $result")
+      }
+    }
+
+    result.orNull
+  }
 
   /**
    * Add a content type header used for downstream processing. The type is the interaction as described
@@ -39,10 +71,10 @@ class ContentTypeMapper {
    * @param message The message for which to add an content type header.
    * @return The message including content type header, or null if no content type could be determined.
    */
-  @ServiceActivator
-  def addContentTypeHeader(message: Message[DOMSource]): Message[Array[Byte]] = {
+  def interaction(message: Message[DOMSource]): Option[String] = {
     val node = converter.convertToNode(message.getPayload)
-    val contentType: Option[String] = XPathEvaluationType.STRING_RESULT.evaluateXPath(messageTypeExpression, node) match {
+
+    XPathEvaluationType.STRING_RESULT.evaluateXPath(messageTypeExpression, node) match {
       case "ClinicalDocument" => Some(HL7V3_CDAR2_CONTENT_TYPE)
       case "OrganizationUpdate" => Some(FHIR_ORGA_CONTENT_TYPE)
       case "PractitionerUpdate" => Some(FHIR_PRAC_CONTENT_TYPE)
@@ -53,29 +85,14 @@ class ContentTypeMapper {
       }
     }
 
-    val result = contentType map { ct =>
-      val payload = XmlConverter.toBytes(message.getPayload)
-      MessageBuilder.withPayload(payload).copyHeaders(message.getHeaders()).setHeader(TranzoomHeaders.CONTENT_TYPE_HEADER, ct).build()
-    } orElse {
-      logger.info(s"Determine content type failed for message $message: Unknown interaction.")
-      errorHandler.error(message, ErrorUtils.ERROR_TYPE_VALIDATION, "Unsupported interaction.")
-      None
-    }
-
-    if (logger.isDebugEnabled) {
-      result map { m =>
-        val p = new String(m.getPayload)
-        logger.debug(s"Added content type header $contentType to result message $m with payload $p")
-      }
-    }
-
-    result.orNull
   }
+
+  def deliveryModeHeader(): MessageDeliveryMode = deliveryMode
 
 }
 
-object ContentTypeMapper {
-  private val logger = LoggerFactory.getLogger(ContentTypeMapper.getClass)
+object InteractionMapper {
+  private val logger = LoggerFactory.getLogger(InteractionMapper.getClass)
 
   val HL7V3_CDAR2_CONTENT_TYPE = "CDA_R2"
   val FHIR_ORGA_CONTENT_TYPE = "TZDU_IN000001UV"

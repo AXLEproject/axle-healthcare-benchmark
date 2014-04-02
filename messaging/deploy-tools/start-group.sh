@@ -28,6 +28,7 @@ UBUNTUAMI="${AMI:-ami-aa56a1dd}"
 
 AMIUSERNAME="${AMIUSERNAME:-ec2-user}"
 EC2_REGION="eu-west-1"
+AVAILABILITYZONE="eu-west-1c"
 # need 4GB ram minimal
 INSTANCETYPE="${INSTANCETYPE:-m1.large}"
 KEYPAIRNAME="axle"
@@ -36,11 +37,13 @@ KEYPAIR="/home/${USER}/.aws/axle.pem"
 # c3.large 2 cpu, 3.75GB 2x16 SSD
 # c3.xlarge 4 cpu, 7.5GB 2x40 SSD
 
-BROKERTYPE="c3.large"
-INGRESSTYPE="c1.xlarge"
-XFMTYPE="c1.xlarge"
-LOADTYPE="c3.xlarge"
+BROKERTYPE="c3.2xlarge"
+INGRESSTYPE="c3.2xlarge"
+XFMTYPE="c3.2xlarge"
+LOADTYPE="c3.2xlarge"
 LAKETYPE="hs1.8xlarge"
+
+PLACEMENTGROUP="axle-cluster"
 
 # Error handlers
 _error() {
@@ -57,6 +60,14 @@ grep -q "^Host ${GROUPNAME}.*" ~/.ssh/config && _error "There already exist host
 
 echo "Starting group ${GROUPNAME}"
 
+ec2-describe-placement-groups ${PLACEMENTGROUP}
+
+if [ $? -ne 0 ]
+then
+  echo "Placement group ${PLACEMENTGROUP} does not exist, create it first..."
+  ec2-create-placement-group ${PLACEMENTGROUP} -s cluster --region ${EC2_REGION}
+fi
+
 # NOTE the instance name is used to determine the name of the setup script,
 # you should use the format "TYPE-ID" where TYPE is one of {broker, ingress, 
 # xfm, loader} and ID is an arbitrary identifier (e.g., a number).
@@ -65,10 +76,10 @@ echo "Starting group ${GROUPNAME}"
 echo "Start brokers first (we need to propagate their IP address to the other instances)"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "ingressbroker-1" "localhost" "dontcare" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > ingressbroker-1.log &
+    ${BROKERTYPE} ${GROUPNAME} "ingressbroker-1" "localhost" "dontcare" ${LAKEEXTERNALHOST:-dontcare} ${PLACEMENTGROUP} ${AVAILABILITYZONE} 2>&1 > ingressbroker-1.log &
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${BROKERTYPE} ${GROUPNAME} "broker-1" "dontcare" "localhost" ${LAKEEXTERNALHOST:-dontcare} 2>&1 > broker-1.log &
+    ${BROKERTYPE} ${GROUPNAME} "broker-1" "dontcare" "localhost" ${LAKEEXTERNALHOST:-dontcare} ${PLACEMENTGROUP} ${AVAILABILITYZONE} 2>&1 > broker-1.log &
 
 # It takes about 30 seconds to start the instance
 sleep 25
@@ -87,7 +98,7 @@ then
   echo "No lake host provided, creating new lake instance of type ${LAKETYPE}"
 
   ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-      ${LAKETYPE} ${GROUPNAME} "lake" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKELOCALHOST} 2>&1 > lake.log  &
+      ${LAKETYPE} ${GROUPNAME} "lake" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKELOCALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE} 2>&1 > lake.log  &
 
   # It takes about 30 seconds to start the instance
   sleep 25
@@ -105,17 +116,17 @@ echo "============= BROKER RUNNING ON HOST ${BROKERHOST} ============="
 echo "=============== LAKE RUNNING ON HOST ${LAKEEXTERNALHOST} ================"
 
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} 2>&1 > ingress-1.log &
+   ${INGRESSTYPE} ${GROUPNAME} "ingress-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE} 2>&1 > ingress-1.log &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-1.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE}        2>&1 > xfm-1.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}        2>&1 > xfm-2.log     &
+    ${XFMTYPE} ${GROUPNAME} "xfm-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE}        2>&1 > xfm-2.log     &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-1.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-1" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE}    2>&1 > loader-1.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-2.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-2" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE}    2>&1 > loader-2.log  &
 ./start-instance.sh ${CENTOSAMI} ${AMIUSERNAME} ${KEYPAIRNAME} ${KEYPAIR} ${EC2_REGION} \
-    ${LOADTYPE} ${GROUPNAME} "loader-3" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST}    2>&1 > loader-3.log  &
+    ${LOADTYPE} ${GROUPNAME} "loader-3" ${INGRESSBROKERHOST} ${BROKERHOST} ${LAKEEXTERNALHOST} ${PLACEMENTGROUP} ${AVAILABILITYZONE}    2>&1 > loader-3.log  &
 
 FAIL=0
 for job in `jobs -p`
