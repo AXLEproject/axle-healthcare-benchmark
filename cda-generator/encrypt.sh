@@ -42,5 +42,5 @@ tar cvz models | openssl aes-256-cbc -salt -out encrypted/models.tar.gz.enc -pas
 
 # Encrypt libraries
 openssl aes-256-cbc -salt -in lib/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar -out encrypted/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -pass file:"$passwordPath"
-openssl aes-256-cbc -salt -out encrypted/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -in lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -pass file:"$passwordPath"
+openssl aes-256-cbc -salt -out encrypted/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar.enc -in lib/terminology-provider-1.0-SNAPSHOT-jar-with-dependencies.jar -pass file:"$passwordPath"
 
