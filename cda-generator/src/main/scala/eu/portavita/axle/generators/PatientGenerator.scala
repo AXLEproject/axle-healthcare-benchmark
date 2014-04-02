@@ -28,7 +28,7 @@ import eu.portavita.databus.messagebuilder.builders.TreatmentBuilder
 import javax.xml.bind.Marshaller
 
 sealed trait PatientMessage
-case class PatientRequest(val organization: Organization, val numberOfPatients: Int) extends PatientMessage
+case class PatientRequest(val organization: Organization) extends PatientMessage
 
 class PatientGenerator(
 	examinationGenerators: Map[String, ActorRef],
@@ -40,9 +40,9 @@ class PatientGenerator(
 	private val queue = new PatientPublisher
 
 	def receive = {
-		case request @ PatientRequest(organization, numberOfPatients) =>
+		case request @ PatientRequest(organization) =>
 			InPipeline.waitGeneratingPatients
-			for (i <- 0 to numberOfPatients) {
+			for (i <- 0 to organization.nrOfPatients) {
 				generate(organization)
 			}
 			val inPipeline = InPipeline.patientRequests.finishRequest

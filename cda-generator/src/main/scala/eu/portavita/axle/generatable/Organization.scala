@@ -6,14 +6,13 @@ package eu.portavita.axle.generatable
 import java.io.File
 import java.util.ArrayList
 import java.util.Date
-
 import scala.annotation.tailrec
 import scala.util.Random
-
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.databus.data.model.PortavitaAddress
 import eu.portavita.databus.data.model.PortavitaOrganization
+import eu.portavita.axle.model.OrganizationModel
 
 /**
  * Represents a healthcare organization.
@@ -26,7 +25,8 @@ class Organization(
 		val startDate: Date,
 		val address: Address,
 		val partOf: Option[Organization],
-		val practitioners: List[Practitioner]) {
+		val practitioners: List[Practitioner],
+		val nrOfPatients: Int) {
 	override def toString = "Organization '" + name + "' (started on " + startDate + ")"
 
 	def toPortavitaOrganization: PortavitaOrganization = {
@@ -72,20 +72,21 @@ object Organization {
 	private val organizationCodes = List("HPRAK")
 	val minimalDaysOld = 30
 	val maximalDaysOld = 10 * 365
-	val nrOfPractitioners = 31
 
 	/**
 	 * Creates a random organization.
 	 *
 	 * @return
 	 */
-	def sample(partOf: Option[Organization]): Organization = {
+	def sample(model: OrganizationModel, partOf: Option[Organization]): Organization = {
 		val id = EntityId.next
 		val agb = Random.nextInt(99999999)
 		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
 		val startDate = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld))
 		val code = organizationCodes(Random.nextInt(organizationCodes.length))
+		val nrOfPatients = model.sampleNrOfPatients
+		val nrOfPractitioners = Math.max(1, RandomHelper.between(0, nrOfPatients / 10))
 		val practitioners = for (i <- 0 to nrOfPractitioners) yield Practitioner.sample(id)
-		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), partOf, practitioners.toList)
+		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), partOf, practitioners.toList, nrOfPatients)
 	}
 }

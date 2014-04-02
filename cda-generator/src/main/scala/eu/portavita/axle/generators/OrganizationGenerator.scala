@@ -39,13 +39,6 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 		setCustodianOrganization(custodianOrganization)
 	}
 
-	private def setCustodianOrganization(custodianOrganization: Organization) {
-		val id = IdentifierFactory.entityId(custodianOrganization.id)
-		val representedCustodian = CustodianOrganizationFactory.create(id, custodianOrganization.name)
-		ClinicalDocumentMessageContentFactory.PORTAVITA_CUSTODIAN.getAssignedCustodian().setRepresentedCustodianOrganization(representedCustodian)
-		queue.publish(custodianOrganization)
-	}
-
 	def receive = {
 		case TopLevelOrganizationRequest =>
 			generateTopLevelOrganization()
@@ -74,18 +67,16 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 
 	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
 		InPipeline.waitGeneratingOrganizations
-		val organization = Organization.sample(partOf)
+		val organization = Organization.sample(model, partOf)
 		queue.publish(organization)
 		generatePatients(organization)
 		organization
 	}
 
-	private def generatePatients(organization: Organization): Int = {
-		val nrOfPatients = model.sampleNrOfPatients
-		patientGeneratorActor ! PatientRequest(organization, nrOfPatients)
+	private def generatePatients(organization: Organization) {
+		patientGeneratorActor ! PatientRequest(organization)
 		val inPipeline = InPipeline.patientRequests.newRequest
-		if (inPipeline % 50 == 0) log.info("Requested a new patient, now %d patient requests in pipeline".format(inPipeline))
-		nrOfPatients
+		if (inPipeline % 500 == 0) log.info("Requested a new patient, now %d patient requests in pipeline".format(inPipeline))
 	}
 
 	class OrganizationPublisher {
@@ -120,11 +111,18 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 		}
 	}
 
+	private def setCustodianOrganization(custodianOrganization: Organization) {
+		val id = IdentifierFactory.entityId(custodianOrganization.id)
+		val representedCustodian = CustodianOrganizationFactory.create(id, custodianOrganization.name)
+		ClinicalDocumentMessageContentFactory.PORTAVITA_CUSTODIAN.getAssignedCustodian().setRepresentedCustodianOrganization(representedCustodian)
+		queue.publish(custodianOrganization)
+	}
+
 	private def createCustodianOrganization: Organization = {
 		val id = 0
 		val agb = Random.nextInt(99999999)
 		val startDate = new GregorianCalendar(2002, 1, 2).getTime()
 		val address = new Address("WP", "Amsterdam", "1018MR", "The Netherlands", startDate, null, "Oostenburgervoorstraat 100", "")
-		new Organization(id, "%08d".format(agb), "ORG", "Portavita B.V.", startDate, address, None, Nil)
+		new Organization(id, "%08d".format(agb), "ORG", "Portavita B.V.", startDate, address, None, Nil, 0)
 	}
 }
