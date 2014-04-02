@@ -3,12 +3,14 @@
  */
 package eu.portavita.axle.generators
 
+import java.util.Calendar
+import java.util.Date
 import scala.util.Random
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorSelection.toScala
 import eu.portavita.axle.GeneratorConfig
+import eu.portavita.axle.generatable.Address
 import eu.portavita.axle.generatable.Organization
 import eu.portavita.axle.helper.MarshalHelper
 import eu.portavita.axle.model.OrganizationModel
@@ -17,6 +19,10 @@ import eu.portavita.axle.publisher.RabbitMessageQueue
 import eu.portavita.databus.messagebuilder.builders.OrganizationBuilder
 import eu.portavita.databus.messagebuilder.builders.PractitionerBuilder
 import javax.xml.bind.Marshaller
+import java.util.GregorianCalendar
+import eu.portavita.databus.messagebuilder.cda.factory.ClinicalDocumentMessageContentFactory
+import eu.portavita.databus.messagebuilder.cda.factory.CustodianOrganizationFactory
+import eu.portavita.databus.messagebuilder.cda.factory.IdentifierFactory
 
 sealed trait OrganizationMessage
 case class TopLevelOrganizationRequest extends OrganizationMessage
@@ -27,9 +33,21 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 
 	private val queue = new OrganizationPublisher
 
+	override def preStart() {
+		super.preStart()
+		val custodianOrganization = createCustodianOrganization
+		setCustodianOrganization(custodianOrganization)
+	}
+
+	private def setCustodianOrganization(custodianOrganization: Organization) {
+		val id = IdentifierFactory.entityId(custodianOrganization.id)
+		val representedCustodian = CustodianOrganizationFactory.create(id, custodianOrganization.name)
+		ClinicalDocumentMessageContentFactory.PORTAVITA_CUSTODIAN.getAssignedCustodian().setRepresentedCustodianOrganization(representedCustodian)
+		queue.publish(custodianOrganization)
+	}
+
 	def receive = {
 		case TopLevelOrganizationRequest =>
-//			System.err.println("TOP LEVEL ORGANIZATION REQUEST")
 			generateTopLevelOrganization()
 
 		case x =>
@@ -56,7 +74,6 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 
 	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
 		InPipeline.waitGeneratingOrganizations
-//		InPipeline.waitUntilReady
 		val organization = Organization.sample(partOf)
 		queue.publish(organization)
 		generatePatients(organization)
@@ -101,5 +118,13 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 				publisher.publish(document, RabbitMessageQueue.practitionerRoutingKey)
 			}
 		}
+	}
+
+	private def createCustodianOrganization: Organization = {
+		val id = 0
+		val agb = Random.nextInt(99999999)
+		val startDate = new GregorianCalendar(2002, 1, 2).getTime()
+		val address = new Address("WP", "Amsterdam", "1018MR", "The Netherlands", startDate, null, "Oostenburgervoorstraat 100", "")
+		new Organization(id, "%08d".format(agb), "ORG", "Portavita B.V.", startDate, address, None, Nil)
 	}
 }
