@@ -146,7 +146,7 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 		if (code.equals("Portavita323") || code.equals("Portavita336") || code.equals("Portavita315") || code.equals("Portavita316")) {
 			val (lower, upper) = extractInterval(value)
 			if (lower.isDefined) act.setNumericValue1(lower.get)
-			if (upper.isDefined) act.setNumericValue1(upper.get)
+			if (upper.isDefined) act.setNumericValue2(upper.get)
 		}
 
 		Some(act)
