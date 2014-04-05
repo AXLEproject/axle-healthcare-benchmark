@@ -54,8 +54,9 @@ LAKEDB=lake
 #------------------------------------------------------------------------------
 
 # Use the official PostgreSQL mirror at github
-PGGIT=https://github.com/postgres/postgres
-PGGITDIR=$(shell basename $(PGGIT))
+##PGGIT=https://github.com/postgres/postgres
+PGGIT=git://git.postgresql.org/git/postgresql.git
+PGGITDIR=$(shell basename $(PGGIT) | cut -d '.' -f 1)
 
 # PostgreSQL branch to checkout
 PGBRANCH=REL9_3_STABLE
