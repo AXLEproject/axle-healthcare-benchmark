@@ -29,6 +29,21 @@ pgext2sql() {
     cat ${EXTDIR}/$2 | sed 's/MODULE_PATHNAME/\$libdir\/hl7/g' | PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
+gpext2sql() {
+    echo "Manually loading extension $2"
+    EXTDIR=$(pg_config --sharedir)/extension
+    cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
+        -e 's/, TYPMOD_.*$//g' \
+        -e 's/, MERGES//g' \
+        -e 's/^COST[ 0-9]\+$//g' \
+        -e '/CREATE OPERATOR CLASS "*gin_/,/;$/d' \
+        -e '/DELETE FROM pg_depend/,/;$/d' \
+        -e 's/\([^a-z]cv"*\)([^)]\+)/\1/gi' \
+        -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
+        -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
+| PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+}
+
 pgcommandfromfile() {
     echo "executing commands from file $2"
     psql --host $PG_HOST --port $PG_PORT $1 --user $PG_USER -f $2 || fail "error while executing commands from $2"
@@ -56,6 +71,15 @@ case "${ACTION}" in
         pgcommand postgres "CREATE USER $DBNAME"
         pgcommand postgres "CREATE DATABASE $DBNAME"
 
+GP=`psql -tA --host $PG_HOST --port $PG_PORT $DBNAME --user $PG_USER -c "select version() like '%reenplum%'"` || fail "could not query database version"
+if [ "x${GP}" = "xt" ];
+then
+        # install_hdl includes installation of hl7v3datatypes_r1--2.0.sql
+        pushd /home/m/mgrid-hdl/greenplum ; ./install_hdl.sh $DBNAME || fail "could not install hdl"
+        popd
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
+        gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
+else
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
@@ -63,9 +87,8 @@ case "${ACTION}" in
 
         # create 2011 vocabulary: has support for previous RIMs
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=atomic, public, hl7, pg_hl7, \"\$user\";"
-
-        pgext2sql $DBNAME hl7v3datatypes_r1--2.0.sql
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1--2.0.sql"
 
 #        pgcommand $DBNAME "CREATE SCHEMA rim2005"
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
@@ -89,17 +112,19 @@ case "${ACTION}" in
 
 #        pgcommand $DBNAME "CREATE SCHEMA rim2011"
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
+
         pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
+
+        pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
+fi
+
         # Load term mappings
         pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
-
-        pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
