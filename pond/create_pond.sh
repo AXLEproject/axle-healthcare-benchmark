@@ -40,6 +40,14 @@ pgcommandfromfile() {
     ${PSQL} --dbname $1 -f $2 || fail "error while executing commands from $2"
 }
 
+pgext2sql_unlogged() {
+    echo "Manually loading extension $2"
+    EXTDIR=$(pg_config --sharedir)/extension
+    cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
+        -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \
+        | PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+}
+
 case "${ACTION}" in
     drop)
         echo "..Dropping database and owner role"
@@ -53,22 +61,23 @@ case "${ACTION}" in
         pgcommand postgres "CREATE DATABASE $DBNAME"
 
         echo "..Loading modules"
-        pgcommand $DBNAME "CREATE EXTENSION dblink"
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,pg_hl7,hl7,\"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
-        pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20110731"
+        pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20140131"
         pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3rim_edition2011"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3crud_edition2011"
+
+        echo "..Loading RIM in schema rim2011"
+        pgcommand $DBNAME "CREATE SCHEMA rim2011"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+        pgext2sql_unlogged $DBNAME "hl7v3rim_edition2011--2.0.sql"
+        pgext2sql_unlogged $DBNAME "hl7v3crud_edition2011--2.0.sql"
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
-
-        echo ".. Creating ETL support tables, views and indexes"
 
         # Load term mappings
         pgcommandfromfile $DBNAME "terminology_mapping.sql"
