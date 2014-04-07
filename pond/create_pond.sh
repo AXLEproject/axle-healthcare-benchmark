@@ -70,7 +70,7 @@ case "${ACTION}" in
         pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20140131"
         pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
 
-        echo "..Loading RIM in schema rim2011"
+        echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
         pgext2sql_unlogged $DBNAME "hl7v3rim_edition2011--2.0.sql"

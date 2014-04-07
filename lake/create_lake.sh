@@ -38,6 +38,8 @@ gpext2sql() {
         -e 's/^COST[ 0-9]\+$//g' \
         -e '/CREATE OPERATOR CLASS "*gin_/,/;$/d' \
         -e '/DELETE FROM pg_depend/,/;$/d' \
+        -e '/FOREIGN KEY/,/;$/d' \
+        -e '/SELECT __warn_extension_deps_removal/,/;$/d' \
         -e 's/\([^a-z]cv"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
@@ -74,29 +76,33 @@ case "${ACTION}" in
 GP=`psql -tA --host $PG_HOST --port $PG_PORT $DBNAME --user $PG_USER -c "select version() like '%reenplum%'"` || fail "could not query database version"
 if [ "x${GP}" = "xt" ];
 then
+        # Install HDL modules in Greenplum
         # install_hdl includes installation of hl7v3datatypes_r1--2.0.sql
         pushd /home/m/mgrid-hdl/greenplum ; ./install_hdl.sh $DBNAME || fail "could not install hdl"
         popd
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
+
+        echo "..Creating RIM in schema rim2011"
+        pgcommand $DBNAME "CREATE SCHEMA rim2011"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 else
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
         pgcommand $DBNAME "CREATE EXTENSION adminpack"
-
-        # create 2011 vocabulary: has support for previous RIMs
+        # Vocabulary 2011 has support for previous editions
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
+
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1--2.0.sql"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
 
-#        pgcommand $DBNAME "CREATE SCHEMA rim2005"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql $DBNAME hl7v3rim_edition2005--2.0.sql
+        pgcommand $DBNAME "CREATE SCHEMA rim2005"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
+        pgext2sql $DBNAME hl7v3rim_edition2005--2.0.sql
 
-#        pgcommand $DBNAME "CREATE SCHEMA rim2006"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql $DBNAME hl7v3rim_edition2006--2.0.sql
+        pgcommand $DBNAME "CREATE SCHEMA rim2006"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
+        pgext2sql $DBNAME hl7v3rim_edition2006--2.0.sql
 
 #        pgcommand $DBNAME "CREATE SCHEMA rim2008"
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2008, public, hl7, pg_hl7, \"\$user\";"
@@ -106,13 +112,13 @@ else
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2009, public, hl7, pg_hl7, \"\$user\";"
 #        pgext2sql $DBNAME hl7v3rim_edition2009--2.0.sql
 
-#        pgcommand $DBNAME "CREATE SCHEMA rim2010"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql $DBNAME hl7v3rim_edition2010--2.0.sql
+        pgcommand $DBNAME "CREATE SCHEMA rim2010"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
+        pgext2sql $DBNAME hl7v3rim_edition2010--2.0.sql
 
-#        pgcommand $DBNAME "CREATE SCHEMA rim2011"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
-
+        echo "..Creating RIM in schema rim2011"
+        pgcommand $DBNAME "CREATE SCHEMA rim2011"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
         pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
@@ -120,9 +126,6 @@ else
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
 fi
-
-        # Load term mappings
-        pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
