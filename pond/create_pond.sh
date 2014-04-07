@@ -7,6 +7,8 @@
 #
 # Copyright (c) 2013, MGRID BV Netherlands
 #
+set -e
+
 usage() {
     echo "USAGE: $0 <PG_HOST> <PG_PORT> <PG_USER> <DB_NAME> <ACTION>"
     echo "e.g.: $0 localhost 5432 ${USER} pond1 create"
@@ -29,7 +31,7 @@ else
     ACTION=$5;
 fi
 
-PSQL="psql --host ${PG_HOST} --port ${PG_PORT} --user ${PG_USER}"
+PSQL="psql -v ON_ERROR_STOP=true --host ${PG_HOST} --port ${PG_PORT} --user ${PG_USER}"
 
 pgcommand() {
     ${PSQL} --dbname $1 -c "$2" || fail "could not $2"
@@ -45,7 +47,7 @@ pgext2sql_unlogged() {
     EXTDIR=$(pg_config --sharedir)/extension
     cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
         -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \
-        | PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+        | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
 case "${ACTION}" in
@@ -60,7 +62,14 @@ case "${ACTION}" in
         pgcommand postgres "CREATE USER $DBNAME"
         pgcommand postgres "CREATE DATABASE $DBNAME"
 
-        echo "..Loading modules"
+        # Load term mappings (take care not to load in stream or rimxxx)
+        pgcommandfromfile $DBNAME "terminology_mapping.sql"
+
+        echo "..Creating stream functions"
+        pgcommandfromfile $DBNAME "stream.sql"
+        pgcommandfromfile $DBNAME "pond.sql"
+
+        echo "..Creating healthcare modules"
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
@@ -78,12 +87,6 @@ case "${ACTION}" in
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
-
-        # Load term mappings
-        pgcommandfromfile $DBNAME "terminology_mapping.sql"
-
-        echo ".. Load pond functions"
-        pgcommandfromfile $DBNAME "pond.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"

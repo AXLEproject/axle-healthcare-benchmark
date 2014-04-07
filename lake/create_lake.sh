@@ -19,14 +19,31 @@ fail() {
     exit 1
 }
 
+if [ $# -lt 5 ]; then
+    usage
+else
+    PG_HOST=$1;
+    PG_PORT=$2;
+    PG_USER=$3;
+    DBNAME=$4;
+    ACTION=$5;
+fi
+
+PSQL="psql -v ON_ERROR_STOP=true --host ${PG_HOST} --port ${PG_PORT} --user ${PG_USER}"
+
 pgcommand() {
-    psql -a --host $PG_HOST --port $PG_PORT $1 --user $PG_USER -c "$2" || fail "could not $2"
+    ${PSQL} --dbname $1 -a -c "$2" || fail "could not $2"
+}
+
+pgcommandfromfile() {
+    echo "executing commands from file $2"
+    ${PSQL} --dbname $1 -f $2 || fail "error while executing commands from $2"
 }
 
 pgext2sql() {
     echo "Manually loading extension $2"
     EXTDIR=$(pg_config --sharedir)/extension
-    cat ${EXTDIR}/$2 | sed 's/MODULE_PATHNAME/\$libdir\/hl7/g' | PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+    cat ${EXTDIR}/$2 | sed 's/MODULE_PATHNAME/\$libdir\/hl7/g' | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
 gpext2sql() {
@@ -43,23 +60,8 @@ gpext2sql() {
         -e 's/\([^a-z]cv"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
-| PGOPTIONS='--client-min-messages=warning' psql -q1 --host $PG_HOST --port $PG_PORT $1 --user $PG_USER --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+| PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
-
-pgcommandfromfile() {
-    echo "executing commands from file $2"
-    psql --host $PG_HOST --port $PG_PORT $1 --user $PG_USER -f $2 || fail "error while executing commands from $2"
-}
-
-if [ $# -lt 5 ]; then
-    usage
-else
-    PG_HOST=$1;
-    PG_PORT=$2;
-    PG_USER=$3;
-    DBNAME=$4;
-    ACTION=$5;
-fi
 
 case "${ACTION}" in
     drop)
@@ -72,6 +74,11 @@ case "${ACTION}" in
         echo "..Creating owner role and database"
         pgcommand postgres "CREATE USER $DBNAME"
         pgcommand postgres "CREATE DATABASE $DBNAME"
+
+        echo "..Creating stream info"
+        pgcommandfromfile $DBNAME "stream.sql"
+
+        echo "..Creating healthcare modules"
 
 GP=`psql -tA --host $PG_HOST --port $PG_PORT $DBNAME --user $PG_USER -c "select version() like '%reenplum%'"` || fail "could not query database version"
 if [ "x${GP}" = "xt" ];

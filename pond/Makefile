@@ -20,16 +20,15 @@ reconfig:
 	PATH=$(PGSERVER)/bin:${PATH} pg_ctl reload -D $(PGDATA)
 
 template:
-	PATH=$(PGSERVER)/bin:${PATH} psql $(TEMPLATEDB) -c "SELECT 1" || PATH=$(PGSERVER)/bin:${PATH} ./create_pond.sh $(PONDHOST) $(PONDPORT) $(PONDUSER) $(TEMPLATEDB) create
+	PATH=$(PGSERVER)/bin:${PATH} psql --dbname $(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) -c "SELECT 1" || PATH=$(PGSERVER)/bin:${PATH} ./create_pond.sh $(PONDHOST) $(PONDPORT) $(PONDUSER) $(TEMPLATEDB) create
 
 ponds:	reconfig template
 	@echo
 	@echo "CREATING DATABASES pond1 .. pond$(PONDCOUNT)"
 	@echo
-	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} createdb --template=$(TEMPLATEDB) pond$$i ; PATH=$(PGSERVER)/bin:${PATH} psql postgres -c "ALTER DATABASE pond$$i SET search_path=public,pg_hl7,hl7,\"\$$user\";" ; done
-
+	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} createdb --template=$(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) pond$$i ; PATH=$(PGSERVER)/bin:${PATH} psql --dbname $(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) -c "ALTER DATABASE pond$$i SET search_path=rim2011, public,pg_hl7,hl7,\"\$$user\";" ; done
 
 desert:
-	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} psql postgres -c "DROP DATABASE IF EXISTS pond$$i" ; done
+	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} psql --dbname postgres --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER)  -c "DROP DATABASE IF EXISTS pond$$i" ; done
 clean:	desert
-	PATH=$(PGSERVER)/bin:${PATH} psql $(TEMPLATEDB) -c "SELECT 1" && PATH=$(PGSERVER)/bin:${PATH} ./create_pond.sh $(PONDHOST) $(PONDPORT) $(PONDUSER) $(TEMPLATEDB) drop
+	PATH=$(PGSERVER)/bin:${PATH} psql --dbname $(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) -c "SELECT 1" && PATH=$(PGSERVER)/bin:${PATH} ./create_pond.sh $(PONDHOST) $(PONDPORT) $(PONDUSER) $(TEMPLATEDB) drop

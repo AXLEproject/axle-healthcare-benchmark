@@ -5,7 +5,6 @@
  * Functions for dealing with parititioned minirims aka data ponds.
  */
 
-
 /*
  * Initialize the pond. Takes a sequence and hostname.
  *
@@ -52,7 +51,6 @@ CREATE OR REPLACE FUNCTION pond_setinfo(seqstart bigint, seqend bigint, hostname
 $$
 BEGIN
         EXECUTE 'CREATE TABLE IF NOT EXISTS pond."_Info" (ts timestamp, hostname text, seqstart bigint, seqend bigint)';
-
         EXECUTE 'INSERT INTO pond."_Info" VALUES (now(), ''' || hostname || ''', ' || seqstart || ', ' || seqend || ')';
 END
 $$ LANGUAGE plpgsql;
@@ -133,25 +131,6 @@ END
 $$ LANGUAGE plpgsql;
 
 /*
- * Utility to determine all tables that need to be dumped;
- * - all relations in public
- * - that are true tables
- * - have an _id attribute
- * - are visible
- */
-CREATE OR REPLACE VIEW pond_tables
-AS
-        SELECT c.relname as sname
-          FROM pg_catalog.pg_class c
-          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-          JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-         WHERE c.relkind = 'r'
-           AND n.nspname = 'public'
-           AND a.attname = '_id'
-           AND pg_catalog.pg_table_is_visible(c.oid)
-      ORDER BY 1;
-
-/*
  * Determine all ids that were inserted into this pond, and store them in
  * pond.<rimtablename>.
  *
@@ -161,15 +140,17 @@ AS
 CREATE OR REPLACE FUNCTION pond_recordids() RETURNS int AS
 $$
 DECLARE
-        tblname name;
+        r RECORD;
         total int;
         current int;
 BEGIN
         total := 0;
 
-        FOR tblname IN SELECT * FROM pond_tables
+        FOR r IN SELECT * FROM stream.table WHERE has_id
         LOOP
-                EXECUTE 'CREATE TABLE pond."' || tblname || '" AS SELECT _id FROM ONLY "' || tblname || '"';
+                EXECUTE 'INSERT INTO stream.append_id(schema_name, table_name, id) ' ||
+                'SELECT $1, $2, _id FROM ONLY ' || r.table_schema || '."' || r.table_name || '"'
+                USING r.table_schema, r.table_name;
                 GET DIAGNOSTICS current = ROW_COUNT;
                 total := total + current;
         END LOOP;
@@ -185,54 +166,20 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION pond_empty() RETURNS int AS
 $$
 DECLARE
-        tblname name;
+        r RECORD;
         total int;
         current int;
 BEGIN
         total := 0;
 
-        FOR tblname IN SELECT * FROM pond_tables
+        EXECUTE 'TRUNCATE TABLE stream.append_id';
+        FOR r IN SELECT * FROM stream.table
         LOOP
-                EXECUTE 'DROP TABLE IF EXISTS pond."' || tblname || '"';
-                EXECUTE 'TRUNCATE TABLE "' || tblname || '" CASCADE';
+                EXECUTE 'TRUNCATE TABLE ' || r.table_schema || '."' || r.table_name || '" CASCADE';
                 GET DIAGNOSTICS current = ROW_COUNT;
                 total := total + current;
         END LOOP;
         RETURN total;
-END
-$$ LANGUAGE plpgsql;
-
-/*
- * The set of ddl statements that need to be issued on a lake to be able to
- * ingest a pond update. Should be pre-loaded on lake.
- */
-CREATE OR REPLACE FUNCTION pond_ddl() RETURNS text AS
-$$
-DECLARE
-        rt text;
-        tblname name;
-        seq_start int8;
-        seq_end int8;
-BEGIN
-        seq_start := -9223372036854775808;
-        seq_end := 9223372036854775807;
-
-        rt := 'CREATE SCHEMA IF NOT EXISTS pond;';
-
-        rt := rt || 'ALTER SEQUENCE "InfrastructureRoot__id_seq"'
-                 || ' START WITH ' || seq_start
-                 || ' RESTART WITH ' || seq_start
-                 || ' MINVALUE ' || seq_start
-                 || ' MAXVALUE ' || seq_end
-                 || ' NO CYCLE INCREMENT BY 1;';
-
-        rt := rt || 'CREATE TABLE IF NOT EXISTS pond."_Info" (ts timestamp, hostname text, seqstart bigint, seqend bigint);';
-
-        FOR tblname IN SELECT * FROM pond_tables
-        LOOP
-                rt := rt || 'CREATE TABLE IF NOT EXISTS pond."' || tblname || '" (_id bigint);';
-        END LOOP;
-        RETURN rt;
 END
 $$ LANGUAGE plpgsql;
 
