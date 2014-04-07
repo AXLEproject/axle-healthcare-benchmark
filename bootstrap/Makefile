@@ -50,7 +50,7 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 
 # Start cluster
 start: $(PGDATA)
-	PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
+	PATH=$(PGSERVER)/bin:${PATH} pg_isready -p $(PONDPORT) -h $(PONDHOST) -U $(PONDUSER) -d "dbname=postgres" || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
 
 # Download HDL and HDM
 $(MGRIDHDLFILE):
@@ -79,5 +79,5 @@ installmsg: $(MGRIDMSGFILE)
 
 # Some other useful targets
 stop:
-	test -d $(PGDATA) && PATH=$(PGSERVER)/bin:${PATH} pg_isready -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast || echo ""
+	test -d $(PGDATA) && PATH=$(PGSERVER)/bin:${PATH} pg_isready  -p $(PONDPORT) -h $(PONDHOST) -U $(PONDUSER) -d "dbname=postgres" && PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) stop -m fast || echo ""
 

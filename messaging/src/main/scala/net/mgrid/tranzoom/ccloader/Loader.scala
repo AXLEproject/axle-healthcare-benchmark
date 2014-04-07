@@ -167,7 +167,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   override def toString: String = s"""
         |Loader[pondUploadScript=$pondUploadScript, 
         |pondHost=$pondHost, pondPort=$pondPort, pondDatabase: $pondDatabase, pondUser: $pondUser, 
-        |lakeHost: $lakeHost, lakeDatabase: $lakeDatabase, lakeUser: $lakeUser]
+        |lakeHost: $lakeHost, lakePort=$lakePort, lakeDatabase: $lakeDatabase, lakeUser: $lakeUser]
     """.stripMargin
 }
 

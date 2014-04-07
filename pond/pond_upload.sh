@@ -82,6 +82,7 @@ psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
 
 pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
     -e '/SET search_path/ s/;/, hl7;/' \
+    -e '/SET lock_timeout/d' \
     -e '/pg_catalog.setval/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
 

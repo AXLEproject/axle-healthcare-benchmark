@@ -55,7 +55,7 @@ gpext2sql() {
         -e 's/^COST[ 0-9]\+$//g' \
         -e '/CREATE OPERATOR CLASS "*gin_/,/;$/d' \
         -e '/DELETE FROM pg_depend/,/;$/d' \
-        -e '/FOREIGN KEY/,/;$/d' \
+        -e '/ALTER TABLE/d' \
         -e '/SELECT __warn_extension_deps_removal/,/;$/d' \
         -e 's/\([^a-z]cv"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
@@ -85,7 +85,7 @@ if [ "x${GP}" = "xt" ];
 then
         # Install HDL modules in Greenplum
         # install_hdl includes installation of hl7v3datatypes_r1--2.0.sql
-        pushd /home/m/mgrid-hdl/greenplum ; ./install_hdl.sh $DBNAME || fail "could not install hdl"
+        pushd /home/m/mgrid-hdl/greenplum ; ./install_hdl.sh ${DBNAME} ${PG_PORT} ${PG_HOST} ${PG_USER} || fail "could not install hdl"
         popd
 
         echo "..Creating RIM in schema rim2011"
