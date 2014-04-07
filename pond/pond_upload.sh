@@ -81,8 +81,7 @@ done
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
 
 pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
-    -e 's/^SET search_path = stream, pg_catalog;$/SET search_path = stream, pg_catalog, hl7;/' \
-    -e 's/^SET search_path = rim2011, pg_catalog;$/SET search_path = rim2011, pg_catalog, hl7;/' \
+    -e '/SET search_path/ s/;/, hl7;/' \
     -e '/pg_catalog.setval/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
 
