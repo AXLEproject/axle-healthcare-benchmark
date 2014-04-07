@@ -4,6 +4,10 @@ a new patient has been added to Portavita with the following details. -->
 <PatientUpdate  xmlns="urn:hl7-org:v3" classCode="ACTN" moodCode="EVN">
   <recordTarget typeCode="RCT">
     <patient classCode="PAT">
+      <id root="2.16.840.1.113883.2.4.3.31.1" extension="19889115" />
+      <id root="2.16.840.1.113883.2.4.3.31.2" extension="1629601" />
+      <id root="2.16.840.1.113883.2.4.6.3" extension="010001128" />
+      <id root="2.16.840.1.113883.2.4.3.31.3.TODO.1" extension="PV16296012637" />
       <patientPerson classCode="PSN" determinerCode="INSTANCE">
         <id root="2.16.840.1.113883.2.4.3.31.1" extension="19889115" />
         <id root="2.16.840.1.113883.2.4.3.31.2" extension="1629601" />

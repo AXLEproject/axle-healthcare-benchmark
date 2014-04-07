@@ -8,7 +8,7 @@
 # a-priori. We keep an account of which partitions are in flight, and make sure
 # to return the next free partition when one is requested.
 #
-from kombu import Connection, Exchange, Producer
+from amqp import Connection, Message
 
 partitions = 4096
 
@@ -20,11 +20,17 @@ S_end = 2**63 - 1
 
 partsize = S_total / partitions
 
-conn = Connection('pyamqp://admin:tr4nz00m@localhost//messaging')
-exchange_seq = Exchange(name='sequencer', type='direct', durable=True, auto_delete=False, delivery_mode='persistent')
-
 print("Seeding rabbitmq sequence_space with %ld partitions of %ld size"% (partitions, partsize))
 
-with conn.Producer(conn, exchange=exchange_seq, routing_key='pond') as producer:
-    for p in range(0, partitions):
-        producer.publish("%ld:%ld" % ((S_start + (p * partsize)), (S_start + ((p + 1) * partsize) - 1)))
+conn = Connection(host='localhost', userid='admin', password='tr4nz00m', virtual_host='/messaging')
+channel = conn.channel()
+
+for p in range(0, partitions):
+    channel.basic_publish(
+            Message(
+                "%ld:%ld" % ((S_start + (p * partsize)), (S_start + ((p + 2) * partsize) - 1)),
+                content_type='text/plain',
+                content_encoding='utf-8',
+                delivery_mode=2),
+            exchange='sequencer',
+            routing_key='pond')

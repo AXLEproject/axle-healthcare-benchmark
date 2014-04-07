@@ -38,7 +38,8 @@ yum install -y curl wget htop mc joe
 
 yum install -y python-pip python-lxml
 
-pip install importlib kombu
+pip install importlib
+pip install https://github.com/celery/py-amqp/archive/v1.4.4.tar.gz
 
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make installmsg"
 

@@ -104,7 +104,8 @@ curl -i -u guest:guest -H "content-type:application/json" -XPOST http://localhos
   -d @axle-healthcare-benchmark/messaging/config/rabbitmq_broker_definitions.json
 
 # Load loader sequences in queue
-pip install importlib kombu
+pip install importlib
+pip install https://github.com/celery/py-amqp/archive/v1.4.4.tar.gz
 python axle-healthcare-benchmark/pond/rabbitmq_seed_pond_seq.py
 
 # initialize cda generator
