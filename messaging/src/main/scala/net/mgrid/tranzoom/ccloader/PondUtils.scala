@@ -18,8 +18,9 @@ trait PondUtils { self: Loader =>
 
   private lazy val hostname = "hostname --fqdn".!!.filter(_ >= ' ') // filter out all control characters
 
-  def pondReady(implicit conn: Connection): Boolean =
+  def pondReady(): Boolean = withDatabaseConnection { implicit conn =>
     singleQuery[Boolean]("SELECT pond_ready()").getOrElse(false)
+  }
 
   def withPondSequence[T](f: String => T)(implicit channel: Channel): T =
     Option(channel.basicGet("pond-seq", false)) match {
@@ -39,26 +40,29 @@ trait PondUtils { self: Loader =>
       case None => throw new Exception("No pond sequence available from broker")
     }
 
-  def initPond(seq: String)(implicit conn: Connection): Unit =
+  def initPond(seq: String): Unit = withDatabaseConnection { implicit conn =>
     singleQuery(s"SELECT pond_init('$seq', '$hostname')")
+  }
 
-  def resetPond(implicit conn: Connection, channel: Channel): Unit =
+  def resetPond(implicit channel: Channel): Unit = withDatabaseConnection { implicit conn =>
     singleQuery[String](s"SELECT pond_retseq()") map { seq =>
       logger.info(s"Return sequence $seq to broker")
       channel.basicPublish("sequencer", "pond", true /*mandatory*/ , false /*immediate*/ , null /*props*/ , seq.getBytes())
     }
+  }
 
-  def emptyPond(implicit conn: Connection): Unit = singleQuery("SELECT pond_empty()")
+  def emptyPond(): Unit = withDatabaseConnection { implicit conn =>
+    singleQuery("SELECT pond_empty()")
+  }
 
-  def commitToPond(messages: List[Message[String]])(implicit conn: Connection): Int =
+  def commitToPond(messages: List[Message[String]]): Int = withDatabaseConnection { implicit conn =>
       try {
-        conn.setAutoCommit(false)
         commitMessages(messages)
       } finally {
-        conn.setAutoCommit(true)
         // explicitly release internal resources associated with database session
         quietly(discardState)
       }
+    }
 
   /**
    * @return Number of messages that successfully committed
@@ -90,17 +94,20 @@ trait PondUtils { self: Loader =>
       case (successList, failList) =>
         // some messages failed, rollback and commit the succeeded messages
         quietly(conn.rollback())
-        commitToPond(successList)
+        commitMessages(successList)
     }
   }
 
-  def discardState(implicit conn: Connection): Unit = singleQuery("DISCARD ALL")
+  private def discardState(): Unit = withDatabaseConnection { implicit conn =>
+    singleQuery("DISCARD ALL")
+  }
 
-  def withDatabaseConnection[A](f: Connection => A): A = {
+  private def withDatabaseConnection[A](f: Connection => A): A = {
     val conn = dataSource.getConnection()
     try {
       f(conn)
     } finally {
+      conn.commit()
       quietly(conn.close())
     }
   }
@@ -151,7 +158,7 @@ object PondUtils {
     //connPool.setMaxWait(0)
 
     val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
-    val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , true /*defaultAutoCommit*/ )
+    val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )
 
     new PoolingDataSource(connPool)
   }

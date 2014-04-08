@@ -72,13 +72,11 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   def start: Unit = {
     logger.info(s"Starting loader $this, check if we need to initialize the pond")
 
-    withDatabaseConnection { implicit conn =>
-      if (!pondReady) {
-        withRabbitChannel { implicit channel =>
-          withPondSequence { seq =>
-            logger.info(s"Received pond sequence [$seq] from broker, now initialize the pond")
-            initPond(seq)
-          }
+    if (!pondReady()) {
+      withRabbitChannel { implicit channel =>
+        withPondSequence { seq =>
+          logger.info(s"Received pond sequence [$seq] from broker, now initialize the pond")
+          initPond(seq)
         }
       }
     }
@@ -87,10 +85,8 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   @PreDestroy
   def stop: Unit = {
     logger.info("Stopping loader, reset pond")
-    withDatabaseConnection { implicit conn =>
-      withRabbitChannel { implicit channel =>
-        resetPond
-      }
+    withRabbitChannel { implicit channel =>
+      resetPond
     }
   }
 
@@ -113,7 +109,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
 
       val txStart = System.currentTimeMillis()
 
-      val numCommitted = withDatabaseConnection { implicit conn => commitToPond(messages) }
+      val numCommitted = commitToPond(messages)
 
       if (logger.isDebugEnabled()) {
         val txEnd = System.currentTimeMillis()
@@ -154,7 +150,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
       case ex: Throwable =>
         logger.info(s"Exception during loading: ${ex.getMessage}, report error for all messages in group and empty pond.", ex)
         messages foreach (m => errorHandler.error(m, ErrorUtils.ERROR_TYPE_INTERNAL, ex.getMessage))
-        withDatabaseConnection { implicit conn => emptyPond }
+        emptyPond()
     }
 
   }
