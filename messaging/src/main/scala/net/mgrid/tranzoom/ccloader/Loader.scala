@@ -42,7 +42,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   var pondHost: String = "localhost"
 
   @BeanProperty
-  var pondPort: String = "5432"
+  var pondPort: Int = 5432
 
   @BeanProperty @Required
   var pondDatabase: String = _

@@ -14,7 +14,7 @@ trait PondUtils { self: Loader =>
 
   import PondUtils._
 
-  private lazy val dataSource = newDatasource(s"jdbc:postgresql://$pondHost:$pondPort/$pondDatabase?user=$pondUser")
+  private lazy val dataSource = newDatasource(pondHost, pondPort, pondDatabase, pondUser)
 
   private lazy val hostname = "hostname --fqdn".!!.filter(_ >= ' ') // filter out all control characters
 
@@ -55,19 +55,10 @@ trait PondUtils { self: Loader =>
     singleQuery("SELECT pond_empty()")
   }
 
-  def commitToPond(messages: List[Message[String]]): Int = withDatabaseConnection { implicit conn =>
-      try {
-        commitMessages(messages)
-      } finally {
-        // explicitly release internal resources associated with database session
-        quietly(discardState)
-      }
-    }
-
   /**
    * @return Number of messages that successfully committed
    */
-  private def commitMessages(messages: List[Message[String]])(implicit conn: Connection): Int = {
+  def commitToPond(messages: List[Message[String]]): Int = withDatabaseConnection { implicit conn =>
     def queryOk(message: Message[String])(onFail: Throwable => Unit): Boolean = {
       val stmt = conn.createStatement()
       try {
@@ -94,20 +85,17 @@ trait PondUtils { self: Loader =>
       case (successList, failList) =>
         // some messages failed, rollback and commit the succeeded messages
         quietly(conn.rollback())
-        commitMessages(successList)
+        commitToPond(successList)
     }
-  }
-
-  private def discardState(): Unit = withDatabaseConnection { implicit conn =>
-    singleQuery("DISCARD ALL")
   }
 
   private def withDatabaseConnection[A](f: Connection => A): A = {
     val conn = dataSource.getConnection()
     try {
+      conn.setAutoCommit(false)
       f(conn)
     } finally {
-      conn.commit()
+      quietly(conn.commit())
       quietly(conn.close())
     }
   }
@@ -138,29 +126,21 @@ trait PondUtils { self: Loader =>
  * Helpers and database connection pooling.
  */
 object PondUtils {
-  import org.apache.commons.pool.impl.GenericObjectPool
-  import org.apache.commons.dbcp.PoolableConnectionFactory
-  import org.apache.commons.dbcp.DriverManagerConnectionFactory
-  import org.apache.commons.dbcp.PoolingDataSource
-  import org.apache.commons.dbcp.ConnectionFactory
-  import java.util.Properties
+
+  import org.postgresql.ds.PGSimpleDataSource
 
   Class.forName("org.postgresql.Driver")
 
   private val logger = LoggerFactory.getLogger(PondUtils.getClass)
 
-  def newDatasource(jdbcUri: String): DataSource = {
-    val connPool = new GenericObjectPool()
+  def newDatasource(pondHost: String, pondPort: Int, pondDatabase: String, pondUser: String): DataSource = {
+    val ds = new PGSimpleDataSource()
+    ds.setServerName(pondHost)
+    ds.setPortNumber(pondPort)
+    ds.setDatabaseName(pondDatabase)
+    ds.setUser(pondUser)
 
-    //connPool.setMaxActive(1)
-    //connPool.setMaxIdle(1)
-    //connPool.setWhenExhaustedAction(GenericObjectPool.WHEN_EXHAUSTED_BLOCK)
-    //connPool.setMaxWait(0)
-
-    val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
-    val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )
-
-    new PoolingDataSource(connPool)
+    ds
   }
 
 }
