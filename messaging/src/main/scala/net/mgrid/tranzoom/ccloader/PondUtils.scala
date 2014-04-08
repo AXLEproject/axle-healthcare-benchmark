@@ -50,10 +50,20 @@ trait PondUtils { self: Loader =>
 
   def emptyPond(implicit conn: Connection): Unit = singleQuery("SELECT pond_empty()")
 
+  def commitToPond(messages: List[Message[String]])(implicit conn: Connection): Int =
+      try {
+        conn.setAutoCommit(false)
+        commitMessages(messages)
+      } finally {
+        conn.setAutoCommit(true)
+        // explicitly release internal resources associated with database session
+        quietly(discardState)
+      }
+
   /**
    * @return Number of messages that successfully committed
    */
-  def commitToPond(messages: List[Message[String]])(implicit conn: Connection): Int = {
+  private def commitMessages(messages: List[Message[String]])(implicit conn: Connection): Int = {
     def queryOk(message: Message[String])(onFail: Throwable => Unit): Boolean = {
       val stmt = conn.createStatement()
       try {
@@ -83,6 +93,8 @@ trait PondUtils { self: Loader =>
         commitToPond(successList)
     }
   }
+
+  def discardState(implicit conn: Connection): Unit = singleQuery("DISCARD ALL")
 
   def withDatabaseConnection[A](f: Connection => A): A = {
     val conn = dataSource.getConnection()
@@ -139,7 +151,7 @@ object PondUtils {
     //connPool.setMaxWait(0)
 
     val connFactory: ConnectionFactory = new DriverManagerConnectionFactory(jdbcUri, new Properties())
-    val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , false /*defaultAutoCommit*/ )
+    val poolableConnectionFactory = new PoolableConnectionFactory(connFactory, connPool, null /*stmtPoolFactory*/ , null /*validationQuery*/ , false /*defaultReadOnly*/ , true /*defaultAutoCommit*/ )
 
     new PoolingDataSource(connPool)
   }

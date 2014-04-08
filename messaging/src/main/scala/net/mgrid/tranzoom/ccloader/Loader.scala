@@ -64,10 +64,10 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
 
   @Autowired @Required
   var errorHandler: TranzoomErrorHandler = _
-  
+
   @Resource(name="consumeConnectionFactory") @Required
   var rabbitFactory: RabbitConnectionFactory = _
-  
+
   @PostConstruct
   def start: Unit = {
     logger.info(s"Starting loader $this, check if we need to initialize the pond")
@@ -103,70 +103,67 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
   def loadGroup(group: Message[java.util.List[Message[String]]]): Unit = synchronized {
     import scala.collection.JavaConversions._
     val messages = group.getPayload().toList
+    val loadStart = System.currentTimeMillis
 
-    withDatabaseConnection { implicit conn =>
-      val loadStart = System.currentTimeMillis
+    if (logger.isDebugEnabled) {
+      logger.debug(s"Start load ${messages.size} messages on time $loadStart")
+    }
 
-      if (logger.isDebugEnabled) {
-        logger.debug(s"Start load ${messages.size} messages on time $loadStart")
+    Try { // commit messages to data pond
+
+      val txStart = System.currentTimeMillis()
+
+      val numCommitted = withDatabaseConnection { implicit conn => commitToPond(messages) }
+
+      if (logger.isDebugEnabled()) {
+        val txEnd = System.currentTimeMillis()
+        val txDelta = txEnd - txStart
+        logger.debug(s"Transaction finished, group size ${messages.size}, success $numCommitted, time $txDelta ms")
       }
 
-      Try { // commit messages to data pond
+    } map { // committed, upload to data lake
 
-        val txStart = System.currentTimeMillis()
+      _ =>
+        val uploadStart = System.currentTimeMillis()
+        val stdout = StringBuilder.newBuilder
+        val stderr = StringBuilder.newBuilder
+        val processLogger = ProcessLogger(out => stdout.append(s"$out\n"), err => stderr.append(s"$err\n"))
 
-        val numCommitted = commitToPond(messages)
+        val exitCode = s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!(processLogger)
 
         if (logger.isDebugEnabled()) {
-          val txEnd = System.currentTimeMillis()
-          val txDelta = txEnd - txStart
-          logger.debug(s"Transaction finished, group size ${messages.size}, success $numCommitted, time $txDelta ms")
+          val uploadEnd = System.currentTimeMillis()
+          val uploadDelta = uploadEnd - uploadStart
+          logger.debug(s"Upload script finished, running time $uploadDelta ms, exit code $exitCode, stderr[${stderr.mkString}], stdout[${stdout.mkString}]")
+
+          messages.headOption map { m =>
+            val ingressTimestamp = m.getHeaders.get(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP).asInstanceOf[String]
+            val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
+            val loadDelta = uploadEnd - loadStart
+            val total = uploadEnd - ingressStart
+            logger.debug(s"Loading complete: ingress time $ingressTimestamp, total $total ms")
+          }
         }
 
-      } map { // committed, upload to data lake
+        if (exitCode != 0) {
+          throw new Exception(s"Upload to data lake failed: ${stderr.mkString}")
+        }
 
-        _ =>
-          val uploadStart = System.currentTimeMillis()
-          val stdout = StringBuilder.newBuilder
-          val stderr = StringBuilder.newBuilder
-          val processLogger = ProcessLogger(out => stdout.append(s"$out\n"), err => stderr.append(s"$err\n"))
-          
-          val exitCode = s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!(processLogger)
-          
-          if (logger.isDebugEnabled()) {
-            val uploadEnd = System.currentTimeMillis()
-            val uploadDelta = uploadEnd - uploadStart
-            logger.debug(s"Upload script finished, running time $uploadDelta ms, exit code $exitCode, stderr[${stderr.mkString}], stdout[${stdout.mkString}]")
-            
-            messages.headOption map { m =>
-              val ingressTimestamp = m.getHeaders.get(TranzoomHeaders.HEADER_INGRESS_TIMESTAMP).asInstanceOf[String]
-              val ingressStart = java.lang.Long.parseLong(ingressTimestamp)
-              val loadDelta = uploadEnd - loadStart
-              val total = uploadEnd - ingressStart
-              logger.debug(s"Loading complete: ingress time $ingressTimestamp, total $total ms")
-            }
-          }
-          
-          if (exitCode != 0) {
-            throw new Exception(s"Upload to data lake failed: ${stderr.mkString}")
-          }
+    } recover { // handle fail
 
-      } recover { // handle fail
-
-        case ex: Throwable =>
-          logger.info(s"Exception during loading: ${ex.getMessage}, report error for all messages in group and empty pond.", ex)
-          messages foreach (m => errorHandler.error(m, ErrorUtils.ERROR_TYPE_INTERNAL, ex.getMessage))
-          emptyPond
-      }
-
+      case ex: Throwable =>
+        logger.info(s"Exception during loading: ${ex.getMessage}, report error for all messages in group and empty pond.", ex)
+        messages foreach (m => errorHandler.error(m, ErrorUtils.ERROR_TYPE_INTERNAL, ex.getMessage))
+        withDatabaseConnection { implicit conn => emptyPond }
     }
+
   }
-  
+
   override def rabbitConnectionFactory = rabbitFactory
 
   override def toString: String = s"""
-        |Loader[pondUploadScript=$pondUploadScript, 
-        |pondHost=$pondHost, pondPort=$pondPort, pondDatabase: $pondDatabase, pondUser: $pondUser, 
+        |Loader[pondUploadScript=$pondUploadScript,
+        |pondHost=$pondHost, pondPort=$pondPort, pondDatabase: $pondDatabase, pondUser: $pondUser,
         |lakeHost: $lakeHost, lakePort=$lakePort, lakeDatabase: $lakeDatabase, lakeUser: $lakeUser]
     """.stripMargin
 }
