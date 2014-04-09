@@ -25,6 +25,7 @@ source /tmp/default_settings_bash
 
 # Add EPEL repository
 rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
+sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/epel.repo
 yum install -y erlang
 yum install -y curl wget htop mc joe
 

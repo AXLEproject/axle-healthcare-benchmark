@@ -4,6 +4,7 @@
 #
 # Copyright (c) 2014, Portavita B.V.
 #
+set -e
 
 GROUPNAME="${1:-mytest}"
 LAKEEXTERNALHOST="$2"
@@ -23,7 +24,10 @@ source /tmp/default_settings_bash
 ##CENTOSAMI="${AMI:-ami-8aa3a8fe}"
 
 # Copy of Bashton Image: in case the Bashton image is taken offline:
-CENTOSAMI="${AMI:-ami-ce10e0b9}"
+##CENTOSAMI="${AMI:-ami-ce10e0b9}"
+
+# Amazon Linux 64 bit HVM. Instance-store backed otherwise no media/ephemeral storage
+CENTOSAMI="${AMI:-ami-0f21df78}"
 UBUNTUAMI="${AMI:-ami-aa56a1dd}"
 
 AMIUSERNAME="${AMIUSERNAME:-ec2-user}"

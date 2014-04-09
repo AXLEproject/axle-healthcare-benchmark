@@ -13,7 +13,7 @@ Steps to perform locally
 ## START GROUP ##
 
     cd axle-healthcare-benchmark/messaging/deploy-tools
-    ./start-group.sh mtest 2>&1 > log.txt &
+    ./start-group.sh mtest 2>&1 > start-group.log &
 
 ## WATCH PROGRESS ##
 
