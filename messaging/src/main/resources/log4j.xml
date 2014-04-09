@@ -18,9 +18,9 @@
   </logger>
 
   <logger name="net.mgrid">
-    <level value="info" />
+    <level value="warn" />
   </logger>
-  
+
   <root>
     <priority value="warn" />
     <appender-ref ref="console" />

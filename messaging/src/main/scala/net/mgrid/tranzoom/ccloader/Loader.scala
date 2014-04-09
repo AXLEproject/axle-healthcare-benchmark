@@ -80,6 +80,10 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
         }
       }
     }
+
+    // make sure we have a clean start
+    emptyPond()
+
   }
 
   @PreDestroy

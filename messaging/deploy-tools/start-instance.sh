@@ -37,6 +37,9 @@ SSHPORT=${SSHPORT:-22}
 INSTANCEWAIT=${INSTANCEWAIT:-25}
 LOGINWAIT=${LOGINWAIT:-10}
 
+# allow setting the branch via the environment
+AXLEBRANCH="${AXLEBRANCH:-topic/fawork/10TB}"
+
 echo "Starting instance: ami $1 amiusername $2 keypairname $4 keypairuser $5 ec2_region $5 instancetype $6 groupname $7 instancename $8 ingressbrokerhost $9 brokerhost ${10} lakeexternalhost ${11} placementgroup ${12} availabilityzone ${13}"
 
 #exit code
@@ -143,7 +146,7 @@ EOF
 
 pushd $(git rev-parse --show-cdup)
 git remote add ${GROUPNAME}-${INSTANCENAME} ssh://${GROUPNAME}-${INSTANCENAME}/home/${AMIUSERNAME}/axle-healthcare-benchmark
-git push ${GROUPNAME}-${INSTANCENAME} topic/fawork/10TB
+git push ${GROUPNAME}-${INSTANCENAME} ${AXLEBRANCH}
 git remote rm ${GROUPNAME}-${INSTANCENAME}
 popd
 
@@ -151,7 +154,7 @@ popd
 STARTTYPE=`expr match "${INSTANCENAME}" '\(^[a-zA-Z]*\)'`
 ssh -p ${SSHPORT} -t -t -i ${KEYPAIR} -o StrictHostKeyChecking=no ${AMIUSERNAME}@${IP} <<EOF
 cd axle-healthcare-benchmark
-git checkout topic/fawork/10TB
+git checkout ${AXLEBRANCH}
 git reset --hard
 exit
 EOF

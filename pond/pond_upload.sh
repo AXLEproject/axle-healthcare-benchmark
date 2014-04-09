@@ -26,6 +26,10 @@ usage() {
 EOF
 }
 
+timestamp() {
+  date +"%s"
+}
+
 # Set PATH
 source $HOME/.bashrc
 
@@ -78,12 +82,24 @@ do
     logger -t axle-pond-upload "${i} execution time ${SECONDS} seconds"
 done
 
+t_before=$(timestamp)
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
+t_after=$(timestamp)
 
+logger -t axle-pond-upload "pond_recordids() execution time $(( t_after - t_before )) seconds"
+
+t_before=$(timestamp)
 pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
     -e '/SET search_path/ s/;/, hl7;/' \
     -e '/SET lock_timeout/d' \
     -e '/pg_catalog.setval/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
+t_after=$(timestamp)
 
+logger -t axle-pond-upload "dump and upload total execution time $(( t_after - t_before )) seconds"
+
+t_before=$(timestamp)
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_empty()"
+t_after=$(timestamp)
+
+logger -t axle-pond-upload "pond_empty() execution time $(( t_after - t_before )) seconds"
