@@ -40,10 +40,12 @@ pgcommandfromfile() {
     ${PSQL} --dbname $1 -f $2 || fail "error while executing commands from $2"
 }
 
-pgext2sql() {
+pgext2sql_unlogged() {
     echo "Manually loading extension $2"
     EXTDIR=$(pg_config --sharedir)/extension
-    cat ${EXTDIR}/$2 | sed 's/MODULE_PATHNAME/\$libdir\/hl7/g' | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+    cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
+        -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \
+        | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
 gpext2sql() {
@@ -105,28 +107,28 @@ else
 
         pgcommand $DBNAME "CREATE SCHEMA rim2005"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2005--2.0.sql
+        pgext2sql_unlogged $DBNAME hl7v3rim_edition2005--2.0.sql
 
         pgcommand $DBNAME "CREATE SCHEMA rim2006"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2006--2.0.sql
+        pgext2sql_unlogged $DBNAME hl7v3rim_edition2006--2.0.sql
 
 #        pgcommand $DBNAME "CREATE SCHEMA rim2008"
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2008, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql $DBNAME hl7v3rim_edition2008--2.0.sql
+#        pgext2sql_unlogged $DBNAME hl7v3rim_edition2008--2.0.sql
 
 #        pgcommand $DBNAME "CREATE SCHEMA rim2009"
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2009, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql $DBNAME hl7v3rim_edition2009--2.0.sql
+#        pgext2sql_unlogged $DBNAME hl7v3rim_edition2009--2.0.sql
 
         pgcommand $DBNAME "CREATE SCHEMA rim2010"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2010--2.0.sql
+        pgext2sql_unlogged $DBNAME hl7v3rim_edition2010--2.0.sql
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
+        pgext2sql_unlogged $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
