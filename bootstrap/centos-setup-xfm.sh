@@ -37,9 +37,10 @@ rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.n
 sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/epel.repo
 yum install -y curl wget htop mc joe
 
-yum install -y python-pip python-lxml
+yum install -y python-pip python-devel libxslt libxslt-devel gcc
 
 pip install importlib
+pip install lxml
 pip install https://github.com/celery/py-amqp/archive/v1.4.4.tar.gz
 
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make installmsg"
