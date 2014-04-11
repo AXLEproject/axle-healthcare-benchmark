@@ -30,7 +30,7 @@ BROKEREXTIP=`euca-describe-instances  --filter instance-state-name=running --fil
 
 BROKERINTIP=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} --filter tag:instancename=broker-1 | tr '\n' ' ' | awk '{print $8}'`
 
-INSTANCES=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} | grep INSTANCE | awk '{print $2":"$14";"$15}'`
+INSTANCES=`euca-describe-instances  --filter instance-state-name=running --filter tag:groupname=${GROUPNAME} | grep INSTANCE | awk '{print $2":"$13";"$14}'`
 
 T=`mktemp`
 

@@ -117,6 +117,9 @@ stop on stopping axle-laketunnel or runlevel [016]
 respawn
 
 script
+  # random sleep to spread loader instances
+  /bin/bash -c 'sleep \$(( RANDOM % 10 ))'
+
   exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- $AXLEMESSAGING_DIR/target/start \
     -Dconfig.rabbitmq.host=${BROKERHOST} \
     -Dconfig.pond.uploadscript=${AXLE}/pond/pond_upload.sh \

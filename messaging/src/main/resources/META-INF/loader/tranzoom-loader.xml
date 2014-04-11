@@ -21,6 +21,11 @@
     location="classpath:META-INF/loader/loader.properties"
     system-properties-mode="OVERRIDE"/>
 
+  <bean id="groupSize" class="java.lang.Integer">
+    <!-- set group size to pseudo-random number between group-size-low and group-size-high (inclusive) -->
+    <constructor-arg value="#{new java.util.Random().nextInt((${config.group-size-high} - ${config.group-size-low}) + 1) + ${config.group-size-low}}"/>
+  </bean>
+
   <!-- Channels, routing and transformation -->
 
   <int:channel id="sqlAggregateChannel"/>
@@ -76,7 +81,7 @@
     method="aggregate"
     send-partial-result-on-expiry="true"
     correlation-strategy-expression="1"
-    release-strategy-expression="size() == ${config.group-size}"
+    release-strategy-expression="size() == #{@groupSize}"
     expire-groups-upon-completion="true">
 
     <bean class="net.mgrid.tranzoom.ccloader.AggregatorLogicProcessor" />
@@ -183,14 +188,14 @@
     p:queueNames="transform-sql"
     p:concurrentConsumers="1"
     p:defaultRequeueRejected="false"
-    p:prefetchCount="#{2 * ${config.group-size}}"
+    p:prefetchCount="#{2 * @groupSize}"
     p:receiveTimeout="1000"
     p:recoveryInterval="5000"
     p:shutdownTimeout="5000"
     p:taskExecutor-ref="taskExecutor"
     p:transactionAttribute-ref="rabbitTxAttribute"
     p:transactionManager-ref="rabbitTxManager"
-    p:txSize="${config.group-size}"
+    p:txSize="#{@groupSize}"
     />
 
   <!--
