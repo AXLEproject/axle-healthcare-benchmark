@@ -12,9 +12,9 @@ CREATE SCHEMA stream;
  */
 CREATE TABLE stream.append_id
 (
+        id              bigint,
         schema_name     text,
-        table_name      text,
-        id              bigint
+        table_name      text
 );
 
 
