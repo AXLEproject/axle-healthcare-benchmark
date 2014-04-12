@@ -18,8 +18,8 @@ SET _value_pq_value   = value(value::"PQ"::pq)
 WHERE datatype(value) = 'PQ';
 
 UPDATE "Observation"
-SET _value_code_code  = value @ 'code'
-,   _value_code_codesystem = value @ 'codeSystem';
+SET _value_code_code  = value ->> 'code'
+,   _value_code_codesystem = value ->> 'codeSystem';
 
 /* Effective times */
 
@@ -78,5 +78,3 @@ SET _effective_time_low = lowvalue("effectiveTime")::timestamptz
 ,   _effective_time_high_day = EXTRACT(day FROM highvalue("effectiveTime")::timestamptz);
 
 END;
-
-
