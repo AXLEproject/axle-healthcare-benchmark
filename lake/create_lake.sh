@@ -66,9 +66,25 @@ gpext2sql() {
         -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
         -e 's/_id BIGSERIAL PRIMARY KEY,/_id BIGSERIAL PRIMARY KEY, _cluster BIGINT,/g' \
+        -e 's/_id BIGINT PRIMARY KEY,/_id BIGINT PRIMARY KEY, _cluster BIGINT,/g' \
+        -e 's/ INHERITS (\"[[:alpha:]]*\")//g' \
+        -e 's/ PRIMARY KEY//g' \
+        -e 's/ REFERENCES \"[[:alpha:]]*\"//g' \
         -e 's/"value" "ANY",/_value_pq_value NUMERIC, _value_pq_unit TEXT, _value_code_code TEXT, _value_code_codesystem TEXT, "value" "ANY",/g' \
         -e 's/, "effectiveTime"/, _effective_time_low TIMESTAMPTZ, _effective_time_low_year INT, _effective_time_low_month INT, _effective_time_low_day INT, _effective_time_high TIMESTAMPTZ, _effective_time_high_year INT, _effective_time_high_month INT, _effective_time_high_day INT, "effectiveTime"/g' \
-| PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+        -e '/CREATE TABLE "Observation"/ {s/;//}' \
+        -e '/CREATE TABLE "Observation"/ {a\
+with (appendonly = true, orientation = column, compresslevel = 9)\
+distributed by (_id)\
+partition by range (_effective_time_low_year)\
+  subpartition by range (_effective_time_low_month)\
+    subpartition template (\
+      start (1) end (13) every (1),\
+      default subpartition other_months )\
+\
+  (start (2008) end (2016) every (1),\
+   default partition other_years );
+}' | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
 case "${ACTION}" in
