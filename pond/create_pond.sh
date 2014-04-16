@@ -55,6 +55,7 @@ pgext2sql_unlogged() {
         -e 's/"value" "ANY",/_value_pq_value NUMERIC, _value_pq_unit TEXT, _value_code_code TEXT, _value_code_codesystem TEXT, "value" "ANY",/g' \
         -e 's/, "effectiveTime"/, _effective_time_low TIMESTAMPTZ, _effective_time_low_year INT, _effective_time_low_month INT, _effective_time_low_day INT, _effective_time_high TIMESTAMPTZ, _effective_time_high_year INT, _effective_time_high_month INT, _effective_time_high_day INT, "effectiveTime"/g' \
         -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \
+        -e 's/\([^a-z]\)cs\(([^)]\+)\)/\1cv\2/gi' \
         | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
