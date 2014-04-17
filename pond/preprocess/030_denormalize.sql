@@ -5,13 +5,6 @@
  * Pre-process RIM data in a pond before uploading to the lake.  This can be
  * all pre-processing that does not require knowledge from other documents.
  */
-BEGIN;
-
-UPDATE "Observation"
-SET _value_pq_value   = value(value::"PQ"::pq)
-,   _value_pq_unit    = unit(value::"PQ"::pq)
-where datatype(value) = 'PQ';
-
 UPDATE "Observation"
 SET _value_pq_value   = value(value::"PQ"::pq)
 ,   _value_pq_unit    = unit(value::"PQ"::pq)
@@ -76,5 +69,3 @@ SET _effective_time_low = lowvalue("effectiveTime")::timestamptz
 ,   _effective_time_high_year = EXTRACT(year FROM highvalue("effectiveTime")::timestamptz)
 ,   _effective_time_high_month = EXTRACT(month FROM highvalue("effectiveTime")::timestamptz)
 ,   _effective_time_high_day = EXTRACT(day FROM highvalue("effectiveTime")::timestamptz);
-
-END;

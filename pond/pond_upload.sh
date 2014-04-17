@@ -78,7 +78,7 @@ test "X${R}" = "X1" || exit 0
 # Execute all pre-processing SQL files first.
 for i in $(ls $(dirname $0)/preprocess/*sql)
 do
-    SECS=`TIME="%e" PGOPTIONS='--client-min-messages=warning' psql -1 -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}`
+    SECS=`TIME="%e" PGOPTIONS='--client-min-messages=warning' psql -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}`
     logger -t axle-pond-upload "${i} execution time ${SECONDS} seconds"
 done
 
