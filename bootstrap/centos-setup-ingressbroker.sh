@@ -63,8 +63,8 @@ mkdir bin
 mv apache-maven-3.2.1 bin
 rm -f apache-maven-3.2.1-bin.tar.gz
 cat >> .bashrc <<EOF
-export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1 
-export M2=\${M2_HOME}/bin 
+export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1
+export M2=\${M2_HOME}/bin
 export PATH=\${M2}:\${PATH}
 EOF
 
@@ -83,8 +83,7 @@ end script
 EOF
 
 # Add symon
-# Add symon
-yum install -y httpd gettext php
+yum install -y httpd gettext php cairo pango dejavu-sans-mono-fonts
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/rrdtool-1.4.8-2git.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mux-2.87-1.el6.x86_64.rpm

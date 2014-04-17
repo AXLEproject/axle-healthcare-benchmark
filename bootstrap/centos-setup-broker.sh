@@ -56,7 +56,7 @@ pip install importlib kombu
 python axle-healthcare-benchmark/pond/rabbitmq_seed_pond_seq.py
 
 # Add symon
-yum install -y httpd gettext php
+yum install -y httpd gettext php cairo pango dejavu-sans-mono-fonts
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/rrdtool-1.4.8-2git.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
 rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mux-2.87-1.el6.x86_64.rpm
