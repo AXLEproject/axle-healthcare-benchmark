@@ -45,7 +45,7 @@ pgext2sql_unlogged() {
     EXTDIR=$(pg_config --sharedir)/extension
     cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
         -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
-        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _type_1_hash INT, _type_2_hash INT, _weight INT,/g' \
+        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _type_1_hash TEXT, _type_2_hash TEXT, _weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
         -e 's/"player" BIGINT, "scoper" BIGINT,/"player" BIGINT, "scoper" BIGINT, "player_original" BIGINT, "scoper_original" BIGINT,/g' \
@@ -76,7 +76,7 @@ gpext2sql() {
         -e 's/\([^a-z]cs"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
         -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
-        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _type_1_hash INT, _type_2_hash INT, _weight INT,/g' \
+        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _type_1_hash TEXT, _type_2_hash TEXT, _weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
         -e 's/"player" BIGINT, "scoper" BIGINT,/"player" BIGINT, "scoper" BIGINT, "player_original" BIGINT, "scoper_original" BIGINT,/g' \
