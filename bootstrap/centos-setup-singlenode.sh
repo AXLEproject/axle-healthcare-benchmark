@@ -62,7 +62,7 @@ yum install -y wget screen man-pages man joe htop erlang curl \
                git gcc bison flex gdb make readline-devel zlib-devel uuid-devel \
                perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel \
                java-1.7.0-openjdk-devel python-pip python-lxml \
-               httpd rrdtool php autossh
+               httpd php autossh gettext
 
 # Maven
 if [ ! -d ${USERDIR}/bin/apache-maven* ];
@@ -228,11 +228,22 @@ done
 
 # Add symon
 rpm -q symon-mon || rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mon-2.87-1.el6.x86_64.rpm
+rpm -q rrdtool || rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/rrdtool-1.4.8-2git.el6.x86_64.rpm
+rpm -q syweb || rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/syweb-0.66-1.el6.x86_64.rpm
 rpm -q symon-mux || rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/symon-mux-2.87-1.el6.x86_64.rpm
-rpm -q syweb || rpm -Uhv http://wpd.home.xs4all.nl/el6/x86_64/syweb-0.65-1.el6.x86_64.rpm
 chkconfig --add symon
 chkconfig --add symux
 chkconfig --add httpd
 /usr/share/symon/c_config.sh 127.0.0.1 > /etc/symon.conf
+
+cat >/etc/symux.conf <<EOF
+mux 127.0.0.1
+EOF
+clientdir=/var/www/symon/rrds/singlenode
+cat /etc/symon.conf | sed -n "/monitor/ s/monitor/source 127.0.0.1 { accept/;s,stream .*$, datadir \"${clientdir}\"},p" >> /etc/symux.conf
+mkdir -p ${clientdir}
+/usr/share/symon/c_smrrds.sh all
+
 service symon start
+service symux start
 service httpd start
