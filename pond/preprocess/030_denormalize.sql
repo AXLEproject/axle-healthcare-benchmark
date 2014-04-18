@@ -6,13 +6,30 @@
  * all pre-processing that does not require knowledge from other documents.
  */
 UPDATE "Observation"
-SET _value_pq_value   = value(value::"PQ"::pq)
-,   _value_pq_unit    = unit(value::"PQ"::pq)
-WHERE datatype(value) = 'PQ';
+SET _value_pq              = value::"PQ"::pq
+,   _value_pq_value        = value(value::"PQ"::pq)
+,   _value_pq_unit         = unit(value::"PQ"::pq)
+WHERE datatype(value)      = 'PQ';
 
 UPDATE "Observation"
-SET _value_code_code  = value ->> 'code'
-,   _value_code_codesystem = value ->> 'codeSystem';
+SET _value_code            = value::"CD"::cv
+,   _value_code_code       = value ->> 'code'
+,   _value_code_codesystem = value ->> 'codeSystem'
+WHERE datatype(value)      IN ('CD', 'CS', 'CE', 'CO', 'CV');
+
+UPDATE "Observation"
+SET _value_int             = (value ->> 'value')::int
+WHERE datatype(value)      = 'INT';
+
+UPDATE "Observation"
+SET _value_real            = (value ->> 'value')::numeric
+WHERE datatype(value)      = 'REAL';
+
+/** XXX enable when bad ucum representation ]-inf;4] is solved
+UPDATE "Observation"
+SET _value_ivl_real        = value::"IVL_REAL"::ivl_real
+WHERE datatype(value)      = 'IVL_REAL';
+**/
 
 /* Effective times */
 

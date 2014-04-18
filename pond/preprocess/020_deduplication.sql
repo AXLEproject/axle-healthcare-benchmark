@@ -5,6 +5,9 @@
  * Pre-process RIM data in a pond before uploading to the lake.  This can be
  * all pre-processing that does not require knowledge from other documents.
  */
+
+/* Organization de-duplication */
+
 BEGIN;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 WITH

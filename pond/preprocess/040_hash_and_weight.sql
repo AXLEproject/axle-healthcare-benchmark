@@ -34,7 +34,7 @@
  */
 
 UPDATE "Organization"
-SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
+SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1000 * ("id" is not null)::int
                + 100  * ("name" is not null)::int
                + 1    * ("nullFlavor" is not null)::int
@@ -53,7 +53,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1    * ("handlingCode" is not null)::int
                + 1    * ("addr" is not null)::int
                + 1    * ("standardIndustryClassCode" is not null)::int
-,      _type_2_hash = md5(textin(record_out(ROW(
+,      _record_hash = md5(textin(record_out(ROW(
                     "nullFlavor",
                     "classCode",
                     "determinerCode",
@@ -71,7 +71,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
 ))));
 
 UPDATE "Person"
-SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
+SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1000 * ("id" is not null)::int
                + 100  * ("name" is not null)::int
                + 1    * ("nullFlavor" is not null)::int
@@ -103,7 +103,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1    * ("religiousAffiliationCode" is not null)::int
                + 1    * ("raceCode" is not null)::int
                + 1    * ("ethnicGroupCode" is not null)::int
-,      _type_2_hash = md5(textin(record_out(ROW(
+,      _record_hash = md5(textin(record_out(ROW(
                     "nullFlavor",
                     "classCode",
                     "determinerCode",
@@ -134,7 +134,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
 ))));
 
 UPDATE ONLY "Role"
-SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
+SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1000 * ("id" is not null)::int
                + 100  * (player is not null)::int
                + 100  * (scoper is not null)::int
@@ -155,7 +155,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1    * ("quantity" is not null)::int
                + 1    * ("priorityNumber" is not null)::int
                + 1    * ("positionNumber" is not null)::int
-,      _type_2_hash = md5(textin(record_out(ROW(
+,      _record_hash = md5(textin(record_out(ROW(
                     "nullFlavor",
                     "classCode",
                     "code",
@@ -174,7 +174,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
 
 
 UPDATE ONLY "Patient"
-SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
+SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1000 * ("id" is not null)::int
                + 100  * (player is not null)::int
                + 100  * (scoper is not null)::int
@@ -196,7 +196,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1    * ("priorityNumber" is not null)::int
                + 1    * ("positionNumber" is not null)::int
                + 1    * ("veryImportantPersonCode" is not null)::int
-,      _type_2_hash = md5(textin(record_out(ROW(
+,      _record_hash = md5(textin(record_out(ROW(
                     "nullFlavor",
                     "classCode",
                     "code",
@@ -215,7 +215,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
 ))));
 
 UPDATE ONLY "LicensedEntity"
-SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
+SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1000 * ("id" is not null)::int
                + 100  * (player is not null)::int
                + 100  * (scoper is not null)::int
@@ -237,7 +237,7 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
                + 1    * ("priorityNumber" is not null)::int
                + 1    * ("positionNumber" is not null)::int
                + 1    * ("recertificationTime" is not null)::int
-,      _type_2_hash = md5(textin(record_out(ROW(
+,      _record_hash = md5(textin(record_out(ROW(
                     "nullFlavor",
                     "classCode",
                     "code",
@@ -257,9 +257,9 @@ SET    _weight = 2000 * (_mif LIKE 'TZDU%')::int
 
 \quit
 
-select _mif, "classCode", avg(_weight) from "Entity" group by _mif, "classCode";
-select _mif, "classCode", avg(_weight) from "Role" group by _mif, "classCode";
+select _mif, "classCode", avg(_record_weight) from "Entity" group by _mif, "classCode";
+select _mif, "classCode", avg(_record_weight) from "Role" group by _mif, "classCode";
 
-explain analyze select distinct _mif, "classCode" from "Entity" where _weight is null;
-explain analyze select distinct _mif, "classCode" from "Role" where _weight is null;
+explain analyze select distinct _mif, "classCode" from "Entity" where _record_weight is null;
+explain analyze select distinct _mif, "classCode" from "Role" where _record_weight is null;
 

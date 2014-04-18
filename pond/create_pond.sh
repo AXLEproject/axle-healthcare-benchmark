@@ -47,12 +47,12 @@ pgext2sql_unlogged() {
     EXTDIR=$(pg_config --sharedir)/extension
     cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
         -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
-        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _type_1_hash TEXT, _type_2_hash TEXT, _weight INT,/g' \
+        -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _record_hash TEXT, _record_weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
         -e 's/"player" BIGINT, "scoper" BIGINT,/"player" BIGINT, "scoper" BIGINT, "player_original" BIGINT, "scoper_original" BIGINT,/g' \
         -e '/CREATE TABLE "[[:alpha:]]*Participation"/ {s/_clonename TEXT,/_clonename TEXT, _origin BIGINT,/}' \
-        -e 's/"value" "ANY",/_value_pq_value NUMERIC, _value_pq_unit TEXT, _value_code_code TEXT, _value_code_codesystem TEXT, "value" "ANY",/g' \
+        -e 's/"value" "ANY",/_value_pq pq,_value_pq_value NUMERIC, _value_pq_unit TEXT,_value_code cv,_value_code_code TEXT, _value_code_codesystem TEXT, _value_int INT, _value_real NUMERIC, _value_ivl_real ivl_real, "value" "ANY",/g' \
         -e 's/, "effectiveTime"/, _effective_time_low TIMESTAMPTZ, _effective_time_low_year INT, _effective_time_low_month INT, _effective_time_low_day INT, _effective_time_high TIMESTAMPTZ, _effective_time_high_year INT, _effective_time_high_month INT, _effective_time_high_day INT, "effectiveTime"/g' \
         -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \
         -e 's/\([^a-z]\)cs\(([^)]\+)\)/\1cv\2/gi' \
