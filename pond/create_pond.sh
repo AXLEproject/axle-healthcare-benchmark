@@ -97,6 +97,9 @@ case "${ACTION}" in
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
 
+# add opaque oid for some observation codes in the synthetic dataset.
+        pgcommand $DBNAME "SELECT add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');"
+
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
         ;;
