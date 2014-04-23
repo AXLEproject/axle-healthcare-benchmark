@@ -70,8 +70,8 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
-# If there are no organizations we can exit
-R=`psql -U ${DPUSER} -d ${DPDB} -tAc 'SELECT 1 FROM "Organization" LIMIT 1'`
+# If there are no roles we can exit
+R=`psql -U ${DPUSER} -d ${DPDB} -tAc 'SELECT 1 FROM "Role" LIMIT 1'`
 test "X${R}" = "X1" || exit 0
 #logger -t axle-pond-upload "database is empty"
 

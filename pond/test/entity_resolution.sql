@@ -4,7 +4,6 @@
  *
  */
 
-CREATE EXTENSION IF NOT EXISTS intarray;
 /*
  * Patient records:
  * id      contents          weight
@@ -362,15 +361,7 @@ END$$;
 
 COMMIT;
 
-BEGIN;
-
-\i /home/m/axle-healthcare-benchmark/pond/preprocess/010_ccontextconduction.sql
-
-COMMIT;
-\i /home/m/axle-healthcare-benchmark/pond/preprocess/020_deduplication.sql
-\i /home/m/axle-healthcare-benchmark/pond/preprocess/030_denormalize.sql
-\i /home/m/axle-healthcare-benchmark/pond/preprocess/040_hash_and_weight.sql
-\i /home/m/axle-healthcare-benchmark/pond/preprocess/050_original_id.sql
+\quit
 
 set hdl.pretty_print to true;
 SELECT _id
@@ -381,7 +372,5 @@ SELECT _id
 ,       _record_weight
 FROM "Patient"
 ORDER BY _id;
-
-\i /home/m/axle-healthcare-benchmark/lake/postprocess/010_entity_resolution.sql
 
 

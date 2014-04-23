@@ -184,6 +184,8 @@ else
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
 fi
 
+        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
+
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
         echo "..Restricting login to owner"
