@@ -38,7 +38,7 @@ SELECT (select count(*) from updr) AS roles_updated,
 DO $$
 DECLARE orphaned_rows boolean;
 BEGIN
-        SELECT EXISTS(SELECT 1 FROM "Role" WHERE scoper NOT IN (SELECT _id FROM "Entity"))
+        SELECT EXISTS(SELECT 1 FROM "Role" WHERE scoper IS NOT NULL AND scoper NOT IN (SELECT _id FROM "Entity"))
                 INTO orphaned_rows;
         IF orphaned_rows THEN
                 RAISE EXCEPTION 'Organization de-duplication caused orphaned rows';
