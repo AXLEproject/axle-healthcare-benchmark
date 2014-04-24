@@ -69,7 +69,7 @@ class Organization(
 }
 
 object Organization {
-	private val organizationCodes = List("HPRAK")
+	private val organizationCodes = List(("HPRAK", 0.8), ("APTK", 0.1), ("ZI", 0.08), ("HOSP", 0.02))
 	val minimalDaysOld = 30
 	val maximalDaysOld = 10 * 365
 
@@ -83,10 +83,20 @@ object Organization {
 		val agb = Random.nextInt(99999999)
 		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
 		val startDate = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld))
-		val code = organizationCodes(Random.nextInt(organizationCodes.length))
+		val code = randomOrganizationCode()
 		val nrOfPatients = model.sampleNrOfPatients
 		val nrOfPractitioners = Math.max(1, RandomHelper.between(0, nrOfPatients / 10))
 		val practitioners = for (i <- 0 to nrOfPractitioners) yield Practitioner.sample(id)
 		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), partOf, practitioners.toList, nrOfPatients)
+	}
+
+	private def randomOrganizationCode(): String = {
+		organizationCodes.foreach(e => {
+			if (Random.nextDouble() < e._2) {
+				return e._1
+			}
+		})
+
+		return organizationCodes(Random.nextInt(organizationCodes.length))._1
 	}
 }
