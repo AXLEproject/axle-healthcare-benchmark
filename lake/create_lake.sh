@@ -81,7 +81,6 @@ gpext2sql() {
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
         -e 's/"player" BIGINT, "scoper" BIGINT,/"player" BIGINT, "scoper" BIGINT, "player_original" BIGINT, "scoper_original" BIGINT,/g' \
         -e '/CREATE TABLE "[[:alpha:]]*Participation"/ {s/_clonename TEXT,/_clonename TEXT, _origin BIGINT,/}' \
-        -e 's/ INHERITS (\"[[:alpha:]]*\")//g' \
         -e 's/ PRIMARY KEY//g' \
         -e 's/ REFERENCES \"[[:alpha:]]*\"//g' \
         -e 's/"value" "ANY",/_value_pq pq,_value_pq_value NUMERIC, _value_pq_unit TEXT,_value_code cv,_value_code_code TEXT, _value_code_codesystem TEXT, _value_int INT, _value_real NUMERIC, _value_ivl_real ivl_real, "value" "ANY",/g' \
@@ -93,10 +92,11 @@ DISTRIBUTED BY (_id);
 }' \
         -e '/CREATE TABLE "Participation"/ {s/;//}' \
         -e '/CREATE TABLE "Participation"/ {a\
-WITH (appendonly = true, orientation = column, compresslevel = 6)\
+WITH (appendonly = true, compresslevel = 6)\
 DISTRIBUTED BY (act);
 }' \
-        -e '/CREATE TABLE "Observation"/ {s/;//}' \
+        -e '/CREATE TABLE "[[:alpha:]]*"/ {s/ INHERITS (\"Observation\")//}' \
+        -e '/CREATE TABLE "Observation"/ {s/ INHERITS (\"[[:alpha:]]*\");//}' \
         -e '/CREATE TABLE "Observation"/ {a\
 WITH (appendonly = true, orientation = column, compresslevel = 6)\
 DISTRIBUTED BY (_id)\
