@@ -35,7 +35,7 @@ BEGIN
     ,      _record_weight
     ,      t.id
     ,      "ANYout"(t.id::"ANY")::text AS idtext -- workaround for no hash on udt on gp
-    FROM   "$sql$||rimschema||'"."'||rimtable||$sql$" t
+    FROM   ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     JOIN   stream.append_id i
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
@@ -50,7 +50,7 @@ BEGIN
     , a._record_hash
     , t._id_cluster
     FROM _A a
-    JOIN "$sql$||rimschema||'"."'||rimtable||$sql$" t
+    JOIN ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     ON   t.id @> a.id
     AND  t._id_cluster IS NOT NULL
   $sql$;
@@ -100,7 +100,7 @@ BEGIN
     ,      e._id_cluster
     ,      t._id AS dedup_new_id
     FROM _E e
-    LEFT JOIN "$sql$||rimschema||'"."'||rimtable||$sql$" t
+    LEFT JOIN ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     ON   e._id_cluster = t._id_cluster
     AND  e._record_hash = t._record_hash
   $sql$;
@@ -253,7 +253,7 @@ BEGIN
 
   /* De-dup */
   EXECUTE $sql$
-    DELETE FROM "$sql$||rimschema||'"."'||rimtable||$sql$" t
+    DELETE FROM ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     USING  _I i
     WHERE  t._id          = i._id
     AND    i.dedup_new_id IS NOT NULL
@@ -261,7 +261,7 @@ BEGIN
 
   /* Set new clusters */
   EXECUTE $sql$
-    UPDATE "$sql$||rimschema||'"."'||rimtable||$sql$" t
+    UPDATE ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     SET    _id_cluster = i._id_cluster
     FROM   _I i
     WHERE  t._id       = i._id
