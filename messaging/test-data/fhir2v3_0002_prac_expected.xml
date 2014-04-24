@@ -2,27 +2,28 @@
 <!-- Payload of the HTTP POST to http://mgrid.net/fhir/Practitioner This means
 	that a new employee (has role_id) has been added to Portavita.  with
 	the following details. JWK 27-11-2013. -->
-<PractitionerUpdate  xmlns="urn:hl7-org:v3" classCode="ACTN" moodCode="EVN">
+<PractitionerUpdate moodCode="EVN" classCode="ACTN" xmlns="urn:hl7-org:v3">
   <templateId root="TBD"/>
   <subject typeCode="SBJ">
     <healthCareProvider classCode="PROV">
-      <code code="specialist" codeSystem="http://portavita.eu/fhir/PractitionerSpeciality"/>
+      <id extension="192105" root="2.16.840.1.113883.2.4.3.31.3.3"/>
+      <id extension="31879" root="2.16.840.1.113883.2.4.3.31.3.2"/>
+      <id extension="13199" root="2.16.840.1.113883.2.4.6.1"/>
+      <code codeSystem="http://portavita.eu/fhir/PractitionerSpeciality" code="specialist"/>
       <effectiveTime>
         <low value="20100331000000"/>
       </effectiveTime>
-      <healthCarePractitioner classCode="PSN" determinerCode="INSTANCE">
-        <id root="2.16.840.1.113883.2.4.3.31.3.3" extension="192105" />
-        <id root="2.16.840.1.113883.2.4.3.31.3.2" extension="31879" />
-        <id root="2.16.840.1.113883.2.4.6.1" extension="13199" />
-	<name use="L">
+      <healthCarePractitioner determinerCode="INSTANCE" classCode="PSN">
+        <id extension="192105" root="2.16.840.1.113883.2.4.3.31.3.3"/>
+        <id extension="31879" root="2.16.840.1.113883.2.4.3.31.3.2"/>
+        <id extension="13199" root="2.16.840.1.113883.2.4.6.1"/>
+        <name use="L">
           <given>Francisca</given>
-          <family>JASPERS</family>
-            WMJ JASPERS-DE BOER
-        </name>
-        <telecom use="WP" value="0123-456789" />
-	<telecom use="MC" value="06-52523542" />
-	<telecom use="WP" value="wmjdeboer@zgch.nl"/>
-        <administrativeGenderCode code="F" codeSystem="2.16.840.1.113883.5.1" codeSystemName="HL7 AdministrativeGender" displayName="Female"/>
+        <family>JASPERS</family>WMJ JASPERS-DE BOER</name>
+        <telecom use="WP" value="0123-456789"/>
+        <telecom use="MC" value="06-52523542"/>
+        <telecom use="WP" value="wmjdeboer@zgch.nl"/>
+        <administrativeGenderCode displayName="Female" codeSystemName="HL7 AdministrativeGender" codeSystem="2.16.840.1.113883.5.1" code="F"/>
         <birthTime value="19510909000000"/>
         <addr use="WP">
           <streetAddressLine>Tjongerschansweg 100-200</streetAddressLine>
@@ -31,8 +32,8 @@
           <useablePeriod value="20100331000000"/>
         </addr>
       </healthCarePractitioner>
-      <issuingOrganization classCode="ORG" determinerCode="INSTANCE">
-        <id root="2.16.840.1.113883.2.4.3.31.1" extension="257327"/>
+      <issuingOrganization determinerCode="INSTANCE" classCode="ORG">
+        <id extension="257327" root="2.16.840.1.113883.2.4.3.31.1"/>
       </issuingOrganization>
     </healthCareProvider>
   </subject>

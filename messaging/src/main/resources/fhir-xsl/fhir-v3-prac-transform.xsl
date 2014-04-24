@@ -11,6 +11,7 @@
       <templateId root="TBD"/>
       <subject typeCode="SBJ">
         <healthCareProvider classCode="PROV">
+          <xsl:apply-templates select="fhir:identifier" />
           <xsl:apply-templates select="fhir:specialty/fhir:coding" />
           <xsl:apply-templates select="fhir:period" />
           <healthCarePractitioner classCode="PSN" determinerCode="INSTANCE">
