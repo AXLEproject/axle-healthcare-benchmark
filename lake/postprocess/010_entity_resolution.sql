@@ -19,18 +19,8 @@
    ->  Seq Scan on "Container"  (cost=0.00..10.80 rows=80 width=636) (actual time=0.001..0.001 rows=0 loops=1)
    ->  Seq Scan on "Device"  (cost=0.00..10.80 rows=80 width=636) (actual time=0.000..0.000 rows=0 loops=1)
 **/
-BEGIN;
-SELECT resolution_start  ('rim2011', 'Organization');
-SELECT resolution_execute('rim2011', 'Organization', '{{Role,player},{Role,scoper}}');
-SELECT resolution_end    ('rim2011', 'Organization');
-COMMIT;
-
-BEGIN;
-SELECT resolution_start  ('rim2011', 'Person');
-SELECT resolution_execute('rim2011', 'Person', '{{Role,player},{Role,scoper}}');
-SELECT resolution_end    ('rim2011', 'Person');
-COMMIT;
-
+SELECT resolution('rim2011', 'Organization', '{{Role,player},{Role,scoper}}');
+SELECT resolution('rim2011', 'Person'      , '{{Role,player},{Role,scoper}}');
 
 /***
 ---------------------------------------------------------------------------
@@ -43,20 +33,12 @@ COMMIT;
    ->  Seq Scan on "QualifiedEntity"  (cost=0.00..11.00 rows=100 width=744) (actual time=0.009..0.009 rows=0 loops=1)
 ***/
 
-BEGIN;
-SELECT resolution_start  ('rim2011', 'Role'  );
-SELECT resolution_execute('rim2011', 'Role'  , '{{Participation,role}}');
-SELECT resolution_end    ('rim2011', 'Role'  );
-COMMIT;
+SELECT resolution('rim2011', 'Role'          , '{{Participation,role}}');
+SELECT resolution('rim2011', 'LicensedEntity', '{{Participation,role}}');
+SELECT resolution('rim2011', 'Patient'       , '{{Participation,role}}');
 
-BEGIN;
-SELECT resolution_start  ('rim2011', 'LicensedEntity');
-SELECT resolution_execute('rim2011', 'LicensedEntity', '{{Participation,role}}');
-SELECT resolution_end    ('rim2011', 'LicensedEntity');
-COMMIT;
+DELETE FROM stream.append_id
+WHERE schema_name = 'rim2011'
+AND   table_name IN ('ActRelationship','Act','Observation','ControlAct','Participation','Document');
 
-BEGIN;
-SELECT resolution_start  ('rim2011', 'Patient'  );
-SELECT resolution_execute('rim2011', 'Patient'  , '{{Participation,role}}');
-SELECT resolution_end    ('rim2011', 'Patient'  );
-COMMIT;
+VACUUM stream.append_id;

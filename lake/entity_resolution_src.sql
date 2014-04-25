@@ -6,6 +6,22 @@
  */
 
 
+CREATE OR REPLACE FUNCTION resolution(
+       rimschema   text
+,      rimtable    text
+,      rimfkeys    text[][]
+)
+RETURNS void AS
+$resolution$
+BEGIN
+  PERFORM resolution_start(rimschema, rimtable);
+  PERFORM resolution_execute(rimschema, rimtable, rimfkeys);
+  PERFORM resolution_end(rimschema, rimtable);
+END;
+$resolution$
+LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION resolution_start(
        rimschema text
 ,      rimtable text
@@ -226,11 +242,32 @@ CREATE OR REPLACE FUNCTION resolution_execute(
 RETURNS void AS
 $resolution_execute$
 DECLARE
-  i   int;
-  fk  text;
-  fk_orig text;
-
+  i       INT;
+  fk      TEXT;
+  fk_orig TEXT;
+  sta     TEXT[];
+  r       RECORD;
 BEGIN
+  /*
+   * Lock exclusively all tables we will update in alphabetic order, to prevent
+   * deadlocks with incoming copy streams.
+   */
+  RAISE INFO 'Executing resolution for %', rimtable;
+
+  SELECT array_agg(schema_table ORDER BY schema_table)
+  INTO sta
+  FROM alfa_lock_tables(('"'||rimfkeys[1][1]||'"')::regclass,
+     '"'||rimschema||'"',
+     '"'||rimtable||'"'
+    );
+
+  FOR r IN SELECT * FROM unnest(sta)
+  LOOP
+    RAISE INFO 'Locking table %', r.unnest;
+    EXECUTE $sql$
+      LOCK TABLE $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE
+    $sql$;
+  END LOOP;
 
   /* Update foreign keys */
   FOR i IN array_lower(rimfkeys, 1) .. array_upper(rimfkeys, 1)
@@ -272,7 +309,6 @@ END;
 $resolution_execute$
 LANGUAGE plpgsql;
 
-
 CREATE OR REPLACE FUNCTION resolution_end(
        rimschema text
 ,      rimtable text
@@ -280,11 +316,63 @@ CREATE OR REPLACE FUNCTION resolution_end(
 RETURNS void AS
 $resolution_end$
 BEGIN
+  /* Mark the records processed */
+  EXECUTE $sql$
+    DELETE FROM stream.append_id i
+    USING  _A a
+    WHERE  a._id = i.id;
+  $sql$;
+END;
+$resolution_end$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION purge_append_id(
+       rimschema text
+,      rimtable text
+)
+RETURNS void AS
+$purge_append_id$
+BEGIN
   EXECUTE $sql$
     DELETE FROM stream.append_id i
     WHERE  i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
   $sql$;
 END;
-$resolution_end$
+$purge_append_id$
 LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION reflx_trans_inh_childs(oid)
+RETURNS SETOF oid AS $$
+  SELECT $1
+  UNION
+  SELECT i.inhrelid
+  FROM   pg_catalog.pg_inherits i
+  WHERE  i.inhparent            = $1
+  UNION
+  SELECT reflx_trans_inh_childs(i.inhrelid)
+  FROM   pg_catalog.pg_inherits i
+  WHERE  i.inhparent            = $1;
+$$ LANGUAGE 'sql' STABLE;
+
+CREATE OR REPLACE FUNCTION alfa_lock_tables(
+       parentoid  IN  regclass
+,      rimschema  IN  text
+,      rimtable   IN  text
+,      schema_table OUT text
+)
+RETURNS SETOF text AS $$
+  SELECT rimschema || '.' || rimtable FROM (
+    SELECT  $2 AS rimschema
+    ,       $3 AS rimtable
+    UNION
+    SELECT  pg_namespace.nspname::text
+    ,       regclassout(('"'||pg_class.relname::text||'"')::regclass)::text
+    FROM    reflx_trans_inh_childs($1) inh(inhrelid)
+    JOIN    pg_catalog.pg_class ON (inh.inhrelid = pg_class.oid)
+    JOIN    pg_catalog.pg_namespace ON (pg_class.relnamespace = pg_namespace.oid)
+  ) t
+  ;
+$$ LANGUAGE 'sql' STABLE;
+
