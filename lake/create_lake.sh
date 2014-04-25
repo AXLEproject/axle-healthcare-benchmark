@@ -59,8 +59,6 @@ pgext2sql_unlogged() {
         | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
 }
 
-# WITH (appendonly = true, orientation = column, compresslevel = 9)\
-
 gpext2sql() {
     echo "Manually loading extension $2"
     EXTDIR=$(pg_config --sharedir)/contrib
@@ -93,7 +91,8 @@ DISTRIBUTED BY (_id);
         -e '/CREATE TABLE "Participation"/ {s/;//}' \
         -e '/CREATE TABLE "Participation"/ {a\
 WITH (appendonly = true, compresslevel = 6)\
-DISTRIBUTED BY (act);
+DISTRIBUTED BY (act);\
+ALTER TABLE "Participation" SET DISTRIBUTED BY (act);
 }' \
         -e '/CREATE TABLE "[[:alpha:]]*"/ {s/ INHERITS (\"Observation\")//}' \
         -e '/CREATE TABLE "Observation"/ {s/ INHERITS (\"[[:alpha:]]*\");//}' \
@@ -108,6 +107,7 @@ PARTITION BY RANGE (_effective_time_low_year)\
   (START (2008) END (2016) EVERY (1),\
    DEFAULT PARTITION other_years );
 }' | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
+    rm log.txt
 }
 
 case "${ACTION}" in
