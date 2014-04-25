@@ -12,11 +12,12 @@ WITH ActOrObs AS (
 )
 SELECT
             ptnt.player           AS peso_id
+,           ptnt._id              AS ptnt_id
 ,           exam._id
 ,           exam.code
 ,           exam."classCode"
 ,           exam._effective_time_low
-,           RANK() OVER (PARTITION BY ptnt.player--, exam.code
+,           RANK() OVER (PARTITION BY ptnt.player, exam.code->>'code'
                          ORDER BY exam._effective_time_low DESC, exam._id DESC) AS rocky
 FROM        ActOrObs                exam
 JOIN        "Participation"         rct_ptcp
@@ -30,4 +31,3 @@ JOIN ONLY   "Act"                   section
 ON          section._id         =   parent.source
 AND         section."classCode" =   'DOCSECT:2.16.840.1.113883.5.6'
 ;
-
