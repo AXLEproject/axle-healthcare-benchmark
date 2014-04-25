@@ -3,6 +3,11 @@
  * All rights reserved
  *
  * Post processing on the lake.
+ *
+ * Use the following oneliner to resolve incoming data
+
+while true ; do PGOPTIONS='--client-min-messages=warning' time psql --set=VERBOSITY=terse -p 15432 lake -f postprocess/010_entity_resolution.sql ; sleep 5 ; done
+
  */
 /**
                                                          QUERY PLAN
