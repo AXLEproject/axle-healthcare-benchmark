@@ -14,27 +14,28 @@ CREATE OR REPLACE FUNCTION resolution(
 RETURNS void AS
 $resolution$
 BEGIN
-  PERFORM resolution_start(rimschema, rimtable);
-  PERFORM resolution_execute(rimschema, rimtable, rimfkeys);
-  PERFORM resolution_end(rimschema, rimtable);
+  /* Force error when trying to run resolution on the same table concurrently. */
+  PERFORM 1/pg_try_advisory_lock(('"'||rimschema||'"."'||rimtable||'"')::regclass::int)::int;
+
+  IF resolution_start(rimschema, rimtable)
+  THEN
+    PERFORM resolution_execute(rimschema, rimtable, rimfkeys);
+    PERFORM resolution_end(rimschema, rimtable);
+  END IF;
 END;
 $resolution$
 LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION resolution_start(
        rimschema text
 ,      rimtable text
 )
-RETURNS void AS
+RETURNS bool AS
 $resolution_start$
 DECLARE
   number int;
+  result bool := false;
 BEGIN
-
-  /* Prevent running the procedure for this table more than once concurrently. */
-  PERFORM 1/pg_try_advisory_lock(('"'||rimschema||'"."'||rimtable||'"')::regclass::int)::int;
-
   CREATE TEMP TABLE _I (
     _id          bigint
   , _id_cluster  bigint
@@ -50,7 +51,6 @@ BEGIN
     ,      _record_hash
     ,      _record_weight
     ,      t.id
-    ,      "ANYout"(t.id::"ANY")::text AS idtext -- workaround for no hash on udt on gp
     FROM   ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
     JOIN   stream.append_id i
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
@@ -75,6 +75,7 @@ BEGIN
 
   IF number > 0
   THEN
+     result := true;
      PERFORM instructions_for_existing_clusters(rimschema, rimtable);
   END IF;
 
@@ -91,8 +92,11 @@ BEGIN
 
   IF number > 0
   THEN
+     result := true;
      PERFORM instructions_for_new_clusters(rimschema, rimtable);
   END IF;
+
+  RETURN result;
 END;
 $resolution_start$
 LANGUAGE plpgsql;
@@ -196,7 +200,7 @@ BEGIN
       ,       cluster_hash
       ,      rank() OVER (mywindow) AS rank
       FROM _N
-      JOIN (SELECT * FROM _C2 LIMIT 8) _C2
+      JOIN _C2
       ON ARRAY[_N._id] <@ _C2.cluster
       WINDOW mywindow AS (PARTITION BY cluster_hash
                           ORDER BY _record_weight DESC)
@@ -263,10 +267,13 @@ BEGIN
 
   FOR r IN SELECT * FROM unnest(sta)
   LOOP
-    RAISE INFO 'Locking table %', r.unnest;
-    EXECUTE $sql$
-      LOCK TABLE $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE
-    $sql$;
+    BEGIN
+      EXECUTE $sql$ LOCK TABLE ONLY $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE $sql$;
+      RAISE DEBUG 'Locking table PG %', r.unnest;
+    EXCEPTION WHEN OTHERS THEN
+      EXECUTE $sql$ LOCK TABLE $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE $sql$;
+      RAISE DEBUG 'Locking table GP %', r.unnest;
+    END;
   END LOOP;
 
   /* Update foreign keys */
