@@ -146,6 +146,8 @@ else
         pgcommand $DBNAME "CREATE EXTENSION adminpack"
         # Vocabulary 2011 has support for previous editions
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
+        pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20140131"
+        pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
 
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
