@@ -3,22 +3,26 @@
  */
 package eu.portavita.axle.generatable
 
-import java.text.SimpleDateFormat
+import java.util.ArrayList
 import java.util.Date
+
 import scala.collection.JavaConversions.asScalaBuffer
 import scala.collection.JavaConversions.bufferAsJavaList
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.collection.JavaConversions.mutableMapAsJavaMap
 import scala.collection.JavaConversions.seqAsJavaList
 import scala.collection.mutable
-import eu.portavita.terminology.CodeSystem
-import eu.portavita.terminology.HierarchyNode
-import java.util.ArrayList
-import eu.portavita.databus.data.model.PortavitaTreatmentOfExamination
+
+import eu.portavita.axle.helper.CdaValueBuilderHelper
+import eu.portavita.axle.helper.CodeSystemProvider
+import eu.portavita.axle.helper.DateTimes
+import eu.portavita.databus.data.model.PortavitaAct
+import eu.portavita.databus.data.model.PortavitaActRelationship
 import eu.portavita.databus.data.model.PortavitaExamination
 import eu.portavita.databus.data.model.PortavitaParticipation
-import eu.portavita.databus.data.model.PortavitaActRelationship
-import eu.portavita.databus.data.model.PortavitaAct
+import eu.portavita.databus.data.model.PortavitaTreatmentOfExamination
+import eu.portavita.terminology.CodeSystem
+import eu.portavita.terminology.HierarchyNode
 
 /**
  * Represents an examination with underlying observations.
@@ -34,7 +38,9 @@ class Examination(
 	val practitioner: Practitioner) {
 
 	/** Code system of act code. */
-	lazy val codeSystem = CodeSystem.guess(code)
+	lazy val codeSystem = CodeSystemProvider.get(code)
+
+	lazy val displayNameProvider = CdaValueBuilderHelper.getDisplayNameProvider
 
 	/**
 	 * Returns whether any observation in this examination has a value.
@@ -99,6 +105,15 @@ class Examination(
 		new PortavitaExamination(examAct, actRelationships, actDetails.values.toList, participants, treatments)
 	}
 
+	def generateText(): String = {
+		val sb = new StringBuilder
+		sb.append("This is the report about %s examination that was performed on date %s by %s\n".format(displayNameProvider.get(code), DateTimes.dateFormat.format(date), practitioner.toReportString))
+		sb.append("The examination was performed on patient %s\n".format(patient.toString()))
+		sb.append("In this examination, the following %d observations were made:\n".format(observations.size))
+		for((key, observation) <- observations) sb.append(" - %s\n".format(observation.toReportString(displayNameProvider)))
+		sb.toString()
+	}
+
 	def createTreatments(examinationActId: Long): ArrayList[PortavitaTreatmentOfExamination] = {
 		val treatments = new ArrayList[PortavitaTreatmentOfExamination]()
 		for (treatment <- patient.treatments) {
@@ -154,8 +169,7 @@ class Examination(
 		if (hasValues) {
 			val s = StringBuilder.newBuilder
 			s.append("Examination (code=" + code + ")")
-			val formatter = new SimpleDateFormat("dd-MM-yyyy")
-			s.append("on " + formatter.format(date))
+			s.append("on " + DateTimes.dateFormat.format(date))
 			s.append("\n")
 			for ((code, observation) <- observations if observation.hasValue) {
 				s.append("\t" + observation + "\n")

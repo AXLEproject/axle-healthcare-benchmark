@@ -9,6 +9,7 @@ import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.databus.data.model.PortavitaPractitioner
 import eu.portavita.databus.data.model.PortavitaPerson
 import eu.portavita.databus.data.model.PortavitaParticipation
+import java.text.SimpleDateFormat
 
 /**
  * Represents a health care practitioner.
@@ -38,6 +39,17 @@ class Practitioner(
 		participation.setRoleId(roleId)
 		participation.setTypeCode(typeCode)
 		participation
+	}
+
+	override def toString = {
+		"%s (in service from %s till %s)".format(person.name.toString(), DateTimes.dateFormat.format(fromTime), DateTimes.dateFormat.format(toTime))
+	}
+
+	def toReportString: String = {
+		if (toTime != null) {
+			return "%s (in service from %s till %s)".format(person.name.toString(), DateTimes.dateFormat.format(fromTime), DateTimes.dateFormat.format(toTime))
+		}
+		return "%s (in service from %s)".format(person.name.toString(), DateTimes.dateFormat.format(fromTime))
 	}
 }
 

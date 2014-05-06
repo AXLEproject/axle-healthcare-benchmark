@@ -3,14 +3,14 @@
  */
 package eu.portavita.axle.generatable
 
-import java.util.Date
-import java.text.SimpleDateFormat
-import eu.portavita.axle.helper.RandomHelper
-import scala.util.Random
-import eu.portavita.axle.helper.DateTimes
-import eu.portavita.databus.data.model.PortavitaPerson
-import eu.portavita.databus.data.model.PortavitaAddress
 import java.util.Arrays
+import java.util.Date
+
+import scala.util.Random
+
+import eu.portavita.axle.helper.DateTimes
+import eu.portavita.axle.helper.RandomHelper
+import eu.portavita.databus.data.model.PortavitaPerson
 
 /**
  * Represents a person.
@@ -44,12 +44,9 @@ class Person(
 	}
 
 	override def toString = {
-		val s = StringBuilder.newBuilder
-		val formatter = new SimpleDateFormat("dd-MM-yyyy")
-		s.append("Patient " + name +
-			", birth date = " + formatter.format(birthDate) + "\n")
-		s.toString
+		"%s (born at %s in %s)".format(name.toString(), DateTimes.dateFormat.format(birthDate), birthPlace)
 	}
+
 }
 
 object Person {

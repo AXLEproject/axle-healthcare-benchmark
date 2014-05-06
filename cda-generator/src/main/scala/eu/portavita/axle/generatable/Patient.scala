@@ -3,14 +3,15 @@
  */
 package eu.portavita.axle.generatable
 
-import java.text.SimpleDateFormat
 import java.util.Date
+
 import scala.util.Random
+
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.model.PatientProfile
-import eu.portavita.databus.data.model.PortavitaPatient
 import eu.portavita.databus.data.model.PortavitaParticipation
+import eu.portavita.databus.data.model.PortavitaPatient
 
 /**
  * Represents a patient.
@@ -53,10 +54,9 @@ class Patient(
 		participation
 	}
 
-	override def toString = {
-		val formatter = new SimpleDateFormat("dd-MM-yyyy")
-		super.toString + ", care provision started " + formatter.format(careProvisionStart) + "\n"
-	}
+	override def toString = "%s, care provision started %s".format(nameString, DateTimes.dateFormat.format(careProvisionStart))
+	def nameString = person.name.toString()
+	def treatmentString = "TODO"
 }
 
 object Patient {

@@ -39,6 +39,10 @@ class Treatment(
 		treatmentOfExamination.setExaminationActId(examinationActId)
 		treatmentOfExamination
 	}
+
+	override def toString = {
+		"treatment from %s".format(principalPractitioner.person.toString())
+	}
 }
 
 object Treatment {

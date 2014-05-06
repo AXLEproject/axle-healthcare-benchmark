@@ -32,6 +32,9 @@ import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.HierarchyNode
 import javax.xml.bind.Marshaller
 import eu.portavita.databus.message.contents.ExaminationMessageContent
+import eu.portavita.axle.helper.CodeSystemProvider
+import org.hl7.v3.StrucDocText
+import org.apache.commons.io.input.TeeInputStream
 
 sealed trait ExaminationMessage
 case class ExaminationGenerationRequest(val patient: Patient, val performanceDates: IndexedSeq[Date]) extends ExaminationMessage
@@ -116,8 +119,15 @@ class ExaminationGenerator(
 
 		def publish(examination: Examination) {
 			val message = buildExaminationMessage(examination)
+			addText(examination.generateText(), message)
 			val marshalledMessage = MarshalHelper.marshal(message, marshaller)
 			publisher.publish(marshalledMessage, RabbitMessageQueue.examinationRoutingKey)
+		}
+
+		def addText(text: String, message: ExaminationMessageContent) {
+			val textElement = new StrucDocText
+			textElement.getContent().add(text)
+			message.getExaminationSections().get(0).setText(textElement)
 		}
 
 		private def buildExaminationMessage(examination: Examination): ExaminationMessageContent = {
@@ -221,7 +231,7 @@ object ExaminationGenerator {
 
 			// Create generator actor if there is either a discrete nor numeric network defined
 			if (discreteNetwork.isDefined || (numericNetwork.isDefined && missingValuesNetwork.isDefined)) {
-				val codeSystem = CodeSystem.guess(examinationCode)
+				val codeSystem = CodeSystemProvider.get(examinationCode)
 				// Create examination generator actor based on the model
 				Some(system.actorOf(
 					Props(

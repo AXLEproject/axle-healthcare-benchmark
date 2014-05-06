@@ -4,12 +4,12 @@
 package eu.portavita.axle.generatable
 
 import java.util.Date
-import eu.portavita.axle.GeneratorConfig
-import eu.portavita.databus.data.model.PortavitaAct
-import eu.portavita.terminology.CodeSystem
-import scala.util.matching.Regex
-import java.util.regex.Pattern
 import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+import eu.portavita.axle.GeneratorConfig
+import eu.portavita.axle.helper.TerminologyDisplayNameProvider
+import eu.portavita.databus.data.model.PortavitaAct
 
 /**
  * Represents a single observation event.
@@ -81,6 +81,8 @@ abstract class Observation {
 	 * @return Java object version of this observation
 	 */
 	def toHl7Act(date: Date): Option[PortavitaAct]
+
+	def toReportString(displayNameProvider: TerminologyDisplayNameProvider): String
 }
 
 /**
@@ -115,6 +117,10 @@ case class NumericObservation(val code: String, val value: Double, val unit: Str
 	}
 
 	override def toString = "Num.Obs(" + code + ")=" + value
+
+	override def toReportString(displayNameProvider: TerminologyDisplayNameProvider): String = {
+		"observation %s was made and had outcome %s %s".format(displayNameProvider.get(code), value, unit)
+	}
 }
 
 /**
@@ -153,4 +159,8 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 	}
 
 	override def toString = code + "\t= " + value
+
+	override def toReportString(displayNameProvider: TerminologyDisplayNameProvider): String = {
+		"observation %s was made and had outcome %s".format(displayNameProvider.get(code), value)
+	}
 }

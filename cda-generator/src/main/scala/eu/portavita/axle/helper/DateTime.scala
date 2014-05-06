@@ -6,8 +6,11 @@ package eu.portavita.axle.helper
 import java.util.Calendar
 import java.util.Date
 
+import org.apache.commons.lang3.time.FastDateFormat
+
 object DateTimes {
 	val todayDate = new Date
+	val dateFormat = FastDateFormat.getInstance("yyyy-MM-dd")
 
 	/**
 	 * Returns the date as the given number of days after the given date.
