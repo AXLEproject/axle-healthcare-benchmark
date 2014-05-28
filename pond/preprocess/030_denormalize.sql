@@ -12,8 +12,7 @@ SET _value_pq              = value::"PQ"::pq
 WHERE datatype(value)      = 'PQ';
 
 UPDATE "Observation"
-SET _value_code            = value::"CD"::cv
-,   _value_code_code       = value ->> 'code'
+SET _value_code_code       = value ->> 'code'
 ,   _value_code_codesystem = value ->> 'codeSystem'
 WHERE datatype(value)      IN ('CD', 'CS', 'CE', 'CO', 'CV');
 

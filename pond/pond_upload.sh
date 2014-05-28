@@ -89,7 +89,7 @@ t_after=$(timestamp)
 logger -t axle-pond-upload "pond_recordids() execution time $(( t_after - t_before )) seconds"
 
 t_before=$(timestamp)
-pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
+PGOPTIONS='--hdl.concept_print_mode=complex_r1' pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
     -e '/SET search_path/ s/;/, hl7;/' \
     -e '/SET lock_timeout/d' \
     -e '/pg_catalog.setval/d' \
