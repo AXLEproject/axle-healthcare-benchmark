@@ -1,20 +1,20 @@
 WITH care_provisions AS (
-  SELECT * FROM ONLY "Act" WHERE "classCode" = 'PCPR:2.16.840.1.113883.5.6'
+  SELECT * FROM ONLY "Act" WHERE "classCode"->>'code' = 'PCPR'
 ),
 patientMetaData AS (
-  SELECT   pcpr._id              AS pcpr_act_id
-  ,        ptnt._id              AS ptnt_id
-  ,        ptnt.scoper           AS orga_enti_id
-  ,        ptnt.player           AS peso_id
-  FROM     care_provisions        pcpr
-  JOIN    "Participation"         sbj_ptcp
-  ON       sbj_ptcp.act           = pcpr._id
-  AND      sbj_ptcp."typeCode"    = 'RCT:2.16.840.1.113883.5.90' -- PRF, AUT as well.
-  JOIN    "Patient" ptnt
-  ON       ptnt._id =             sbj_ptcp.role
-  WHERE    pcpr."statusCode"      = 'active:2.16.840.1.113883.5.14'
-  AND      pcpr."moodCode"        = 'EVN:2.16.840.1.113883.5.1001'  -- note there are also 'INT' pcpr moodcodes.
-  AND      ptnt.scoper            IS NOT NULL
+  SELECT   pcpr._id                     AS pcpr_act_id
+  ,        ptnt._id                     AS ptnt_id
+  ,        ptnt.scoper                  AS orga_enti_id
+  ,        ptnt.player                  AS peso_id
+  FROM     care_provisions pcpr
+  JOIN    "Participation"  sbj_ptcp
+  ON       sbj_ptcp.act                 = pcpr._id
+  AND      sbj_ptcp."typeCode"->>'code' = 'RCT'
+  JOIN    "Patient"        ptnt
+  ON       ptnt._id                     = sbj_ptcp.role
+  WHERE    pcpr."statusCode"->>'code'   = 'active'
+  AND      pcpr."moodCode"->>'code'     = 'EVN'  -- there are also 'INT' pcpr moodcodes.
+  AND      ptnt.scoper                  IS NOT NULL
 ),
 patientCountPerOrga AS (
  SELECT   orga_enti_id
@@ -36,6 +36,7 @@ fundusLastYear AS (
  ,        count(*)::numeric c
  FROM     lastExamLastYear
  WHERE    code->>'code'            = '170757007'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.6.96'
  GROUP BY orga_enti_id
 ),
 footCheckupLastYear AS (
@@ -43,6 +44,7 @@ footCheckupLastYear AS (
  ,        count(*)::numeric c
  FROM     lastExamLastYear
  WHERE    code->>'code'            = '401191002'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.6.96'
  GROUP BY orga_enti_id
 ),
 intermediaryCheckupLastYear AS (
@@ -50,6 +52,7 @@ intermediaryCheckupLastYear AS (
  ,        count(*)::numeric c
  FROM     lastExamLastYear
  WHERE    code->>'code'            = 'Portavita154'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.2.4.3.31.2.1'
  GROUP BY orga_enti_id
 ),
 riskInventoryLastYear AS (
@@ -57,6 +60,7 @@ riskInventoryLastYear AS (
  ,        count(*)::numeric c
  FROM     lastExamLastYear
  WHERE    code->>'code'            = 'Portavita140'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.2.4.3.31.2.1'
  GROUP BY orga_enti_id
 )
 SELECT    pcpo.orga_enti_id                            AS orgaEntiId
@@ -71,4 +75,3 @@ LEFT JOIN footCheckupLastYear fc ON   fc.orga_enti_id          = pcpo.orga_enti_
 LEFT JOIN intermediaryCheckupLastYear ic ON   ic.orga_enti_id          = pcpo.orga_enti_id
 LEFT JOIN riskInventoryLastYear ri ON   ri.orga_enti_id          = pcpo.orga_enti_id
 ;
-
