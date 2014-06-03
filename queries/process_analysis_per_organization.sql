@@ -62,6 +62,30 @@ riskInventoryLastYear AS (
  WHERE    code->>'code'            = 'Portavita140'
  AND      code->>'codeSystem'      = '2.16.840.1.113883.2.4.3.31.2.1'
  GROUP BY orga_enti_id
+),
+diabMedicationLastyear AS (
+ SELECT   orga_enti_id
+ ,        count(*)::numeric c
+ FROM     lastExamLastYear
+ WHERE    code->>'code'            = 'Portavita648'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.2.4.3.31.2.1'
+ GROUP BY orga_enti_id
+),
+stoppingSmokingLastyear AS (
+ SELECT   orga_enti_id
+ ,        count(*)::numeric c
+ FROM     lastExamLastYear
+ WHERE    code->>'code'            = 'Portavita571'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.2.4.3.31.2.1'
+ GROUP BY orga_enti_id
+),
+dietaryAdviceLastyear AS (
+ SELECT   orga_enti_id
+ ,        count(*)::numeric c
+ FROM     lastExamLastYear
+ WHERE    code->>'code'            = '183056000'
+ AND      code->>'codeSystem'      = '2.16.840.1.113883.6.96'
+ GROUP BY orga_enti_id
 )
 SELECT    pcpo.orga_enti_id                            AS orgaEntiId
 ,         pcpo.total                                   AS nrOfPatients
@@ -69,9 +93,16 @@ SELECT    pcpo.orga_enti_id                            AS orgaEntiId
 ,         TRUNC((COALESCE(fc.c, 0) / total) * 100::numeric, 2)  AS footCheckupOfTotal
 ,         TRUNC((COALESCE(ic.c, 0) / total) * 100::numeric, 2)  AS intermediaryCheckupOfTotal
 ,         TRUNC((COALESCE(ri.c, 0) / total) * 100::numeric, 2)  AS riskInventoryOfTotal
+,         TRUNC((COALESCE(ic.c, 0) / total) * 100::numeric, 2)  AS intermediaryCheckupOfTotal
+,         TRUNC((COALESCE(dm.c, 0) / total) * 100::numeric, 2)  AS diabMedicationOfTotal
+,         TRUNC((COALESCE(ss.c, 0) / total) * 100::numeric, 2)  AS stoppingSmokingLastyear
+,         TRUNC((COALESCE(da.c, 0) / total) * 100::numeric, 2)  AS dietaryAdviceLastyear
 FROM      patientCountPerOrga pcpo
-LEFT JOIN fundusLastYear      f  ON   f.orga_enti_id           = pcpo.orga_enti_id
-LEFT JOIN footCheckupLastYear fc ON   fc.orga_enti_id          = pcpo.orga_enti_id
+LEFT JOIN fundusLastYear              f  ON   f.orga_enti_id           = pcpo.orga_enti_id
+LEFT JOIN footCheckupLastYear         fc ON   fc.orga_enti_id          = pcpo.orga_enti_id
 LEFT JOIN intermediaryCheckupLastYear ic ON   ic.orga_enti_id          = pcpo.orga_enti_id
-LEFT JOIN riskInventoryLastYear ri ON   ri.orga_enti_id          = pcpo.orga_enti_id
+LEFT JOIN riskInventoryLastYear       ri ON   ri.orga_enti_id          = pcpo.orga_enti_id
+LEFT JOIN diabMedicationLastyear      dm ON   dm.orga_enti_id          = pcpo.orga_enti_id
+LEFT JOIN stoppingSmokingLastyear     ss ON   ss.orga_enti_id          = pcpo.orga_enti_id
+LEFT JOIN dietaryAdviceLastyear       da ON   da.orga_enti_id          = pcpo.orga_enti_id
 ;
