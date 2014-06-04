@@ -1,5 +1,7 @@
 WITH care_provisions AS (
-  SELECT * FROM ONLY "Act" WHERE "classCode"->>'code' = 'PCPR'
+  SELECT * FROM ONLY "Act"
+  WHERE  "classCode"->>'code' = 'PCPR'
+  AND    "moodCode"->>'code'  = 'EVN' -- there are also 'INT' pcpr moodcodes for treatment plans.
 ),
 patientMetaData AS (
   SELECT   pcpr._id                     AS pcpr_act_id
@@ -13,7 +15,6 @@ patientMetaData AS (
   JOIN    "Patient"        ptnt
   ON       ptnt._id                     = sbj_ptcp.role
   WHERE    pcpr."statusCode"->>'code'   = 'active'
-  AND      pcpr."moodCode"->>'code'     = 'EVN'  -- there are also 'INT' pcpr moodcodes.
   AND      ptnt.scoper                  IS NOT NULL
 ),
 patientCountPerOrga AS (
@@ -87,8 +88,8 @@ dietaryAdviceLastyear AS (
  AND      code->>'codeSystem'      = '2.16.840.1.113883.6.96'
  GROUP BY orga_enti_id
 )
-SELECT    pcpo.orga_enti_id                            AS orgaEntiId
-,         pcpo.total                                   AS nrOfPatients
+SELECT    pcpo.orga_enti_id                                     AS orgaEntiId
+,         pcpo.total                                            AS nrOfPatients
 ,         TRUNC((COALESCE(f.c, 0) / total) * 100::numeric, 2)   AS fundusOfTotal
 ,         TRUNC((COALESCE(fc.c, 0) / total) * 100::numeric, 2)  AS footCheckupOfTotal
 ,         TRUNC((COALESCE(ic.c, 0) / total) * 100::numeric, 2)  AS intermediaryCheckupOfTotal
