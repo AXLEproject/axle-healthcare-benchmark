@@ -10,7 +10,7 @@ WITH patientMetaData AS (
   JOIN   "Participation"                    prf_ptcp
   ON     prf_ptcp.act                     = pcpr._id
   AND    prf_ptcp."typeCode"->>'code'     = 'PRF'
-  AND    prf_ptcp.time                    ~ now()::ts::ivl_ts
+  AND    prf_ptcp.time                    ~ now()::ts
 
   -- Get the patient
   JOIN    "Participation"                  sbj_ptcp
