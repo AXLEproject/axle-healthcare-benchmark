@@ -13,7 +13,6 @@ object GeneratorConfig {
 	val config = ConfigFactory.load()
 
 	val modelsDirectory = config.getString("modelsDirectory")
-	val outputDirectory = config.getString("outputDirectory")
 	val terminologyDirectory = config.getString("terminologyDirectory")
 
 	/** The terminology cache. */
@@ -23,9 +22,6 @@ object GeneratorConfig {
 
 	val cdaJaxbContext = new CdaJaxbContext
 	val fhirJaxbContext = new FhirJaxbContext
-
-	val nrOfOrganizations = config.getInt("nrOfOrganizations")
-	val cdasToGenerate = config.getLong("numberOfCdas")
 
 	val rabbitConfig = new RabbitMessageQueueConfig(
 		username = config.getString("rabbit.username"),
@@ -42,6 +38,9 @@ object GeneratorConfig {
 		maxOrganizations = config.getInt("maxInPipeline.organizations"),
 		maxPatients = config.getInt("maxInPipeline.patients"),
 		maxExaminations = config.getInt("maxInPipeline.examinations"))
+
+	val maxNrOfCaregroups = config.getInt("generate.max.caregroups")
+	val maxNrOfOrganizations = config.getInt("generate.max.organizations")
 
 	/**
 	 * Reads a map from act code onto used unit from the given file.
@@ -60,4 +59,7 @@ object GeneratorConfig {
 			(code, unit)
 		}) toMap
 	}
+
+	def mayGenerateNewCaregroup(nrOfCaregroups: Int) = maxNrOfCaregroups == 0 || nrOfCaregroups < maxNrOfCaregroups
+	def mayGenerateNewOrganization(nrOfOrganizations: Int) = maxNrOfOrganizations == 0 || nrOfOrganizations < maxNrOfOrganizations
 }

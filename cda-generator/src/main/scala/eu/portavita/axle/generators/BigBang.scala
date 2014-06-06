@@ -1,11 +1,11 @@
 package eu.portavita.axle.generators
 
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorSelection.toScala
 import akka.actor.Cancellable
+import eu.portavita.axle.GeneratorConfig
 
 sealed trait BigBangMessage
 case class BrokerIsBlocked extends BigBangMessage
@@ -19,6 +19,7 @@ class BigBang extends Actor with ActorLogging {
 	val organizationGenerator = context.actorSelection("/user/organizationGenerator")
 
 	private var scheduledRefresh: Option[Cancellable] = None
+	private var nrOfRequestedCaregroups = 0
 
 	override def preStart {
 		super.preStart()
@@ -28,7 +29,10 @@ class BigBang extends Actor with ActorLogging {
 	private def startGenerating {
 		log.info("Starting to generate.")
 		scheduledRefresh = Some(system.scheduler.schedule(0.millis, 2500.millis) {
-			organizationGenerator ! TopLevelOrganizationRequest
+			if (GeneratorConfig.mayGenerateNewCaregroup(nrOfRequestedCaregroups)) {
+				organizationGenerator ! TopLevelOrganizationRequest
+				nrOfRequestedCaregroups += 1
+			}
 		})
 	}
 

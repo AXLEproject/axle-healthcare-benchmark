@@ -29,6 +29,9 @@ case class TopLevelOrganizationRequest extends OrganizationMessage
 
 class OrganizationGenerator(val model: OrganizationModel) extends Actor with ActorLogging {
 
+	private var nrOfGeneratedCaregroups = 0
+	private var nrOfGeneratedOrganizations= 0
+
 	lazy private val patientGeneratorActor = context.actorSelection("/user/patientGenerator")
 
 	private val queue = new OrganizationPublisher
@@ -41,7 +44,12 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 
 	def receive = {
 		case TopLevelOrganizationRequest =>
-			generateTopLevelOrganization()
+			if (GeneratorConfig.mayGenerateNewCaregroup(nrOfGeneratedCaregroups)) {
+				generateTopLevelOrganization()
+				nrOfGeneratedCaregroups += 1
+			} else {
+				log.info("Not generating new caregroup because %d caregroups were created and %d is the max".format(nrOfGeneratedCaregroups, GeneratorConfig.maxNrOfCaregroups))
+			}
 
 		case x =>
 			log.warning("Received message that I cannot handle: " + x.toString)
@@ -66,10 +74,15 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 	}
 
 	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
-		InPipeline.waitGeneratingOrganizations
 		val organization = Organization.sample(model, partOf)
-		queue.publish(organization)
-		generatePatients(organization)
+		if (GeneratorConfig.mayGenerateNewOrganization(nrOfGeneratedOrganizations)) {
+			InPipeline.waitGeneratingOrganizations
+			queue.publish(organization)
+			generatePatients(organization)
+			nrOfGeneratedOrganizations += 1
+		} else {
+			log.info("Not generating new organization because %d organizations were created and %d is the max".format(nrOfGeneratedOrganizations, GeneratorConfig.maxNrOfOrganizations))
+		}
 		organization
 	}
 
