@@ -6,6 +6,8 @@
  */
 
 
+CREATE INDEX "Participation_role_idx" ON "Participation" (role);
+
 CREATE OR REPLACE FUNCTION resolution(
        rimschema   text
 ,      rimtable    text
@@ -56,6 +58,7 @@ BEGIN
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
     AND    t._id            = i.id
+    LIMIT 1500
    $sql$;
 
   /* check block against existing clusters */
@@ -146,6 +149,8 @@ BEGIN
     SELECT id, array_agg(_id) AS set__id
     FROM _N
     GROUP BY id;
+
+  CREATE INDEX _Gci ON _Gc USING GIST(id);
 
   /* cluster records */
   CREATE TEMP TABLE _C1 ON COMMIT DROP AS
@@ -268,10 +273,10 @@ BEGIN
   FOR r IN SELECT * FROM unnest(sta)
   LOOP
     BEGIN
-      EXECUTE $sql$ LOCK TABLE ONLY $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE $sql$;
+      EXECUTE $sql$ LOCK TABLE ONLY $sql$||r.unnest||$sql$ IN ROW EXCLUSIVE MODE $sql$;
       RAISE DEBUG 'Locking table PG %', r.unnest;
     EXCEPTION WHEN OTHERS THEN
-      EXECUTE $sql$ LOCK TABLE $sql$||r.unnest||$sql$ IN EXCLUSIVE MODE $sql$;
+      EXECUTE $sql$ LOCK TABLE $sql$||r.unnest||$sql$ IN ROW EXCLUSIVE MODE $sql$;
       RAISE DEBUG 'Locking table GP %', r.unnest;
     END;
   END LOOP;
@@ -303,6 +308,10 @@ BEGIN
     AND    i.dedup_new_id IS NOT NULL
   $sql$;
 
+  EXECUTE $sql$
+    ANALYZE _I; SET random_page_cost to 0.2;
+  $sql$;
+
   /* Set new clusters */
   EXECUTE $sql$
     UPDATE ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
@@ -310,6 +319,10 @@ BEGIN
     FROM   _I i
     WHERE  t._id       = i._id
     AND    t._id_cluster IS DISTINCT FROM i._id_cluster
+  $sql$;
+
+  EXECUTE $sql$
+    SET random_page_cost to default;
   $sql$;
 
 END;
