@@ -346,22 +346,6 @@ END;
 $resolution_end$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION purge_append_id(
-       rimschema text
-,      rimtable text
-)
-RETURNS void AS
-$purge_append_id$
-BEGIN
-  EXECUTE $sql$
-    DELETE FROM stream.append_id i
-    WHERE  i.schema_name    = '$sql$||rimschema||$sql$'
-    AND    i.table_name     = '$sql$||rimtable||$sql$'
-  $sql$;
-END;
-$purge_append_id$
-LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION reflx_trans_inh_childs(oid)
 RETURNS SETOF oid AS $$
