@@ -99,6 +99,20 @@ pg_stat_statements.max = 1000
 pg_stat_statements.track = all
 from_collapse_limit = 12
 join_collapse_limit = 12
+# start settings from mail Abhijit 2013 09 26
+### shared_buffers = 2GB
+work_mem = 64MB
+maintenance_work_mem = 1GB
+checkpoint_segments = 32
+checkpoint_timeout = 30min
+checkpoint_completion_target = 0.9
+###effective_cache_size = 8GB
+log_checkpoints = on
+###log_duration = on
+log_lock_waits = on
+log_temp_files = 1024
+### log_statements = all
+# end
+
 endef
 export NONDEFAULTPOSTGRESQLCONFLAKE
-
