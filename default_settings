@@ -80,9 +80,11 @@ define NONDEFAULTPOSTGRESQLCONFPOND
 # Settings from default_settings NONDEFAULTPOSTGRESQLCONFPOND
 #------------------------------------------------------------------------------
 
-shared_preload_libraries = 'pg_stat_statements'
+shared_preload_libraries = 'pg_stat_statements,auto_explain'
 pg_stat_statements.max = 1000
 pg_stat_statements.track = all
+auto_explain.log_min_duration = 5000
+auto_explain.log_nested_statements = on
 autovacuum = off
 endef
 export NONDEFAULTPOSTGRESQLCONFPOND
@@ -94,11 +96,18 @@ define NONDEFAULTPOSTGRESQLCONFLAKE
 # Settings from default_settings NONDEFAULTPOSTGRESQLCONFLAKE
 #------------------------------------------------------------------------------
 
-shared_preload_libraries = 'pg_stat_statements'
+shared_preload_libraries = 'pg_stat_statements,auto_explain'
 pg_stat_statements.max = 1000
 pg_stat_statements.track = all
+auto_explain.log_min_duration = 5000
+auto_explain.log_nested_statements = on
 from_collapse_limit = 12
 join_collapse_limit = 12
+autovacuum = on
+autovacuum_max_workers = 1
+autovacuum_vacuum_threshold = 1000
+autovacuum_analyze_threshold = 500
+log_autovacuum_min_duration = 250
 # start settings from mail Abhijit 2013 09 26
 ### shared_buffers = 2GB
 work_mem = 64MB
@@ -110,9 +119,9 @@ checkpoint_completion_target = 0.9
 log_checkpoints = on
 ###log_duration = on
 log_lock_waits = on
-log_temp_files = 1024
+### log_temp_files = 1024
 ### log_statements = all
-# end
+# end settings from mail
 
 endef
 export NONDEFAULTPOSTGRESQLCONFLAKE
