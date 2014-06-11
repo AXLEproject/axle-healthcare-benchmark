@@ -281,6 +281,10 @@ BEGIN
     END;
   END LOOP;
 
+  EXECUTE $sql$
+    ANALYZE _I; SET random_page_cost to 0.2; SET enable_mergejoin to false;  SET enable_hashjoin to false;
+  $sql$;
+
   /* Update foreign keys */
   FOR i IN array_lower(rimfkeys, 1) .. array_upper(rimfkeys, 1)
   LOOP
@@ -308,10 +312,6 @@ BEGIN
     AND    i.dedup_new_id IS NOT NULL
   $sql$;
 
-  EXECUTE $sql$
-    ANALYZE _I; SET random_page_cost to 0.2;
-  $sql$;
-
   /* Set new clusters */
   EXECUTE $sql$
     UPDATE ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
@@ -322,7 +322,7 @@ BEGIN
   $sql$;
 
   EXECUTE $sql$
-    SET random_page_cost to default;
+    SET random_page_cost to default; SET enable_mergejoin to default; SET enable_hashjoin to false;
   $sql$;
 
 END;
