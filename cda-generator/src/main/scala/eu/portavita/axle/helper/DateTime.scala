@@ -5,11 +5,14 @@ package eu.portavita.axle.helper
 
 import java.util.Calendar
 import java.util.Date
-
 import org.apache.commons.lang3.time.FastDateFormat
+import org.apache.commons.lang3.time.FastDateParser
+import java.text.SimpleDateFormat
+import eu.portavita.axle.GeneratorConfig
 
 object DateTimes {
-	val todayDate = new Date
+	val dateParser = new SimpleDateFormat("yyyy-MM-dd")
+	val todayDate = dateParser.parse(GeneratorConfig.todayDateString)
 	val dateFormat = FastDateFormat.getInstance("yyyy-MM-dd")
 
 	/**
@@ -19,7 +22,7 @@ object DateTimes {
 	 * @param date
 	 * @return
 	 */
-	def getRelativeDate (days: Int, date: Date = new Date): Date = {
+	def getRelativeDate (days: Int, date: Date = todayDate): Date = {
 		val cal = Calendar.getInstance()
 		cal.setTime(date)
 		cal.add(Calendar.DATE, days)

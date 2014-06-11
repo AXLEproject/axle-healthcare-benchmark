@@ -4,13 +4,12 @@
 package eu.portavita.axle.generatable
 
 import java.util.Date
-
 import scala.collection.JavaConversions._
-
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.databus.data.dto.ParticipationDTO
 import eu.portavita.databus.data.dto.PractitionerDTO
+import javax.xml.crypto.Data
 
 /**
  * Represents a health care practitioner.
@@ -60,7 +59,7 @@ object Practitioner {
 	def sample(organizationEntityId: Long): Practitioner = {
 		val roleId = RoleId.next
 		val person = Person.sample
-		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), new Date)
+		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), DateTimes.todayDate)
 		val organizationRoles = List("309389004") // medical practitioner grade
 		new Practitioner(roleId, person, fromTime, null, organizationRoles, organizationEntityId)
 	}
@@ -68,7 +67,7 @@ object Practitioner {
 	def sampleCareGroupEmployee(organizationEntityId: Long): Practitioner = {
 		val roleId = RoleId.next
 		val person = Person.sample
-		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), new Date)
+		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), DateTimes.todayDate)
 		val organizationRoles = List("6868009") // hospital administrator
 		new Practitioner(roleId, person, fromTime, null, organizationRoles, organizationEntityId)
 	}
@@ -76,7 +75,7 @@ object Practitioner {
 	def sampleResearcher(organizationEntityId: Long): Practitioner = {
 		val roleId = RoleId.next
 		val person = Person.sample
-		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), new Date)
+		val fromTime = DateTimes.getRelativeDate(RandomHelper.between(-10 * 365, 0), DateTimes.todayDate)
 		val organizationRoles = List("309397006") // research fellow
 		new Practitioner(roleId, person, fromTime, null, organizationRoles, organizationEntityId)
 	}

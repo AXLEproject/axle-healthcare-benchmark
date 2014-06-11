@@ -42,6 +42,8 @@ object GeneratorConfig {
 	val maxNrOfCaregroups = config.getInt("generate.max.caregroups")
 	val maxNrOfOrganizations = config.getInt("generate.max.organizations")
 
+	val todayDateString = config.getString("todayDateString")
+
 	/**
 	 * Reads a map from act code onto used unit from the given file.
 	 *
