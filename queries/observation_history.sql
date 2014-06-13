@@ -9,6 +9,7 @@ SELECT   ptnt.player                    AS peso_id
 ,        obs."code"->>'code'            AS code
 ,        obs."code"->>'codeSystem'      AS codesystem
 ,        obs._value_code_code           AS coded_value
+,        obs._value_code_codesystem     AS coded_value_codesystem
 ,        obs._value_pq_value            AS pq_value
 ,        obs._effective_time_low        AS effective_time_low
 ,        RANK() OVER (
