@@ -1,7 +1,7 @@
 /*
  * Examinations are defined as the direct childs of DOCSECTS.
  */
-CREATE OR REPLACE VIEW examinations AS
+CREATE OR REPLACE VIEW examinations_view AS
 SELECT
             ptnt.player           AS peso_id
 ,           ptnt._id              AS ptnt_id
@@ -20,4 +20,9 @@ AND         rct_ptcp."typeCode"->>'code' = 'RCT' -- PRF, AUT as well.
 JOIN        "Patient"               ptnt
 ON          ptnt._id            =   rct_ptcp.role
 WHERE       '[{"root": "2.16.840.1.113883.2.4.3.31.4.2.1", "dataType": "II", "extension": "1"}]' @> exam."templateId"
+;
+
+CREATE TABLE examinations AS
+  SELECT *
+  FROM   examinations_view
 ;

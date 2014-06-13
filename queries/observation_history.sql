@@ -1,8 +1,9 @@
 /*
  * Observation history per patient
  */
-CREATE OR REPLACE VIEW observation_history AS
+CREATE OR REPLACE VIEW observation_history_view AS
 SELECT   ptnt.player                    AS peso_id
+,        ptnt._id                       AS ptnt_role_id
 -- TODO: care provision for which this observation was made would be nice to have
 ,        obs._id                        AS act_id
 ,        obs."code"->>'code'            AS code
@@ -25,4 +26,10 @@ ON       sbj_ptcp.act                    = obs._id
 AND      sbj_ptcp."typeCode"->>'code'    = 'RCT'
 JOIN    "Patient"                          ptnt
 ON       ptnt._id                        = sbj_ptcp.role
+;
+
+DROP TABLE observation_history;
+CREATE TABLE observation_history AS
+  SELECT *
+  FROM   observation_history_view
 ;
