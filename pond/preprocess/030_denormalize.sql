@@ -24,11 +24,9 @@ UPDATE "Observation"
 SET _value_real            = (value ->> 'value')::numeric
 WHERE datatype(value)      = 'REAL';
 
-/** XXX enable when bad ucum representation ]-inf;4] is solved
 UPDATE "Observation"
 SET _value_ivl_real        = value::"IVL_REAL"::ivl_real
 WHERE datatype(value)      = 'IVL_REAL';
-**/
 
 /* Effective times */
 
