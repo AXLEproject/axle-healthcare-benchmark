@@ -52,6 +52,7 @@ pgext2sql_unlogged() {
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
         -e 's/"player" BIGINT, "scoper" BIGINT,/"player" BIGINT, "scoper" BIGINT, "player_original" BIGINT, "scoper_original" BIGINT,/g' \
         -e '/CREATE TABLE "[[:alpha:]]*Participation"/ {s/_clonename TEXT,/_clonename TEXT, _origin BIGINT,/}' \
+        -e 's/"code" "CD",/_code_code TEXT, _code_codesystem TEXT, "code" "CD",/g' \
         -e 's/"value" "ANY",/_value_pq pq,_value_pq_value NUMERIC, _value_pq_unit TEXT,_value_code_code TEXT, _value_code_codesystem TEXT, _value_int INT, _value_real NUMERIC, _value_ivl_real ivl_real, "value" "ANY",/g' \
         -e 's/, "effectiveTime"/, _effective_time_low TIMESTAMPTZ, _effective_time_low_year INT, _effective_time_low_month INT, _effective_time_low_day INT, _effective_time_high TIMESTAMPTZ, _effective_time_high_year INT, _effective_time_high_month INT, _effective_time_high_day INT, "effectiveTime"/g' \
         -e 's/CREATE TABLE/CREATE UNLOGGED TABLE/g' \

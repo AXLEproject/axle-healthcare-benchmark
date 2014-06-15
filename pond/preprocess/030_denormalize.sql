@@ -5,6 +5,10 @@
  * Pre-process RIM data in a pond before uploading to the lake.  This can be
  * all pre-processing that does not require knowledge from other documents.
  */
+UPDATE "Act"
+SET _code_code       = code->>'code'
+,   _code_codesystem = code->>'codeSystem';
+
 UPDATE "Observation"
 SET _value_pq              = value::"PQ"::pq
 ,   _value_pq_value        = value(value::"PQ"::pq)
