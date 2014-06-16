@@ -6,8 +6,6 @@
  */
 
 
-CREATE INDEX "Participation_role_idx" ON "Participation" (role);
-
 CREATE OR REPLACE FUNCTION resolution(
        rimschema   text
 ,      rimtable    text
