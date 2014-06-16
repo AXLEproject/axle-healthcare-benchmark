@@ -182,6 +182,7 @@ else
         pgcommand $DBNAME "SELECT add_opaque_oid('2.16.840.1.113883.2.4.3.31.2.1');"
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
+        pgcommand $DBNAME "CREATE EXTENSION tablefunc"
 fi
 
         pgcommand $DBNAME "CREATE INDEX \"rim2011.Participation_role_idx\" ON rim2011.\"Participation\" (role)"
