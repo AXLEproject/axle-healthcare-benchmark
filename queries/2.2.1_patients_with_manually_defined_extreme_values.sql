@@ -56,8 +56,8 @@ selectExtremes AS (
       END
 )
 SELECT json_object(('{orga_enti_id, ' || orga_enti_id ||
-                    ', ptnt_id, '|| ptnt_id ||
-                    ', peso_id, '|| peso_id || '}')::text[])::text
+                    ', ptnt_id, '     || ptnt_id      ||
+                    ', peso_id, '     || peso_id      || '}')::text[])::text
                    , _code_code
                    , CASE WHEN _code_code = '8480-6' THEN convert(avg_value_pq, 'mm[Hg]') ELSE _value_pq END
 FROM selectExtremes
