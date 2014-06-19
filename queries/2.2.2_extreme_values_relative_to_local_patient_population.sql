@@ -93,7 +93,7 @@ select    pmd.orga_enti_id                                                      
 ,         pmd.peso_id                                                           as pesoId
 ,         pmd.gender                                                            as gender
 ,         pmd.birthTime                                                         as birthTime
-,         (now()::ts - "birthTime")                                             as ageInSeconds
+,         (now()::ts - birthTime)                                               as ageInSeconds
 ,         round(orgaAvgHba1c.percentile_5::numeric, 2)                          as orgaHba1cLow
 ,         round(orgaAvgHba1c.percentile_95::numeric, 2)                         as orgaHba1cHigh
 ,         hba1cHigh.present                                                     as hasHba1cHigh
