@@ -15,22 +15,22 @@ WITH patient_properties_ct AS
   ,       "Diagnosis (diabetes)"->>'value_code'     AS "Diagnosis (diabetes)"
   ,       "Diagnosis (diabetes)"->>'time'           AS "Diagnosis date"
   FROM crosstab($ct$
-    SELECT json_object(('{orga_enti_id, ' || ptnt.scoper              ||
-                        ', ptnt_id, '     || ptnt._id                 ||
-                        ', peso_id, '     || ptnt.player              ||
-                        '}')::text[])::text                           AS record_id
-    ,       obse._code_code                                           AS category
-    ,       json_object(('{value_code, '  || obse._value_code_code    ||
-                         ',time, '        || obse._effective_time_low ||
-                         '}')::text[])::text                          AS value
- --,       RANK() OVER (PARTITION BY ptnt.scoper, ptnt._id, obse._code_code
- --                     ORDER BY obse._effective_time_low DESC, obse._id DESC)     AS rocky
-    FROM    "Patient"                                ptnt
-    JOIN    "Participation"                          obse_ptcp
-    ON      ptnt._id                                 = obse_ptcp.role
-    JOIN    "Observation"                            obse
-    ON      obse._id                                 = obse_ptcp.act
-    WHERE  ((obse._code_code = 'Portavita631' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- ethnicity
+    WITH obse AS
+    (
+      SELECT  ptnt.scoper                           AS orga_enti_id
+      ,       ptnt._id                              AS ptnt_id
+      ,       ptnt.player                           AS peso_id
+      ,       obse._code_code
+      ,       obse._value_code_code
+      ,       obse._effective_time_low
+      ,       RANK() OVER (PARTITION BY ptnt.scoper, ptnt._id, obse._code_code
+                           ORDER BY obse._effective_time_low DESC, obse._id DESC)     AS rocky
+      FROM    "Patient"                                ptnt
+      JOIN    "Participation"                          obse_ptcp
+      ON      ptnt._id                                 = obse_ptcp.role
+      JOIN    "Observation"                            obse
+      ON      obse._id                                 = obse_ptcp.act
+      WHERE  ((obse._code_code = 'Portavita631' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- ethnicity
             OR
             (obse._code_code = 'Portavita68' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- diabetes in family
             OR
@@ -71,6 +71,17 @@ WITH patient_properties_ct AS
                     (_code_code = 'Portavita224' AND _code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- ophtalmologic checkup
                    )
            )
+    )
+    SELECT json_object(('{orga_enti_id, ' || orga_enti_id             ||
+                        ', ptnt_id, '     || ptnt_id                  ||
+                        ', peso_id, '     || peso_id                  ||
+                        '}')::text[])::text                           AS record_id
+    ,       obse._code_code                                           AS category
+    ,       json_object(('{value_code, '  || obse._value_code_code    ||
+                         ',time, '        || obse._effective_time_low ||
+                         '}')::text[])::text                          AS value
+    FROM  obse
+    WHERE rocky = 1
     ORDER BY 1,2
   $ct$,
   $ct$VALUES('Portavita631'::text)
