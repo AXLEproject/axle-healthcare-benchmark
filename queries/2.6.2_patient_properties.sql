@@ -30,18 +30,15 @@ WITH patient_properties_ct AS
       ON      ptnt._id                                 = obse_ptcp.role
       JOIN    "Observation"                            obse
       ON      obse._id                                 = obse_ptcp.act
-      WHERE  ((obse._code_code = 'Portavita631' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- ethnicity
-            OR
-            (obse._code_code = 'Portavita68' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- diabetes in family
-            OR
-            (obse._code_code = 'Portavita69' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- lipid disorders in family
-            OR
-            (obse._code_code = 'Portavita70' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- hypertension in family
-            OR
-            (obse._code_code = 'Portavita71' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- angiopathy in family
-            OR
-            (obse._code_code = 'Portavita1232' AND obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- diagnosis diabetes
-           )
+      WHERE  (obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1' AND
+              obse._code_code IN ('Portavita631' -- ethnicity
+                                 ,'Portavita68' -- diabetes in family
+                                 ,'Portavita69' -- lipid disorders in family
+                                 ,'Portavita70' -- hypertension in family
+                                 ,'Portavita71' -- angiopathy in family
+                                 ,'Portavita1232' -- diagnosis diabetes
+                                 )
+             )
            AND
            EXISTS (
              SELECT * FROM   ONLY "Act"             exam
@@ -52,23 +49,22 @@ WITH patient_properties_ct AS
              AND   '[{"root": "2.16.840.1.113883.2.4.3.31.4.2.1", "dataType": "II", "extension": "1"}]' @> exam."templateId"
              AND    exam._effective_time_low_year BETWEEN 2013 AND 2014
              AND    exam._effective_time_low >= '20130501'
-             AND   ((_code_code = '170777000' AND _code_codesystem = '2.16.840.1.113883.6.96') -- annual checkup, snomed
-                    OR
-                    (_code_code = '170744004' AND _code_codesystem = '2.16.840.1.113883.6.96') -- quarterly checkup, snomed
-                    OR
-                    (_code_code = '401191002' AND _code_codesystem = '2.16.840.1.113883.6.96') -- foot checkup, snomed
-                    OR
-                    (_code_code = '183056000' AND _code_codesystem = '2.16.840.1.113883.6.96') -- dietary advice, snomed
-                    OR
-                    (_code_code = '170757007' AND _code_codesystem = '2.16.840.1.113883.6.96') -- fundus photo checkup, snomed
-                    OR
-                    (_code_code = 'Portavita140' AND _code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- risk inventory
-                    OR
-                    (_code_code = 'Portavita154' AND _code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- interim checkup
-                    OR
-                    (_code_code = 'Portavita136' AND _code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- self checkup
-                    OR
-                    (_code_code = 'Portavita224' AND _code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1') -- ophtalmologic checkup
+             AND   (
+                    (exam._code_codesystem = '2.16.840.1.113883.6.96' AND
+                     exam._code_code IN ('170777000' -- annual checkup, snomed
+                                        ,'170744004' -- quarterly checkup, snomed
+                                        ,'401191002' -- foot checkup, snomed
+                                        ,'183056000' -- dietary advice, snomed
+                                        ,'170757007' -- fundus photo checkup, snomed
+                                        )
+                    ) OR
+                    (exam._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1' AND
+                     exam._code_code IN ('Portavita140' -- risk inventory
+                                        ,'Portavita154' -- interim checkup
+                                        ,'Portavita136' -- self checkup
+                                        ,'Portavita224' -- ophtalmologic checkup
+                                        )
+                    )
                    )
            )
     )
