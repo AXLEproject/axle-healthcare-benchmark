@@ -1,7 +1,6 @@
 /* Select all patients for which at least one of the following examinatios
  * exists in a specified period of time.
 */
-\timing
 WITH patient_properties_ct AS
 (
   SELECT  (record_id->>'orga_enti_id')::bigint      AS orga_enti_id
@@ -98,12 +97,4 @@ WITH patient_properties_ct AS
 ) -- with patient_properties_ct
 SELECT *
 FROM   patient_properties_ct
-;
-\quit
-
-,      peso."birthTime"                         AS birthtime
-,      peso."administrativeGenderCode"->>'code' AS administrative_gender
-FROM   patient_properties_ct
-JOIN  "Person"                                  peso
-ON     peso._id                                 = patient_properties_ct.peso_id
 ;
