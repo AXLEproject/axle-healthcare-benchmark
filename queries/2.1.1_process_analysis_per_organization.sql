@@ -40,7 +40,6 @@ lastExamLastYear AS (
  WHERE    exam.rocky               = 1                            -- most recent
  AND      exam.effective_time_low  >= '20130501'
 ),
-
 fundusLastYear AS (
  SELECT   orga_enti_id
  ,        count(*)::numeric c
