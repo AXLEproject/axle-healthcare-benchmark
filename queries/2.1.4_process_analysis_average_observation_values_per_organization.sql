@@ -1,3 +1,10 @@
+/*
+ * query      : 2.1.4
+ * description: average observation values
+ * user       : care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
 WITH patientMetaData AS (
   SELECT ptnt._id                        AS ptnt_id
   ,      ptnt.scoper                     AS orga_enti_id
@@ -12,7 +19,7 @@ WITH patientMetaData AS (
   ON       ptnt._id                       = sbj_ptcp.role
 
   WHERE  pcpr."classCode"->>'code'        = 'PCPR'
-  AND    pcpr."moodCode"->>'code'         = 'EVN' -- there are also 'INT' pcpr moodcodes for treatment plans.
+  AND    pcpr."moodCode"->>'code'         = 'EVN'
 ),
 patientCountPerOrga AS (
  SELECT   orga_enti_id
@@ -28,8 +35,8 @@ avgObseLastYear as (
   ,        stddev(oh.pq_value)       as std
   from     observation_history          oh
   join     patientMetaData              pmd
-  on       pmd.peso_id                = oh.peso_id
-  where    oh.effective_time_low     >= current_date - interval '1 year' -- of last year
+  on       pmd.ptnt_id                = oh.ptnt_id
+  where    oh.effective_time_low     >= '20130501'
   and      oh.pq_value                IS NOT NULL
   and    (
               (oh.code = '103232008'    and oh.codesystem = '2.16.840.1.113883.6.96')
