@@ -1,23 +1,27 @@
 /*
- * Observation history per patient
+ * query      : 2.0.2
+ * description: materialization of observation history
+ * user       : care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
  */
+DROP VIEW IF EXISTS observation_history_view;
 CREATE OR REPLACE VIEW observation_history_view AS
 SELECT   ptnt.player                    AS peso_id
-,        ptnt._id                       AS ptnt_role_id
--- TODO: care provision for which this observation was made would be nice to have
+,        ptnt._id                       AS ptnt_id
 ,        obs._id                        AS act_id
-,        obs."code"->>'code'            AS code
-,        obs."code"->>'codeSystem'      AS codesystem
+,        obs._code_code                 AS code
+,        obs._code_codesystem           AS codesystem
 ,        obs._value_code_code           AS coded_value
 ,        obs._value_code_codesystem     AS coded_value_codesystem
 ,        obs._value_pq_value            AS pq_value
 ,        obs._effective_time_low        AS effective_time_low
 ,        RANK() OVER (
-           PARTITION BY ptnt.player, obs."code"->>'code', obs."code"->>'codeSystem'
+           PARTITION BY ptnt.player, obs._code_codesystem, obs._code_code
            ORDER BY obs._effective_time_low DESC, obs._id DESC)
                                         AS rocky
 ,        RANK() OVER (
-           PARTITION BY ptnt.player, obs."code"->>'code', obs."code"->>'codeSystem'
+           PARTITION BY ptnt.player, obs._code_codesystem, obs._code_code
            ORDER BY obs._effective_time_low ASC, obs._id ASC)
                                         AS drago
 FROM    "Observation"                      obs
@@ -29,7 +33,7 @@ JOIN    "Patient"                          ptnt
 ON       ptnt._id                        = sbj_ptcp.role
 ;
 
-DROP TABLE observation_history;
+DROP TABLE IF EXISTS observation_history;
 CREATE TABLE observation_history AS
   SELECT *
   FROM   observation_history_view
