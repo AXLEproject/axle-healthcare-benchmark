@@ -98,7 +98,7 @@ class Examination(
 
 		expand(root)
 
-		val examAct = actDetails.get(code).get
+		val examAct = actDetails.getOrElse(code, createOrganizer(code, date))
 		val participants = createParticipants(examAct.getId())
 		val treatments = createTreatments(examAct.getId())
 
