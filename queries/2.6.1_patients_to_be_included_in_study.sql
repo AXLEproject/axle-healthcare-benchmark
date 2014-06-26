@@ -1,6 +1,11 @@
-/* Select all patients for which at least one of the following examinatios
- * exists in a specified period of time.
-*/
+/*
+ * query      : 2.6.1
+ * description: patients to be included in study
+ * user       : researchers, de-identification not applicable
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
+
 SELECT  DISTINCT exam_ptcp.role          AS ptnt_id
   FROM   ONLY "Act"                       exam
   JOIN   "Participation"                  exam_ptcp

@@ -1,6 +1,11 @@
-/* Select all patients for which at least one of the following examinatios
- * exists in a specified period of time.
-*/
+/*
+ * query      : 2.6.2
+ * description: family chronic disease properties
+ * user       : researchers, de-identification required
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
+
 WITH patient_properties_ct AS
 (
   SELECT  (record_id->>'orga_enti_id')::bigint      AS orga_enti_id
@@ -30,11 +35,11 @@ WITH patient_properties_ct AS
       JOIN    "Observation"                            obse
       ON      obse._id                                 = obse_ptcp.act
       WHERE  (obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1' AND
-              obse._code_code IN ('Portavita631' -- ethnicity
-                                 ,'Portavita68' -- diabetes in family
-                                 ,'Portavita69' -- lipid disorders in family
-                                 ,'Portavita70' -- hypertension in family
-                                 ,'Portavita71' -- angiopathy in family
+              obse._code_code IN ('Portavita631'  -- ethnicity
+                                 ,'Portavita68'   -- diabetes in family
+                                 ,'Portavita69'   -- lipid disorders in family
+                                 ,'Portavita70'   -- hypertension in family
+                                 ,'Portavita71'   -- angiopathy in family
                                  ,'Portavita1232' -- diagnosis diabetes
                                  )
              )

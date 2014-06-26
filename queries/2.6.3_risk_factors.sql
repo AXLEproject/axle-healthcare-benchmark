@@ -1,21 +1,26 @@
+/*
+ * query      : 2.6.3
+ * description: chronic disease risk factors
+ * user       : researchers, de-identification required
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
+
 WITH patient_properties_ct AS
 (
-  SELECT  (record_id->>'orga_enti_id')::bigint      AS orga_enti_id
-  ,       (record_id->>'ptnt_id')::bigint           AS ptnt_id
-  ,       (record_id->>'peso_id')::bigint           AS peso_id
-  ,       smoking->>'value'                         AS smoking
-  ,       round((smoking_quantity->>'value')::numeric)  AS smoking_daily_units
-  ,       alcohol->>'value'                         AS alcohol
+  SELECT  (record_id->>'orga_enti_id')::bigint                AS orga_enti_id
+  ,       (record_id->>'ptnt_id')::bigint                     AS ptnt_id
+  ,       (record_id->>'peso_id')::bigint                     AS peso_id
+  ,       smoking->>'value'                                   AS smoking
+  ,       round((smoking_quantity->>'value')::numeric)        AS smoking_daily_units
+  ,       alcohol->>'value'                                   AS alcohol
   ,       round((alcohol_quantity->>'value')::numeric / 7, 1) AS alcohol_daily_units
-  ,       CASE WHEN exercise->>'value' = 'A'
-               THEN 0
-               WHEN exercise->>'value' = 'B'
-               THEN 2
-               WHEN exercise->>'value' = 'C'
-               THEN 4
-               WHEN exercise->>'value' = 'D'
-               THEN 5
-               ELSE NULL END                        AS exercise_days_per_week
+  ,       CASE WHEN exercise->>'value' = 'A' THEN 0
+               WHEN exercise->>'value' = 'B' THEN 2
+               WHEN exercise->>'value' = 'C' THEN 4
+               WHEN exercise->>'value' = 'D' THEN 5
+               ELSE                          NULL
+          END                                       AS exercise_days_per_week
   ,       heartattack->>'time'                      AS heartattack
   ,       angina_pectoris->>'time'                  AS angina_pectoris
   ,       stroke->>'time'                           AS stroke
@@ -58,6 +63,33 @@ WITH patient_properties_ct AS
                )
               )
              )
+      AND EXISTS (
+             SELECT * FROM   ONLY "Act"             exam
+             JOIN   "Participation"                 exam_ptcp
+             ON     exam_ptcp.act                   = exam._id
+             WHERE  exam_ptcp.role                  = ptnt._id
+             AND    exam_ptcp."typeCode"->>'code'   = 'RCT'
+             AND   '[{"root": "2.16.840.1.113883.2.4.3.31.4.2.1", "dataType": "II", "extension": "1"}]' @> exam."templateId"
+             AND    exam._effective_time_low_year BETWEEN 2013 AND 2014
+             AND    exam._effective_time_low >= '20130501'
+             AND   (
+                    (exam._code_codesystem = '2.16.840.1.113883.6.96' AND
+                     exam._code_code IN ('170777000' -- annual checkup, snomed
+                                        ,'170744004' -- quarterly checkup, snomed
+                                        ,'401191002' -- foot checkup, snomed
+                                        ,'183056000' -- dietary advice, snomed
+                                        ,'170757007' -- fundus photo checkup, snomed
+                                        )
+                    ) OR
+                    (exam._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1' AND
+                     exam._code_code IN ('Portavita140' -- risk inventory
+                                        ,'Portavita154' -- interim checkup
+                                        ,'Portavita136' -- self checkup
+                                        ,'Portavita224' -- ophtalmologic checkup
+                                        )
+                    )
+                   )
+           )
     )
     SELECT json_object(('{orga_enti_id, ' || orga_enti_id             ||
                         ', ptnt_id, '     || ptnt_id                  ||
