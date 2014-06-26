@@ -1,5 +1,5 @@
 /*
- * query      : 2.1.4
+ * query      : 2.2.4
  * description: average observation values
  * user       : care group employees and quality employees
  *

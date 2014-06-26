@@ -1,5 +1,5 @@
 /*
- * query      : 2.1.2
+ * query      : 2.2.2
  * description: process analysis per principal practitioner
  * user       : care group employees and quality employees
  *

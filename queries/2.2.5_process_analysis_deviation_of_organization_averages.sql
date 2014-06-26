@@ -1,3 +1,11 @@
+/*
+ * query      : 2.2.5
+ * description: deviation of organization averages
+ * user       : care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
+
 WITH patientMetaData AS (
   SELECT ptnt._id                        AS ptnt_id
   ,      ptnt.scoper                     AS orga_enti_id
@@ -25,7 +33,7 @@ totalAvgObseLastYear as (
   ,        oh.codesystem
   ,        avg(oh.pq_value)          as average
   from     observation_history          oh
-  where    oh.effective_time_low     >= current_date - interval '1 year' -- of last year
+  where    oh.effective_time_low     >= '20130501'
   and      oh.pq_value                IS NOT NULL
   and    (
               (oh.code = '103232008'    and oh.codesystem = '2.16.840.1.113883.6.96')
@@ -43,8 +51,8 @@ avgObseLastYear as (
   ,        stddev(oh.pq_value)       as std
   from     observation_history          oh
   join     patientMetaData              pmd
-  on       pmd.peso_id                = oh.peso_id
-  where    oh.effective_time_low     >= current_date - interval '1 year' -- of last year
+  on       pmd.ptnt_id                = oh.ptnt_id
+  where    oh.effective_time_low     >= '20130501'
   and      oh.pq_value                IS NOT NULL
   and    (
               (oh.code = '103232008'    and oh.codesystem = '2.16.840.1.113883.6.96')

@@ -1,27 +1,40 @@
 /*
- * query      : 2.1.1
- * description: process analysis per organization
+ * query      : 2.2.3
+ * description: process analysis per organization hierarchy
  * user       : care group employees and quality employees
  *
  * Copyright (c) 2014, Portavita B.V.
  */
-WITH care_provisions AS (
-  SELECT * FROM ONLY "Act"
-  WHERE  "classCode"->>'code' = 'PCPR'
-  AND    "moodCode"->>'code'  = 'EVN'
+WITH RECURSIVE organizationHierarchy AS (
+  SELECT _id                            AS child_orga
+  ,      _id                            AS ancestor_orga
+  FROM   "Organization"
+  UNION
+  SELECT player::bigint AS child_orga
+  ,      ancestor_orga
+  FROM "Role"
+  JOIN organizationHierarchy
+  ON   scoper = child_orga
+  WHERE "classCode"->>'code' = 'PART'
+),
+care_provisions AS (
+  SELECT * FROM ONLY "Act" WHERE "classCode"->>'code' = 'PCPR'
 ),
 patientMetaData AS (
   SELECT   pcpr._id                     AS pcpr_act_id
   ,        ptnt._id                     AS ptnt_id
-  ,        ptnt.scoper                  AS orga_enti_id
   ,        ptnt.player                  AS peso_id
-  FROM     care_provisions pcpr
-  JOIN    "Participation"  sbj_ptcp
+  ,        orga_hier.ancestor_orga      AS orga_enti_id
+  FROM     care_provisions              pcpr
+  JOIN    "Participation"               sbj_ptcp
   ON       sbj_ptcp.act                 = pcpr._id
   AND      sbj_ptcp."typeCode"->>'code' = 'RCT'
-  JOIN    "Patient"        ptnt
+  JOIN    "Patient"                     ptnt
   ON       ptnt._id                     = sbj_ptcp.role
+  JOIN     organizationHierarchy        orga_hier
+  ON       child_orga                   = ptnt.scoper
   WHERE    pcpr."statusCode"->>'code'   = 'active'
+  AND      pcpr."moodCode"->>'code'     = 'EVN'  -- there are also 'INT' pcpr moodcodes.
   AND      ptnt.scoper                  IS NOT NULL
 ),
 patientCountPerOrga AS (
@@ -100,8 +113,8 @@ dietaryAdviceLastyear AS (
  AND      codesystem               = '2.16.840.1.113883.6.96'
  GROUP BY orga_enti_id
 )
-SELECT    pcpo.orga_enti_id                                     AS orgaEntiId
-,         pcpo.total                                            AS nrOfPatients
+SELECT    pcpo.orga_enti_id                            AS orgaEntiId
+,         pcpo.total                                   AS nrOfPatients
 ,         TRUNC((COALESCE(f.c, 0) / total) * 100::numeric, 2)   AS fundusOfTotal
 ,         TRUNC((COALESCE(fc.c, 0) / total) * 100::numeric, 2)  AS footCheckupOfTotal
 ,         TRUNC((COALESCE(ic.c, 0) / total) * 100::numeric, 2)  AS intermediaryCheckupOfTotal

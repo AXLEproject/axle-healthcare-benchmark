@@ -1,5 +1,10 @@
-/* Requires crosstab, jsonb */
-
+/*
+ * query      : 2.3.1
+ * description: patients with manually defined extreme values
+ * user       : practitioners, care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
 WITH
 extreme_ct AS
 (

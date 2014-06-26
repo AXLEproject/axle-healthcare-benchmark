@@ -1,5 +1,5 @@
 /*
- * query      : 2.0.2
+ * query      : 2.1.2
  * description: materialization of observation history
  * user       : care group employees and quality employees
  *

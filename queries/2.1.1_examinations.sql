@@ -1,5 +1,5 @@
 /*
- * query      : 2.0.1
+ * query      : 2.1.1
  * description: materialization of examinations for other queries
  * user       : care group employees and quality employees
  *
