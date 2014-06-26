@@ -1,5 +1,12 @@
+/*
+ * query      : 2.3.3
+ * description: patient with abnormal blood pressure or macroangiopathy
+ * user       : practitioners, care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
 WITH patientMetaData AS (
-  SELECT ptnt._id                                     AS ptnt_role_id
+  SELECT ptnt._id                                     AS ptnt_id
   ,      ptnt.scoper                                  AS orga_enti_id
   ,      ptnt.player                                  AS peso_id
   ,      peso."administrativeGenderCode"->>'code'     AS gender
@@ -9,16 +16,16 @@ WITH patientMetaData AS (
   ON     peso._id                                      = ptnt.player
 ),
 abnormalBloodPressure as (
-  select    lo1.peso_id, 'Y'::text as present
+  select    lo1.ptnt_id, 'Y'::text as present
   from      patientMetaData pmd
   join      observation_history        lo1
-  on        lo1.peso_id              = pmd.peso_id
+  on        lo1.ptnt_id              = pmd.ptnt_id
   and       lo1.code                 = '8480-6'                                 --systolic blood pressure
   and       lo1.codesystem           = '2.16.840.1.113883.6.1'                  --systolic blood pressure
   and       lo1.rocky                = 1                                        -- most recent
   and       lo1.effective_time_low  >= ('20140501'::ts - interval '1 year') -- of last year
   left join observation_history        lo2
-  on        lo2.peso_id              = lo1.peso_id
+  on        lo2.ptnt_id              = lo1.ptnt_id
   and       lo2.code                 = '8480-6'
   and       lo2.codesystem           = '2.16.840.1.113883.6.1'                       --systolic blood pressure
   and       lo2.rocky                = 2                                             -- second most recent
@@ -34,7 +41,7 @@ abnormalBloodPressure as (
             )
 ),
 numberOfComplications as (
-  SELECT  peso_id
+  SELECT  ptnt_id
   ,       COUNT(*) dracula
   FROM    observation_history
   WHERE   rocky = 1
@@ -72,16 +79,16 @@ numberOfComplications as (
                    , 'RETINOPATHIE_RECHTEROOG'
                    , 'Y'
                    )
-  GROUP BY peso_id
+  GROUP BY ptnt_id
 )
 select    pmd.orga_enti_id                                                      as orgaEntiId
-,         pmd.peso_id                                                           as pesoId
+,         pmd.ptnt_id                                                           as pesoId
 ,         coalesce(abp.present, 'N')                                            as abnormalBloodPressure
 ,         CASE WHEN coalesce(noc.dracula, 0) > 0 THEN 'Y' ELSE 'N' END          as macroAngioPathy
 ,         coalesce(noc.dracula, 0)                                              as numberOfComplications
 from      patientMetaData pmd
-left join abnormalBloodPressure abp on abp.peso_id = pmd.peso_id
-left join numberOfComplications noc on noc.peso_id = pmd.peso_id
+left join abnormalBloodPressure abp on abp.ptnt_id = pmd.ptnt_id
+left join numberOfComplications noc on noc.ptnt_id = pmd.ptnt_id
 where abp.present = 'Y' or coalesce(noc.dracula, 0) > 0
 order by pmd.orga_enti_id
 ;

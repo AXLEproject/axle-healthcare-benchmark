@@ -1,5 +1,12 @@
+/*
+ * query      : 2.3.2
+ * description: extreme values relative to local patient population
+ * user       : practitioners, care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
 WITH patientMetaData AS (
-  SELECT ptnt._id                                     AS ptnt_role_id
+  SELECT ptnt._id                                     AS ptnt_id
   ,      ptnt.scoper                                  AS orga_enti_id
   ,      ptnt.player                                  AS peso_id
   ,      peso."administrativeGenderCode"->>'code'     AS gender
@@ -18,7 +25,7 @@ relevantObse as (
     ,        oh.effective_time_low
     from     observation_history          oh
     join     patientMetaData              pmd
-    on       pmd.ptnt_role_id           = oh.ptnt_role_id
+    on       pmd.ptnt_id                = oh.ptnt_id
     where    oh.pq_value               IS NOT NULL
     and    (
                 (oh.code = '103232008'    and oh.codesystem = '2.16.840.1.113883.6.96')  --HbA1c
@@ -36,7 +43,8 @@ orgaAvg as (
     ,        percentile_cont(0.95) within group (order by pq_value asc)   AS percentile_95
     from     relevantObse                 ro
     group by orga_enti_id, code, codesystem
-),
+)
+,
 lastObseLastYear as (
   select   peso_id
   ,        code
@@ -51,7 +59,7 @@ avgObseLastYear as (
   ,        codesystem
   ,        avg(pq_value)::numeric AS average
   from     relevantObse
-  where    effective_time_low >= current_date - interval '1 year' -- of last year
+  where    effective_time_low >= '20130501'
   group by peso_id, code, codesystem
 ),
 hba1cHigh as (
@@ -60,7 +68,8 @@ hba1cHigh as (
   join     orgaAvg on orgaAvg.code = loly.code and orgaAvg.orga_enti_id = pmd.orga_enti_id
   where    loly.code     = '103232008' --HbA1c
   and      loly.pq_value > orgaAvg.percentile_95
-),
+)
+,
 hba1cLow as (
   select   loly.peso_id, loly.pq_value, 'Y'::text as present from lastObseLastYear loly
   join     patientMetaData pmd on pmd.peso_id = loly.peso_id

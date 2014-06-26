@@ -1,3 +1,10 @@
+/*
+ * query      : 2.4.1
+ * description: influence of medication on HbA1c
+ * user       : practitioners, care group employees and quality employees
+ *
+ * Copyright (c) 2014, Portavita B.V.
+ */
 with relevantMedication as (
   select *
   from ( values
@@ -17,7 +24,7 @@ with relevantMedication as (
        ) as medication (code)
 ),
 hba1cMeasurements as (
-  select peso_id
+  select ptnt_id
   ,      pq_value
   ,      effective_time_low
   ,      rocky
@@ -26,7 +33,7 @@ hba1cMeasurements as (
 ),
 medicationChanges as (
   select
-    oh.peso_id
+    oh.ptnt_id
   , oh.act_id
   , orig_med.coded_value         as "original medication"
   , oh.coded_value               as "new medication"
@@ -37,40 +44,40 @@ medicationChanges as (
   join   relevantMedication        rm
   on     rm.code                 = oh.code
   join   observation_history       orig_med
-  on     orig_med.peso_id        = oh.peso_id
+  on     orig_med.ptnt_id        = oh.ptnt_id
   and    orig_med.code           = oh.code
   and    orig_med.rocky          = oh.rocky + 1
   and    orig_med.coded_value   <> oh.coded_value
   where  oh.codesystem           = '2.16.840.1.113883.2.4.3.31.2.1'
 ),
 avgBetween as (
-  select   mc.peso_id, mc.act_id, avg(hb.pq_value) as average
+  select   mc.ptnt_id, mc.act_id, avg(hb.pq_value) as average
   from     medicationChanges mc
   join     hba1cMeasurements hb
-  on       hb.peso_id = mc.peso_id
+  on       hb.ptnt_id = mc.ptnt_id
   and      hb.effective_time_low between mc."time of orig med" and mc."time of change"
-  group by mc.peso_id, mc.act_id
+  group by mc.ptnt_id, mc.act_id
 ),
 hb_avg_after as (
-  select hb.peso_id, mc.act_id
+  select hb.ptnt_id, mc.act_id
   ,      avg(hb.pq_value) as average
   from   hba1cMeasurements hb
   join   medicationChanges mc
-  on     mc.peso_id =hb.peso_id
+  on     mc.ptnt_id =hb.ptnt_id
   where  hb.effective_time_low between mc."time of change" and (mc."time of change" + interval '1 year')
-  group by hb.peso_id, mc.act_id
+  group by hb.ptnt_id, mc.act_id
 ),
 hb_avg_before as (
-  select hb.peso_id, mc.act_id
+  select hb.ptnt_id, mc.act_id
   ,      avg(hb.pq_value) as average
   from   hba1cMeasurements hb
   join   medicationChanges mc
-  on     mc.peso_id =hb.peso_id
+  on     mc.ptnt_id =hb.ptnt_id
   where  hb.effective_time_low between (mc."time of orig med" - interval '1 year') and mc."time of orig med"
-  group by hb.peso_id, mc.act_id
+  group by hb.ptnt_id, mc.act_id
 )
 select
-  mc.peso_id
+  mc.ptnt_id
 , mc."time of orig med"       as "time of orig med"
 , mc."original medication"    as "original medication"
 , mc."time of change"         as "time of change"
@@ -81,16 +88,16 @@ select
 
 from   medicationChanges         mc
 left join   avgBetween                ab
-on     ab.peso_id              = mc.peso_id
+on     ab.ptnt_id              = mc.ptnt_id
 and    ab.act_id               = mc.act_id
 
 left join hb_avg_after haa
-on        haa.peso_id = mc.peso_id
+on        haa.ptnt_id = mc.ptnt_id
 and       haa.act_id = mc.act_id
 
 left join hb_avg_before hab
-on        hab.peso_id = mc.peso_id
+on        hab.ptnt_id = mc.ptnt_id
 and       hab.act_id = mc.act_id
 
-order by mc.peso_id
+order by mc.ptnt_id
 ;
