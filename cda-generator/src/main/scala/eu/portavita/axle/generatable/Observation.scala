@@ -135,7 +135,7 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 	/**
 	 * @return if the value is not an empty string nor "TRUE"
 	 */
-	override def hasValue = value.nonEmpty && !value.equals("TRUE")
+	override def hasValue = value.nonEmpty && !"TRUE".equals(value)
 
 	override def toHl7Act(date: Date): Option[ActDTO] = {
 		if (!hasValue) return None

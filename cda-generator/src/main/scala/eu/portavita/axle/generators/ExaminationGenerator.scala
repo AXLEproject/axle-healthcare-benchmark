@@ -5,13 +5,10 @@ package eu.portavita.axle.generators
 
 import java.io.File
 import java.util.Date
-
 import scala.Array.canBuildFrom
 import scala.annotation.tailrec
 import scala.util.parsing.json.JSON
-
 import org.hl7.v3.StrucDocText
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -36,6 +33,7 @@ import eu.portavita.databus.messagebuilder.builders.ExaminationBuilder
 import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.HierarchyNode
 import javax.xml.bind.Marshaller
+import eu.portavita.axle.Generator
 
 sealed trait ExaminationMessage
 case class ExaminationGenerationRequest(val patient: Patient, val performanceDates: IndexedSeq[Date]) extends ExaminationMessage
@@ -95,8 +93,9 @@ class ExaminationGenerator(
 		val filteredNumericObservations = missingValuesBayesianNetwork match {
 			case Some(net) =>
 				val mv = net.sample
-				for ((code, missing) <- mv if missing.hasValue)
-					yield code -> allNumericObservations.get(code).get
+				for ((code, missing) <- mv if missing.hasValue) yield {
+					code -> allNumericObservations.get(code).get
+				}
 			case None => Map()
 		}
 
@@ -156,7 +155,7 @@ object ExaminationGenerator {
 		val actorRefs =
 			for (
 				(examinationCode, file) <- getModelFiles(modelsDirectory);
-				content = scala.io.Source.fromFile(file).mkString.replaceAll("\"NaN\"", "0");
+				content = scala.io.Source.fromFile(file).mkString.replaceAll("\"NaN\"", "0.5");
 				generator <- fromJson(system, examinationCode, content);
 				if generator.isDefined
 			) yield {
@@ -205,7 +204,9 @@ object ExaminationGenerator {
 					val AsMap(discrete) = main.get("discrete").get
 					Some(DiscreteBayesianNetworkReader.read(examinationCode, discrete))
 				} catch {
-					case _: Throwable => None
+					case _: Throwable =>
+						Generator.system.log.debug("Discrete Bayesian network was not defined for examination %s".format(examinationCode))
+						None
 				}
 
 			val numericJson = main.get("numeric")
@@ -217,7 +218,9 @@ object ExaminationGenerator {
 					val AsMap(network) = numeric.get("network").get
 					Some(NumericBayesianNetworkReader.read(examinationCode, network))
 				} catch {
-					case _: Throwable => None
+					case _: Throwable =>
+						Generator.system.log.debug("Numeric Bayesian network was not defined for examination %s".format(examinationCode))
+						None
 				}
 
 			// Try to read the network for the missing value patterns in the numeric network
@@ -227,7 +230,9 @@ object ExaminationGenerator {
 					val AsMap(missingValues) = numeric.get("missingValues").get
 					Some(DiscreteBayesianNetworkReader.read(examinationCode, missingValues))
 				} catch {
-					case _: Throwable => None
+					case _: Throwable =>
+						Generator.system.log.debug("Discrete Bayesian network for the missing values of examination %s was not defined".format(examinationCode))
+						None
 				}
 
 			// Create generator actor if there is either a discrete nor numeric network defined

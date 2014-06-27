@@ -5,10 +5,9 @@ package eu.portavita.axle.bayesiannetwork
 
 import scala.annotation.tailrec
 import scala.util.Random
-import eu.portavita.axle.generatable.DiscreteObservation
+
+import eu.portavita.axle.generatable.NumericObservation
 import eu.portavita.axle.generatable.Observation
-import eu.portavita.axle.generatable.NumericObservation
-import eu.portavita.axle.generatable.NumericObservation
 
 /**
  * Represents a single variable in a Bayesian network.
@@ -45,8 +44,14 @@ class DiscreteVariable(
 	 * For better performance, map a set of observed values to the set of
 	 * conditional probabilities with those observed values.
 	 */
-	private val givenMap: Map[Set[Observation], Set[ConditionalProbability]] =
-		(for (cp <- conditionalProbs) yield (cp.given -> Set(cp))).toMap
+	private val givenMap: Map[Set[Observation], Set[ConditionalProbability]] = {
+		val result = collection.mutable.Map[Set[Observation], Set[ConditionalProbability]]()
+		for (cp <- conditionalProbs) {
+			val currentSet = result.getOrElse(cp.given, Set())
+			result.put(cp.given, currentSet + cp)
+		}
+		result.toMap
+	}
 
 	/**
 	 * Generates a sample value for this variable using the given observed values of independent variables.
