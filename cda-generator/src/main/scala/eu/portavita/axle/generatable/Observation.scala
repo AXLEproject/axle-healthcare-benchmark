@@ -9,7 +9,7 @@ import java.util.regex.Pattern
 
 import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.helper.TerminologyDisplayNameProvider
-import eu.portavita.databus.data.model.PortavitaAct
+import eu.portavita.databus.data.dto.ActDTO
 
 /**
  * Represents a single observation event.
@@ -80,7 +80,7 @@ abstract class Observation {
 	 *
 	 * @return Java object version of this observation
 	 */
-	def toHl7Act(date: Date): Option[PortavitaAct]
+	def toHl7Act(date: Date): Option[ActDTO]
 
 	def toReportString(displayNameProvider: TerminologyDisplayNameProvider): String
 }
@@ -95,8 +95,8 @@ case class NumericObservation(val code: String, val value: Double, val unit: Str
 	override def getCode = code
 	override def hasValue = true
 
-	override def toHl7Act(date: Date): Option[PortavitaAct] = {
-		val act = new PortavitaAct
+	override def toHl7Act(date: Date): Option[ActDTO] = {
+		val act = new ActDTO
 		act.setId(ActId.next)
 		act.setCode(code)
 		act.setClassCode("OBS")
@@ -137,10 +137,10 @@ case class DiscreteObservation(val code: String, val value: String) extends Obse
 	 */
 	override def hasValue = value.nonEmpty && !value.equals("TRUE")
 
-	override def toHl7Act(date: Date): Option[PortavitaAct] = {
+	override def toHl7Act(date: Date): Option[ActDTO] = {
 		if (!hasValue) return None
 
-		val act = new PortavitaAct
+		val act = new ActDTO
 		act.setId(ActId.next)
 		act.setCode(code)
 		act.setClassCode("OBS")

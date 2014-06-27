@@ -7,7 +7,6 @@ import akka.actor.Actor
 import akka.event.Logging
 import collection.mutable
 import eu.portavita.axle.generatable.DiscreteObservation
-import scala.util.parsing.json.JSON
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.Discarder
 import eu.portavita.axle.generatable.DiscreteObservation
 import eu.portavita.axle.generatable.DiscreteObservation

@@ -1,10 +1,10 @@
 package eu.portavita.axle.generators
 
+/*
 import org.junit.Test
 import org.scalatest.Suite
 
 import eu.portavita.axle.GeneratorConfig
-
 class InPipelineSuite extends Suite {
 
 	val maxPublishRequests = GeneratorConfig.pipelineConfig.maxPublishRequests
@@ -49,3 +49,4 @@ class InPipelineSuite extends Suite {
 
 	private def isPaused = InPipeline.pause.get()
 }
+*/

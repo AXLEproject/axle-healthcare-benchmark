@@ -10,7 +10,7 @@ import scala.util.Random
 
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
-import eu.portavita.databus.data.model.PortavitaPerson
+import eu.portavita.databus.data.dto.PersonDTO
 
 /**
  * Represents a person.
@@ -28,6 +28,21 @@ class Person(
 	val genderCode: String,
 	val address: Address) {
 
+	def toPortavitaPerson: PersonDTO = {
+	    val portavitaPerson = new PersonDTO
+	    portavitaPerson.setEntityId(entityId)
+	    portavitaPerson.setAdministrativeGenderCode(genderCode)
+	    portavitaPerson.setBirthPlace(birthPlace)
+	    portavitaPerson.setBirthTime(birthDate)
+	    portavitaPerson.setBsn(bsn)
+	    portavitaPerson.setFamilyName(name.familyName)
+	    portavitaPerson.setGivenName(name.givenName)
+	    portavitaPerson.setFamilyNamePrefix(name.prefix)
+	    portavitaPerson.setAddresses(Arrays.asList(address.toAddressDTO))
+	    portavitaPerson.setName(name.toString())
+	    portavitaPerson
+	}
+/*
 	def toPortavitaPerson: PortavitaPerson = {
 	    val portavitaPerson = new PortavitaPerson
 	    portavitaPerson.setEntityId(entityId)
@@ -42,7 +57,7 @@ class Person(
 	    portavitaPerson.setName(name.toString())
 	    portavitaPerson
 	}
-
+*/
 	override def toString = {
 		"%s (born at %s in %s)".format(name.toString(), DateTimes.dateFormat.format(birthDate), birthPlace)
 	}

@@ -42,7 +42,7 @@ class PatientGenerator(
 	def receive = {
 		case request @ PatientRequest(organization) =>
 			InPipeline.waitGeneratingPatients
-			for (i <- 0 to organization.nrOfPatients) {
+			for (i <- 1 to organization.nrOfPatients) {
 				generate(organization)
 			}
 			val inPipeline = InPipeline.patientRequests.finishRequest

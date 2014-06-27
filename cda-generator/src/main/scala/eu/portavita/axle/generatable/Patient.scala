@@ -10,8 +10,8 @@ import scala.util.Random
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.model.PatientProfile
-import eu.portavita.databus.data.model.PortavitaParticipation
-import eu.portavita.databus.data.model.PortavitaPatient
+import eu.portavita.databus.data.dto.ParticipationDTO
+import eu.portavita.databus.data.dto.PatientDTO
 
 /**
  * Represents a patient.
@@ -34,6 +34,26 @@ class Patient(
 
 	val careProvisionId = Random.nextInt
 
+	def toPortavitaPatient: PatientDTO = {
+		val patient = new PatientDTO
+		patient.setRoleId(roleId)
+		patient.setFromTime(fromTime)
+		patient.setToTime(toTime)
+		patient.setOrganizationEntityId(organization.id)
+		patient.setPortavitaPerson(person.toPortavitaPerson)
+		patient
+	}
+
+	def toParticipation(actId: Long, from: Date, to: Date, typeCode: String = "SBJ"): ParticipationDTO = {
+		val participation = new ParticipationDTO()
+		participation.setActId(actId)
+		participation.setFromTime(from)
+		participation.setToTime(to)
+		participation.setRoleId(roleId)
+		participation.setTypeCode(typeCode)
+		participation
+	}
+/*
 	def toPortavitaPatient: PortavitaPatient = {
 		val patient = new PortavitaPatient
 		patient.setRoleId(roleId)
@@ -53,7 +73,7 @@ class Patient(
 		participation.setTypeCode(typeCode)
 		participation
 	}
-
+*/
 	override def toString = "%s, care provision started %s".format(nameString, DateTimes.dateFormat.format(careProvisionStart))
 	def nameString = person.name.toString()
 	def treatmentString = "TODO"

@@ -1,7 +1,7 @@
 package eu.portavita.axle.helper
 
+/*
 import org.scalatest.Suite
-
 class RandomHelperSuite extends Suite {
 
 	def testLowercase() {
@@ -56,3 +56,4 @@ class RandomHelperSuite extends Suite {
 		assert(actual.size == 15)
 	}
 }
+*/

@@ -6,7 +6,7 @@ import scala.util.Random
 
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
-import eu.portavita.databus.data.model.PortavitaAddress
+import eu.portavita.databus.data.dto.AddressDTO
 
 class Address(
 		val code: String,
@@ -19,16 +19,16 @@ class Address(
 		val streetAddr2: String
 		) {
 
-	def toPortavitaAddress: PortavitaAddress = {
-		val portavitaAddress = new PortavitaAddress
-		portavitaAddress.setCode(code)
-		portavitaAddress.setCityDescription(city)
-		portavitaAddress.setStreetAddress1(streetAddr1)
-		portavitaAddress.setStreetAddress2(streetAddr2)
-		portavitaAddress.setValidFrom(validFrom)
-		portavitaAddress.setValidTo(validTo)
-		portavitaAddress.setZipCode(zipCode)
-		portavitaAddress
+	def toAddressDTO: AddressDTO = {
+		val address = new AddressDTO
+		address.setCode(code)
+		address.setCityDescription(city)
+		address.setStreetAddress1(streetAddr1)
+		address.setStreetAddress2(streetAddr2)
+		address.setValidFrom(validFrom)
+		address.setValidTo(validTo)
+		address.setZipCode(zipCode)
+		address
 	}
 }
 

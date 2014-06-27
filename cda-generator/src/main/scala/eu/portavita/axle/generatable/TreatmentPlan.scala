@@ -1,10 +1,11 @@
 package eu.portavita.axle.generatable
 
-import eu.portavita.databus.data.model.PortavitaTreatmentPlan
-import eu.portavita.databus.data.model.PortavitaAct
 import java.util.ArrayList
-import eu.portavita.databus.data.model.PortavitaActRelationship
 import java.util.Date
+
+import eu.portavita.databus.data.dto.ActDTO
+import eu.portavita.databus.data.dto.ActRelationshipDTO
+import eu.portavita.databus.data.dto.TreatmentPlanDTO
 
 class TreatmentPlan(
 		val id: Long,
@@ -14,15 +15,15 @@ class TreatmentPlan(
 		val completed: Boolean
 		) {
 
-	def toPortavitaTreatmentPlan: PortavitaTreatmentPlan = {
-		val componentRelationships = new ArrayList[PortavitaActRelationship]()
-		val componentDetails = new ArrayList[PortavitaAct]()
-		val plan = new PortavitaTreatmentPlan(createMainAct, componentRelationships, componentDetails)
+	def toPortavitaTreatmentPlan: TreatmentPlanDTO = {
+		val componentRelationships = new ArrayList[ActRelationshipDTO]()
+		val componentDetails = new ArrayList[ActDTO]()
+		val plan = new TreatmentPlanDTO(createMainAct, componentRelationships, componentDetails)
 		plan
 	}
 
-	private def createMainAct: PortavitaAct = {
-		val act = new PortavitaAct
+	private def createMainAct: ActDTO = {
+		val act = new ActDTO
 		act.setId(id)
 		act.setClassCode("PCPR")
 		act.setMoodCode("INT")

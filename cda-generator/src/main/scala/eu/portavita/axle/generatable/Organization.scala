@@ -10,9 +10,9 @@ import scala.annotation.tailrec
 import scala.util.Random
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
-import eu.portavita.databus.data.model.PortavitaAddress
-import eu.portavita.databus.data.model.PortavitaOrganization
 import eu.portavita.axle.model.OrganizationModel
+import eu.portavita.databus.data.dto.OrganizationDTO
+import eu.portavita.databus.data.dto.AddressDTO
 
 /**
  * Represents a healthcare organization.
@@ -26,13 +26,15 @@ class Organization(
 		val address: Address,
 		val partOf: Option[Organization],
 		val practitioners: List[Practitioner],
+		val careGroupEmployees: List[Practitioner],
+		val researchers: List[Practitioner],
 		val nrOfPatients: Int) {
 	override def toString = "Organization '" + name + "' (started on " + startDate + ")"
 
-	def toPortavitaOrganization: PortavitaOrganization = {
-		val organization = new PortavitaOrganization
-		val addresses = new ArrayList[PortavitaAddress]
-		addresses.add(address.toPortavitaAddress)
+	def toOrganizationDTO: OrganizationDTO = {
+		val organization = new OrganizationDTO
+		val addresses = new ArrayList[AddressDTO]
+		addresses.add(address.toAddressDTO)
 		organization.setPortavitaAddresses(addresses)
 		organization.setAgbCode(agbCode)
 		organization.setCode(code)
@@ -73,12 +75,7 @@ object Organization {
 	val minimalDaysOld = 30
 	val maximalDaysOld = 10 * 365
 
-	/**
-	 * Creates a random organization.
-	 *
-	 * @return
-	 */
-	def sample(model: OrganizationModel, partOf: Option[Organization]): Organization = {
+	def sample(model: OrganizationModel, partOf: Organization): Organization = {
 		val id = EntityId.next
 		val agb = Random.nextInt(99999999)
 		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
@@ -87,7 +84,22 @@ object Organization {
 		val nrOfPatients = model.sampleNrOfPatients
 		val nrOfPractitioners = Math.max(1, RandomHelper.between(0, nrOfPatients / 10))
 		val practitioners = for (i <- 0 to nrOfPractitioners) yield Practitioner.sample(id)
-		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), partOf, practitioners.toList, nrOfPatients)
+		val careGroupEmployees = List[Practitioner]()
+		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), Some(partOf), practitioners.toList, careGroupEmployees, Nil, nrOfPatients)
+	}
+
+	def sampleCareGroup: Organization = {
+		val id = EntityId.next
+		val agb = Random.nextInt(99999999)
+		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
+		val startDate = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld))
+		val code = "CAREGROUP"
+		val nrOfPatients = 0
+		val nrOfCareGroupEmployees = Math.max(1, RandomHelper.between(0, 12))
+		val careGroupEmployees = for (i <- 0 to nrOfCareGroupEmployees) yield Practitioner.sampleCareGroupEmployee(id)
+		val nrOfResearchers = Math.max(1, RandomHelper.between(0, 4))
+		val researchers = for (i <- 0 to nrOfResearchers) yield Practitioner.sampleResearcher(id)
+		new Organization(id, "%08d".format(agb), code, name, startDate, Address.sample("WP"), None, Nil, careGroupEmployees.toList, researchers.toList, nrOfPatients)
 	}
 
 	private def randomOrganizationCode(): String = {

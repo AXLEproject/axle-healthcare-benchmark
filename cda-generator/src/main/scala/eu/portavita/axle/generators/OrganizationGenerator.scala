@@ -23,9 +23,10 @@ import java.util.GregorianCalendar
 import eu.portavita.databus.messagebuilder.cda.factory.ClinicalDocumentMessageContentFactory
 import eu.portavita.databus.messagebuilder.cda.factory.CustodianOrganizationFactory
 import eu.portavita.databus.messagebuilder.cda.factory.IdentifierFactory
+import eu.portavita.axle.generatable.Practitioner
 
 sealed trait OrganizationMessage
-case class TopLevelOrganizationRequest extends OrganizationMessage
+case class TopLevelOrganizationRequest() extends OrganizationMessage
 
 class OrganizationGenerator(val model: OrganizationModel) extends Actor with ActorLogging {
 
@@ -56,33 +57,35 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 	}
 
 	private def generateTopLevelOrganization() {
-		val organization = generateAndStoreOrganization(None)
+		val careGroup = storeOrganization(Organization.sampleCareGroup)
 		val numberOfSubOrganizations = Random.nextInt(50) + 10
-		generateSubOrganizations(organization, numberOfSubOrganizations)
+		generateSubOrganizations(careGroup, numberOfSubOrganizations)
 	}
 
 	private def generateSubOrganizations(partOf: Organization, numberOfSubOrganizations: Int) {
 		for (i <- 0 to numberOfSubOrganizations) {
-			val organization = generateAndStoreOrganization(Some(partOf))
-			val numberOfSubSubOrganizations = Random.nextInt(5)
-			generateSubSubOrganizations(organization, numberOfSubSubOrganizations)
+			if (GeneratorConfig.mayGenerateNewOrganization(nrOfGeneratedOrganizations)) {
+				val organization = storeOrganization(Organization.sample(model, partOf))
+				nrOfGeneratedOrganizations += 1
+				val numberOfSubSubOrganizations = Random.nextInt(5)
+				generateSubSubOrganizations(organization, numberOfSubSubOrganizations)
+			}
 		}
 	}
 
 	private def generateSubSubOrganizations(partOf: Organization, numberOfSubSubOrganizations: Int) {
-		for (i <- 0 to numberOfSubSubOrganizations) generateAndStoreOrganization(Some(partOf))
+		for (i <- 0 to numberOfSubSubOrganizations) {
+			if (GeneratorConfig.mayGenerateNewOrganization(nrOfGeneratedOrganizations)) {
+				val organization = storeOrganization(Organization.sample(model, partOf))
+				nrOfGeneratedOrganizations += 1
+			}
+		}
 	}
 
-	private def generateAndStoreOrganization(partOf: Option[Organization]): Organization = {
-		val organization = Organization.sample(model, partOf)
-		if (GeneratorConfig.mayGenerateNewOrganization(nrOfGeneratedOrganizations)) {
-			InPipeline.waitGeneratingOrganizations
-			queue.publish(organization)
-			generatePatients(organization)
-			nrOfGeneratedOrganizations += 1
-		} else {
-			log.info("Not generating new organization because %d organizations were created and %d is the max".format(nrOfGeneratedOrganizations, GeneratorConfig.maxNrOfOrganizations))
-		}
+	private def storeOrganization(organization: Organization): Organization = {
+		InPipeline.waitGeneratingOrganizations
+		queue.publish(organization)
+		generatePatients(organization)
 		organization
 	}
 
@@ -106,7 +109,7 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 		 * @param organization
 		 */
 		def publish(organization: Organization) {
-			organizationBuilder.setMessageInput(organization.toPortavitaOrganization)
+			organizationBuilder.setMessageInput(organization.toOrganizationDTO)
 			organizationBuilder.build()
 			val document = MarshalHelper.marshal(organizationBuilder.getMessageContent(), marshaller)
 
@@ -115,7 +118,13 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 		}
 
 		private def publishPractitioners(organization: Organization) {
-			for (practitioner <- organization.practitioners) {
+			publishPractitioners(organization.careGroupEmployees)
+			publishPractitioners(organization.researchers)
+			publishPractitioners(organization.practitioners)
+		}
+
+		private def publishPractitioners(practitioners: List[Practitioner]) {
+			for (practitioner <- practitioners) {
 				practitionerBuilder.setMessageInput(practitioner.toPortavitaEmployee)
 				practitionerBuilder.build()
 				val document = MarshalHelper.marshal(practitionerBuilder.getMessageContent(), marshaller)
@@ -136,6 +145,6 @@ class OrganizationGenerator(val model: OrganizationModel) extends Actor with Act
 		val agb = Random.nextInt(99999999)
 		val startDate = new GregorianCalendar(2002, 1, 2).getTime()
 		val address = new Address("WP", "Amsterdam", "1018MR", "The Netherlands", startDate, null, "Oostenburgervoorstraat 100", "")
-		new Organization(id, "%08d".format(agb), "ORG", "Portavita B.V.", startDate, address, None, Nil, 0)
+		new Organization(id, "%08d".format(agb), "ORG", "Portavita B.V.", startDate, address, None, Nil, Nil, Nil, 0)
 	}
 }

@@ -16,11 +16,11 @@ import scala.collection.mutable
 import eu.portavita.axle.helper.CdaValueBuilderHelper
 import eu.portavita.axle.helper.CodeSystemProvider
 import eu.portavita.axle.helper.DateTimes
-import eu.portavita.databus.data.model.PortavitaAct
-import eu.portavita.databus.data.model.PortavitaActRelationship
-import eu.portavita.databus.data.model.PortavitaExamination
-import eu.portavita.databus.data.model.PortavitaParticipation
-import eu.portavita.databus.data.model.PortavitaTreatmentOfExamination
+import eu.portavita.databus.data.dto.ActDTO
+import eu.portavita.databus.data.dto.ActRelationshipDTO
+import eu.portavita.databus.data.dto.ExaminationDTO
+import eu.portavita.databus.data.dto.ParticipationDTO
+import eu.portavita.databus.data.dto.TreatmentOfExaminationDTO
 import eu.portavita.terminology.CodeSystem
 import eu.portavita.terminology.HierarchyNode
 
@@ -62,8 +62,8 @@ class Examination(
 	 *
 	 * @return map of the act codes onto Act objects
 	 */
-	def getPortavitaObservationActs: mutable.Map[String, PortavitaAct] = {
-		val acts = mutable.Map.empty[String, PortavitaAct]
+	def getPortavitaObservationActs: mutable.Map[String, ActDTO] = {
+		val acts = mutable.Map.empty[String, ActDTO]
 		for {
 			(code, observation) <- observations
 			act <- observation.toHl7Act(date)
@@ -73,9 +73,9 @@ class Examination(
 		acts
 	}
 
-	def build(root: HierarchyNode): PortavitaExamination = {
+	def build(root: HierarchyNode): ExaminationDTO = {
 		val actDetails = getPortavitaObservationActs
-		val actRelationships = mutable.ListBuffer.empty[PortavitaActRelationship]
+		val actRelationships = mutable.ListBuffer.empty[ActRelationshipDTO]
 
 		/**
 		 * Expands the given node in the hierarchy. If it must be displayed, an act is returned
@@ -85,7 +85,7 @@ class Examination(
 		 *
 		 * @return
 		 */
-		def expand(root: HierarchyNode): Option[PortavitaAct] = {
+		def expand(root: HierarchyNode): Option[ActDTO] = {
 			for (component <- root.getComponents()) {
 				val child = expand(component)
 				if (child.isDefined) {
@@ -102,7 +102,7 @@ class Examination(
 		val participants = createParticipants(examAct.getId())
 		val treatments = createTreatments(examAct.getId())
 
-		new PortavitaExamination(examAct, actRelationships, actDetails.values.toList, participants, treatments)
+		new ExaminationDTO(examAct, actRelationships, actDetails.values.toList, participants, treatments)
 	}
 
 	def generateText(): String = {
@@ -114,16 +114,16 @@ class Examination(
 		sb.toString()
 	}
 
-	def createTreatments(examinationActId: Long): ArrayList[PortavitaTreatmentOfExamination] = {
-		val treatments = new ArrayList[PortavitaTreatmentOfExamination]()
+	def createTreatments(examinationActId: Long): ArrayList[TreatmentOfExaminationDTO] = {
+		val treatments = new ArrayList[TreatmentOfExaminationDTO]()
 		for (treatment <- patient.treatments) {
 			treatments.add(treatment.toPortavitaTreatmentOfExamination(examinationActId))
 		}
 		treatments
 	}
 
-	def createOrganizer(code: String, date: Date): PortavitaAct = {
-		val organizer = new PortavitaAct
+	def createOrganizer(code: String, date: Date): ActDTO = {
+		val organizer = new ActDTO
 		organizer.setId(ActId.next)
 		organizer.setMoodCode("EVN")
 		organizer.setClassCode("ORGANIZER")
@@ -133,8 +133,8 @@ class Examination(
 		organizer
 	}
 
-	def createComponentActRelationship(source: Long, target: Long): PortavitaActRelationship = {
-		val relationship = new PortavitaActRelationship
+	def createComponentActRelationship(source: Long, target: Long): ActRelationshipDTO = {
+		val relationship = new ActRelationshipDTO
 		relationship.setSourceId(source)
 		relationship.setTargetId(target)
 		relationship.setTypeCode("COMP")
@@ -144,11 +144,11 @@ class Examination(
 		relationship
 	}
 
-	private def createParticipants(id: Long): ArrayList[PortavitaParticipation] = {
-		val participants = new ArrayList[PortavitaParticipation]
+	private def createParticipants(id: Long): ArrayList[ParticipationDTO] = {
+		val participants = new ArrayList[ParticipationDTO]
 
-		def createParticipant(typeCode: String, roleId: Long): PortavitaParticipation = {
-			val participant = new PortavitaParticipation
+		def createParticipant(typeCode: String, roleId: Long): ParticipationDTO = {
+			val participant = new ParticipationDTO
 			participant.setActId(id)
 			participant.setFromTime(date)
 			participant.setTypeCode(typeCode)

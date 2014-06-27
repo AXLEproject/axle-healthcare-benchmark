@@ -4,9 +4,9 @@ import java.util.Arrays
 import java.util.Date
 
 import eu.portavita.axle.helper.RandomHelper
-import eu.portavita.databus.data.model.PortavitaParticipation
-import eu.portavita.databus.data.model.PortavitaTreatment
-import eu.portavita.databus.data.model.PortavitaTreatmentOfExamination
+import eu.portavita.databus.data.dto.ParticipationDTO
+import eu.portavita.databus.data.dto.TreatmentDTO
+import eu.portavita.databus.data.dto.TreatmentOfExaminationDTO
 
 class Treatment(
 	val id: Long,
@@ -17,8 +17,8 @@ class Treatment(
 	val treatmentPlan: TreatmentPlan,
 	val principalPractitioner: Practitioner) {
 
-	def toPortavitaTreatment(subject: PortavitaParticipation, performer: PortavitaParticipation, author: PortavitaParticipation): PortavitaTreatment = {
-		val treatment = new PortavitaTreatment()
+	def toPortavitaTreatment(subject: ParticipationDTO, performer: ParticipationDTO, author: ParticipationDTO): TreatmentDTO = {
+		val treatment = new TreatmentDTO()
 		treatment.setActId(id)
 		treatment.setClassCode("PCPR")
 		treatment.setMoodCode("EVN")
@@ -26,14 +26,14 @@ class Treatment(
 		treatment.setFromTime(from)
 		treatment.setToTime(to)
 		treatment.setTreatmentPlanActId(treatmentPlan.id)
-		treatment.setParticipants(Arrays.asList[PortavitaParticipation](subject, performer, author))
+		treatment.setParticipants(Arrays.asList[ParticipationDTO](subject, performer, author))
 		treatment.setStatusCode(if (completed) "completed" else "active")
 		treatment.setTreatmentPlan(treatmentPlan.toPortavitaTreatmentPlan)
 		treatment
 	}
 
-	def toPortavitaTreatmentOfExamination(examinationActId: Long): PortavitaTreatmentOfExamination = {
-		val treatmentOfExamination = new PortavitaTreatmentOfExamination
+	def toPortavitaTreatmentOfExamination(examinationActId: Long): TreatmentOfExaminationDTO = {
+		val treatmentOfExamination = new TreatmentOfExaminationDTO
 		treatmentOfExamination.setTreatmentActId(id)
 		treatmentOfExamination.setTreatmentCode(code)
 		treatmentOfExamination.setExaminationActId(examinationActId)

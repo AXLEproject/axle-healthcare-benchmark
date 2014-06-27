@@ -8,10 +8,10 @@ import akka.actor.Cancellable
 import eu.portavita.axle.GeneratorConfig
 
 sealed trait BigBangMessage
-case class BrokerIsBlocked extends BigBangMessage
-case class BrokerIsUnblocked extends BigBangMessage
-case class PipelineTooFull extends BigBangMessage
-case class PipelineOkay extends BigBangMessage
+case class BrokerIsBlocked() extends BigBangMessage
+case class BrokerIsUnblocked() extends BigBangMessage
+case class PipelineTooFull() extends BigBangMessage
+case class PipelineOkay() extends BigBangMessage
 
 class BigBang extends Actor with ActorLogging {
 	import context._
