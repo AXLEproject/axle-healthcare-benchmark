@@ -3,11 +3,11 @@
  */
 package eu.portavita.axle.helper
 
-import eu.portavita.databus.messagebuilder.cda.IDisplayNameProvider
-import eu.portavita.terminology.LocalTerminologyCache
-import eu.portavita.databus.messagebuilder.cda.ValueType
-import eu.portavita.terminology.CodeSystem
 import java.util.concurrent.ConcurrentHashMap
+
+import eu.portavita.databus.IDisplayNameProvider
+import eu.portavita.terminology.CodeSystem
+import eu.portavita.terminology.LocalTerminologyCache
 
 class TerminologyDisplayNameProvider(terminology: LocalTerminologyCache) extends IDisplayNameProvider {
 

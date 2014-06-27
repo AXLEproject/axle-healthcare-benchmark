@@ -1,16 +1,13 @@
 package eu.portavita.axle
 
 import com.typesafe.config.ConfigFactory
-import eu.portavita.axle.helper.TerminologyDisplayNameProvider
-import eu.portavita.axle.helper.TerminologyValueTypeProvider
-import eu.portavita.axle.publisher.RabbitMessageQueueConfig
-import eu.portavita.databus.messagebuilder.builders.CdaJaxbContext
-import eu.portavita.databus.messagebuilder.builders.FhirJaxbContext
-import eu.portavita.databus.messagebuilder.cda.CdaValueBuilder
-import eu.portavita.databus.messagebuilder.cda.UcumTransformer
-import eu.portavita.terminology.LocalTerminologyCache
-import eu.portavita.axle.helper.CdaValueBuilderHelper
+
 import eu.portavita.axle.generators.PipelineConfig
+import eu.portavita.axle.helper.CdaValueBuilderHelper
+import eu.portavita.axle.publisher.RabbitMessageQueueConfig
+import eu.portavita.databus.message.contents.CdaJaxbContext
+import eu.portavita.databus.message.contents.FhirJaxbContext
+import eu.portavita.terminology.LocalTerminologyCache
 
 object GeneratorConfig {
 	val config = ConfigFactory.load()
@@ -22,7 +19,7 @@ object GeneratorConfig {
 	/** The terminology cache. */
 	val terminology = new LocalTerminologyCache(terminologyDirectory)
 	val unitMap = readUnitMap(terminologyDirectory + "/units.csv")
-	val valueTypeProvider = CdaValueBuilderHelper.getDisplayNameProvider
+	val valueTypeProvider = CdaValueBuilderHelper.getValueTypeProvider
 
 	val cdaJaxbContext = new CdaJaxbContext
 	val fhirJaxbContext = new FhirJaxbContext

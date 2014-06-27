@@ -25,7 +25,7 @@ object InPipeline {
 
 	def updatePause {
 		val shouldPause = organizationRequests.paused || patientRequests.paused || examinationRequests.paused || publishRequests.paused
-		System.err.println("updatePause: shouldPause = " + shouldPause.toString());
+//		System.err.println("updatePause: shouldPause = " + shouldPause.toString());
 		pause.compareAndSet(!shouldPause, shouldPause)
 	}
 }
