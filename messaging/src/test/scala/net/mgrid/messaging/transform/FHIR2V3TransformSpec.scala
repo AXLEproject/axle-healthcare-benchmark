@@ -22,16 +22,17 @@ class FHIR2V3TransformSpec extends FlatSpec {
     testFile("fhir2v3_0001_orga_input_OK.xml")
     testFile("fhir2v3_0003_orga_input_OK.xml")
   }
-  
+
   it should "transform Practitioner updates" in {
     testFile("fhir2v3_0002_prac_input_OK.xml")
+    testFile("fhir2v3_0006_prac_input_OK.xml")
   }
-  
+
   it should "transform Patient updates" in {
     testFile("fhir2v3_0004_pat_input_OK.xml")
     testFile("fhir2v3_0005_pat_input_invalidresref.xml")
   }
-  
+
   // shared variables and helpers
 
   val xsl = new File("src/main/resources/fhir-xsl/fhir-v3-transform.xsl")
@@ -46,12 +47,12 @@ class FHIR2V3TransformSpec extends FlatSpec {
     filename match {
       case okInput(prefix) => {
         import scala.xml.Utility.trim
-        
+
         transformer.transform(s, result)
-        
+
         val output = XML.loadString(result.toString())
         val expected = XML.loadFile(s"test-data/${prefix}_expected.xml")
-        
+
         assert(trim(output) == trim(expected), s"Output $output did not match expected $expected")
       }
       case _ => intercept[TransformerException] { // we expect the transform to fail

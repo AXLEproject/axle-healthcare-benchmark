@@ -142,6 +142,11 @@
           <xsl:value-of select="fhir:family/@value"/>
         </family>
       </xsl:if>
+      <xsl:if test="fhir:prefix">
+        <prefix>
+          <xsl:value-of select="fhir:prefix/@value"/>
+        </prefix>
+      </xsl:if>
       <xsl:value-of select="fhir:text/@value"/>
     </name>
   </xsl:template>

@@ -82,6 +82,11 @@
               <xs:documentation>The organization that the practitioner represents.</xs:documentation>
            </xs:annotation>
           </xs:element>
+          <xs:element name="role" minOccurs="0" maxOccurs="1" type="CodeableConcept">
+            <xs:annotation>
+              <xs:documentation>Role which this practitioner is authorized to perform for the organization.</xs:documentation>
+           </xs:annotation>
+          </xs:element>
           <xs:element name="specialty" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept">
             <xs:annotation>
               <xs:documentation>Specific specialty of the practitioner.</xs:documentation>

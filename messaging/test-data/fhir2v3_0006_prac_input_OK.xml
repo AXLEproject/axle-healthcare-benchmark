@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Practitioner xmlns:ns2="http://www.w3.org/1999/xhtml" xmlns="http://hl7.org/fhir">
+    <identifier>
+        <use value="official"/>
+        <system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.3"/>
+        <value value="1"/>
+    </identifier>
+    <identifier>
+        <use value="secondary"/>
+        <system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.2"/>
+        <value value="2"/>
+    </identifier>
+    <name>
+        <use value="usual"/>
+        <text value="Jucqs vom Bfyqnsi"/>
+        <family value="Bfyqnsi"/>
+        <given value="Jucqs"/>
+        <prefix value="vom"/>
+    </name>
+    <address>
+        <line value="Ukutmtdtpvutigatlpxmxgs 925"/>
+        <city value="Zyhhwienmajw"/>
+        <zip value="1199TK"/>
+        <period>
+            <start value="2011-03-12T09:56:22"/>
+        </period>
+    </address>
+    <gender>
+        <coding>
+            <system value="http://hl7.org/fhir/v3/AdministrativeGender"/>
+            <code value="F"/>
+        </coding>
+    </gender>
+    <birthDate value="1927-07-16T09:56:22"/>
+    <organization>
+        <extension url="http://portavita.eu/fhir/Identifier">
+            <valueIdentifier>
+                <system value="urn:oid:2.16.840.1.113883.2.4.3.31.3.2"/>
+                <value value="1"/>
+            </valueIdentifier>
+        </extension>
+        <reference value="Organization/2.16.840.1.113883.2.4.3.31.3.2-1"/>
+    </organization>
+    <specialty>
+        <coding>
+            <system value="http://portavita.eu/fhir/PractitionerSpeciality" />
+            <code value="gp" /> <!-- either "gp" or "specialist"; nothing else at this time -->
+        </coding>
+    </specialty>
+    <role>
+        <coding>
+            <system value="http://portavita.eu/fhir/RoleInOrganizationCode"/>
+            <code value="CAREGROUPEMP"/>
+        </coding>
+    </role>
+    <period>
+        <start value="2007-03-18T09:56:22"/>
+    </period>
+</Practitioner>
+

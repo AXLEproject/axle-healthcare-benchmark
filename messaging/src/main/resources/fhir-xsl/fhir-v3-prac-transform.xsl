@@ -8,11 +8,10 @@
 
   <xsl:template match="/fhir:Practitioner">
     <PractitionerUpdate classCode="ACTN" moodCode="EVN" >
-      <templateId root="TBD"/>
       <subject typeCode="SBJ">
         <healthCareProvider classCode="PROV">
           <xsl:apply-templates select="fhir:identifier" />
-          <xsl:apply-templates select="fhir:specialty/fhir:coding" />
+          <xsl:apply-templates select="fhir:role/fhir:coding" />
           <xsl:apply-templates select="fhir:period" />
           <healthCarePractitioner classCode="PSN" determinerCode="INSTANCE">
             <xsl:apply-templates select="fhir:identifier" />
@@ -21,6 +20,7 @@
             <xsl:apply-templates select="fhir:gender" />
             <xsl:apply-templates select="fhir:birthDate" />
             <xsl:apply-templates select="fhir:address" />
+            <xsl:apply-templates select="fhir:specialty/fhir:coding" />
           </healthCarePractitioner>
           <xsl:apply-templates select="fhir:organization" />
         </healthCareProvider>
@@ -32,6 +32,12 @@
     <issuingOrganization classCode="ORG" determinerCode="INSTANCE">
       <xsl:call-template name="convert-resource" />
     </issuingOrganization>
+  </xsl:template>
+
+  <xsl:template match="fhir:specialty/fhir:coding">
+    <asQualifiedEntity classCode="QUAL">
+      <xsl:call-template name="convert-code" />
+    </asQualifiedEntity>
   </xsl:template>
 
 </xsl:stylesheet>

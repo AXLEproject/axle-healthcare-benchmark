@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Payload of the HTTP POST to http://mgrid.net/fhir/Practitioner
+
+     This version shows how a practitioner can be added or updated. It also
+     shows how a link with an scoping organization works, how a role in an
+     organization and a speciality are recorded.
+-->
+<PractitionerUpdate  xmlns="urn:hl7-org:v3" classCode="ACTN" moodCode="EVN">
+  <subject typeCode="SBJ">
+    <healthCareProvider classCode="PROV">
+      <id root="2.16.840.1.113883.2.4.3.31.3.3" extension="1" />
+      <id root="2.16.840.1.113883.2.4.3.31.3.2" extension="2" />
+      <code codeSystem="http://portavita.eu/fhir/RoleInOrganizationCode" code="CAREGROUPEMP"/>
+      <effectiveTime>
+        <low value="20070318095622"/>
+      </effectiveTime>
+      <healthCarePractitioner classCode="PSN" determinerCode="INSTANCE">
+        <id root="2.16.840.1.113883.2.4.3.31.3.3" extension="1" />
+        <id root="2.16.840.1.113883.2.4.3.31.3.2" extension="2" />
+        <name use="L">
+          <given>Jucqs</given>
+          <family>Bfyqnsi</family>
+          <prefix>vom</prefix>
+          Jucqs vom Bfyqnsi
+        </name>
+        <administrativeGenderCode code="F" codeSystem="2.16.840.1.113883.5.1" codeSystemName="HL7 AdministrativeGender" displayName="Female"/>
+        <birthTime value="19270716095622"/>
+        <addr>
+          <streetAddressLine>Ukutmtdtpvutigatlpxmxgs 925</streetAddressLine>
+          <city>Zyhhwienmajw</city>
+          <postalCode>1199TK</postalCode>
+          <useablePeriod value="20110312095622"/>
+        </addr>
+        <asQualifiedEntity classCode="QUAL">
+          <code codeSystem="http://portavita.eu/fhir/PractitionerSpeciality" code="gp"/>
+        </asQualifiedEntity>
+      </healthCarePractitioner>
+      <issuingOrganization classCode="ORG" determinerCode="INSTANCE">
+        <id root="2.16.840.1.113883.2.4.3.31.3.2" extension="1"/>
+      </issuingOrganization>
+    </healthCareProvider>
+  </subject>
+</PractitionerUpdate>

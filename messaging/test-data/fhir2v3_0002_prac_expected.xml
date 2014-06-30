@@ -3,13 +3,11 @@
 	that a new employee (has role_id) has been added to Portavita.  with
 	the following details. JWK 27-11-2013. -->
 <PractitionerUpdate moodCode="EVN" classCode="ACTN" xmlns="urn:hl7-org:v3">
-  <templateId root="TBD"/>
   <subject typeCode="SBJ">
     <healthCareProvider classCode="PROV">
       <id extension="192105" root="2.16.840.1.113883.2.4.3.31.3.3"/>
       <id extension="31879" root="2.16.840.1.113883.2.4.3.31.3.2"/>
       <id extension="13199" root="2.16.840.1.113883.2.4.6.1"/>
-      <code codeSystem="http://portavita.eu/fhir/PractitionerSpeciality" code="specialist"/>
       <effectiveTime>
         <low value="20100331000000"/>
       </effectiveTime>
@@ -31,6 +29,9 @@
           <postalCode>8500AB</postalCode>
           <useablePeriod value="20100331000000"/>
         </addr>
+        <asQualifiedEntity classCode="QUAL">
+          <code codeSystem="http://portavita.eu/fhir/PractitionerSpeciality" code="specialist"/>
+        </asQualifiedEntity>
       </healthCarePractitioner>
       <issuingOrganization determinerCode="INSTANCE" classCode="ORG">
         <id extension="257327" root="2.16.840.1.113883.2.4.3.31.1"/>
