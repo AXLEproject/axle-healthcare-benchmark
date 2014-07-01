@@ -9,6 +9,7 @@ include ../default_settings
 
 .PHONY: reconfig template ponds desert clean
 
+SHELL=/bin/bash
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 
 TEMPLATEDB=pondtemplate
