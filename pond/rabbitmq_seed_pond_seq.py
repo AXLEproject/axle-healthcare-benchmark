@@ -1,4 +1,6 @@
 #
+# Copyright (c) 2013, MGRID BV Netherlands
+#
 # Problem:
 #
 # Many loaders need to share a sequence number space S

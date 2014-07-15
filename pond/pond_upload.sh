@@ -1,8 +1,9 @@
 #!/bin/bash
 #
+# Copyright (c) 2013, MGRID BV Netherlands
+#
 # Transfer a local data pond to the data lake
-
-
+#
 # Set pipefail option: "The return value of a pipeline is the value of the last (rightmost) command to exit with a non-zero status, or 
 # zero if all commands in the pipeline exit successfully.
 set -o pipefail

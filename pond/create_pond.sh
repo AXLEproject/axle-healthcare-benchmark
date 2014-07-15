@@ -3,8 +3,6 @@
 # create_pond.sh
 # Create a pond staging RIM database.
 #
-# This file is part of the MGRID HDW sample datawarehouse release.
-#
 # Copyright (c) 2013, MGRID BV Netherlands
 #
 set -e
@@ -71,9 +69,6 @@ case "${ACTION}" in
         echo "..Creating owner role and database"
         pgcommand postgres "CREATE USER $DBNAME"
         pgcommand postgres "CREATE DATABASE $DBNAME"
-
-        # Load term mappings (take care not to load in stream or rimxxx)
-        pgcommandfromfile $DBNAME "terminology_mapping.sql"
 
         echo "..Creating stream functions"
         pgcommandfromfile $DBNAME "stream.sql"

@@ -1,8 +1,6 @@
 /*
  * rim_dropforeignkeys.sql
  *
- * This file is part of the MGRID HDW sample datawarehouse release.
- *
  * Copyright (c) 2013, MGRID BV Netherlands
  */
 ALTER TABLE "AcknowledgementDetail" DROP CONSTRAINT IF EXISTS AcknowledgementDetail_acknowledgement_fkey;

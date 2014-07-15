@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# Copyright (c) 2013, MGRID BV Netherlands
+#
 # Prepare a "staging" database on a tranzoom messageloader to be a
 # partition. To that end, we ensure that the ids used to create inserts are
 # disjunct over an entire mgrid.
