@@ -1,24 +1,25 @@
 package eu.portavita.axle.helper
 
-/*
-import org.scalatest.Suite
-class RandomHelperSuite extends Suite {
+import org.scalatest.Matchers
+import org.scalatest.FlatSpec
 
-	def testLowercase() {
+class RandomHelperSuite extends FlatSpec with Matchers {
+
+	"lowercase" should "generate lowercase strings" in {
 		val length = 10
 		val actual = RandomHelper.lowercase(length)
 		assert(actual.size == length)
 		for (i <- 0 until length) assert(actual(i).isLower)
 	}
 
-	def testUppercase() {
+	"uppercase" should "generate uppercase strings" in {
 		val length = 10
 		val actual = RandomHelper.uppercase(length)
 		assert(actual.size == length)
 		for (i <- 0 until length) assert(actual(i).isUpper)
 	}
 
-	def testStartingWithCapital() {
+	"startingWithCapital" should "generate strings starting with upper case and the rest lower case" in {
 		val length = 10
 		val actual = RandomHelper.startingWithCapital(length)
 		assert(actual.size == length)
@@ -26,7 +27,7 @@ class RandomHelperSuite extends Suite {
 		for (i <- 1 until length) assert(actual(i).isLower)
 	}
 
-	def testBetween1() {
+	"between" should "generate number in between the given min and max" in {
 		val min = 3
 		val max = 5
 		val actual = RandomHelper.between(min, max)
@@ -34,13 +35,13 @@ class RandomHelperSuite extends Suite {
 		assert(actual <= max)
 	}
 
-	def testBetween2() {
+	"between" should "generate min when min = max" in {
 		val x = 5
 		val actual = RandomHelper.between(x, x)
 		assert(actual == x)
 	}
 
-	def testStringMinMaxSize() {
+	"string" should "generate a string with a length between the given min and max" in {
 		val min = 3
 		val max = 5
 		val actual = RandomHelper.string(min, max)
@@ -48,12 +49,10 @@ class RandomHelperSuite extends Suite {
 		assert(actual.size <= max)
 	}
 
-	def testPhrase() {
+	"phrase" should "generate a phrase with the given number of words" in {
 		val wordLength = 3
 		val words = 4
 		val actual = RandomHelper.phrase(words, wordLength, wordLength)(RandomHelper.lowercase)
-		println(actual)
 		assert(actual.size == 15)
 	}
 }
-*/

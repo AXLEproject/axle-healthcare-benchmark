@@ -53,27 +53,7 @@ class Patient(
 		participation.setTypeCode(typeCode)
 		participation
 	}
-/*
-	def toPortavitaPatient: PortavitaPatient = {
-		val patient = new PortavitaPatient
-		patient.setRoleId(roleId)
-		patient.setFromTime(fromTime)
-		patient.setToTime(toTime)
-		patient.setOrganizationEntityId(organization.id)
-		patient.setPortavitaPerson(person.toPortavitaPerson)
-		patient
-	}
 
-	def toParticipation(actId: Long, from: Date, to: Date, typeCode: String = "SBJ"): PortavitaParticipation = {
-		val participation = new PortavitaParticipation()
-		participation.setActId(actId)
-		participation.setFromTime(from)
-		participation.setToTime(to)
-		participation.setRoleId(roleId)
-		participation.setTypeCode(typeCode)
-		participation
-	}
-*/
 	override def toString = "%s, care provision started %s".format(nameString, DateTimes.dateFormat.format(careProvisionStart))
 	def nameString = person.name.toString()
 	def treatmentString = "TODO"

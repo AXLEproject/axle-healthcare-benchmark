@@ -8,7 +8,6 @@ import eu.portavita.axle.GeneratorConfig
 
 object InPipeline {
 	val config = GeneratorConfig.pipelineConfig
-	val pause = new AtomicBoolean(false)
 
 	val organizationRequests = new RequestInProgress(config.maxOrganizations, Nil, "organizations")
 	val patientRequests = new RequestInProgress(config.maxPatients, List(organizationRequests), "patients")

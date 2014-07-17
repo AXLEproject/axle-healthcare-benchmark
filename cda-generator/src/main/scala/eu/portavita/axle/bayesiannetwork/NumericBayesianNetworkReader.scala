@@ -4,10 +4,10 @@
 package eu.portavita.axle.bayesiannetwork
 
 import scala.collection.mutable
+
+import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.json.AsDouble
 import eu.portavita.axle.json.AsMap
-import eu.portavita.axle.Generator
-import eu.portavita.axle.GeneratorConfig
 
 /**
  * Contains functions to read Bayesian network of only numeric variables from JSON map.
