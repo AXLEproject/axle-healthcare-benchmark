@@ -114,6 +114,7 @@ PARTITION BY RANGE (_effective_time_low_year)\
 case "${ACTION}" in
     drop)
         echo "..Dropping database and owner role"
+        pgcommand postgres "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '$DBNAME' AND pid <> pg_backend_pid();"
         pgcommand postgres "DROP DATABASE IF EXISTS $DBNAME"
         pgcommand postgres "DROP USER IF EXISTS $DBNAME"
         ;;
