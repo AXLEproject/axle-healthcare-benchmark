@@ -3,7 +3,7 @@ package eu.portavita.axle.helper
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
 
-class RandomHelperSuite extends FlatSpec with Matchers {
+class RandomHelperSpec extends FlatSpec with Matchers {
 
 	"lowercase" should "generate lowercase strings" in {
 		val length = 10
