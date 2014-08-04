@@ -82,7 +82,8 @@ gpext2sql() {
         -e '/CREATE TABLE "[[:alpha:]]*Participation"/ {s/_clonename TEXT,/_clonename TEXT, _origin BIGINT,/}' \
         -e 's/ PRIMARY KEY//g' \
         -e 's/ REFERENCES \"[[:alpha:]]*\"//g' \
-        -e 's/"value" "ANY",/_value_pq pq,_value_pq_value NUMERIC, _value_pq_unit TEXT,_value_code cv,_value_code_code TEXT, _value_code_codesystem TEXT, _value_int INT, _value_real NUMERIC, _value_ivl_real ivl_real, "value" "ANY",/g' \
+        -e 's/"code" "CD",/_code_code TEXT, _code_codesystem TEXT, "code" "CD",/g' \
+        -e 's/"value" "ANY",/_value_pq pq,_value_pq_value NUMERIC, _value_pq_unit TEXT,_value_code_code TEXT, _value_code_codesystem TEXT, _value_int INT, _value_real NUMERIC, _value_ivl_real ivl_real, "value" "ANY",/g' \
         -e 's/, "effectiveTime"/, _effective_time_low TIMESTAMPTZ, _effective_time_low_year INT, _effective_time_low_month INT, _effective_time_low_day INT, _effective_time_high TIMESTAMPTZ, _effective_time_high_year INT, _effective_time_high_month INT, _effective_time_high_day INT, "effectiveTime"/g' \
         -e '/CREATE TABLE "Act"/ {s/;//}' \
         -e '/CREATE TABLE "Act"/ {a\
@@ -114,7 +115,7 @@ PARTITION BY RANGE (_effective_time_low_year)\
 case "${ACTION}" in
     drop)
         echo "..Dropping database and owner role"
-        pgcommand postgres "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '$DBNAME' AND pid <> pg_backend_pid();"
+        #pgcommand postgres "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '$DBNAME' AND pid <> pg_backend_pid();" || echo ""
         pgcommand postgres "DROP DATABASE IF EXISTS $DBNAME"
         pgcommand postgres "DROP USER IF EXISTS $DBNAME"
         ;;
@@ -132,10 +133,13 @@ case "${ACTION}" in
 GP=`psql -tA --host $PG_HOST --port $PG_PORT $DBNAME --user $PG_USER -c "select version() like '%reenplum%'"` || fail "could not query database version"
 if [ "x${GP}" = "xt" ];
 then
+	# Check that environment matches
+	PGV=$(pg_config --version)
+	test "x${PGV}" = "xPostgreSQL 8.2.15" || fail "pg_config is not set to Greenplum"
+
         # Install HDL modules in Greenplum
         # install_hdl includes installation of hl7v3datatypes_r1--2.0.sql
-        pushd /home/m/mgrid-hdl/greenplum ; ./install_hdl.sh ${DBNAME} ${PG_PORT} ${PG_HOST} ${PG_USER} || fail "could not install hdl"
-        popd
+        $(pg_config --sharedir)/contrib/install_hdl.sh ${DBNAME} ${PG_PORT} ${PG_HOST} ${PG_USER} || fail "could not install hdl"
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
