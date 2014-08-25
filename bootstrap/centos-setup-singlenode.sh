@@ -73,9 +73,11 @@ then
  mv apache-maven-3.2.1 bin
  rm -f apache-maven-3.2.1-bin.tar.gz
  cat >> .bashrc <<EOF
-export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1 
-export M2=\${M2_HOME}/bin 
+export M2_HOME=/home/\${USER}/bin/apache-maven-3.2.1
+export M2=\${M2_HOME}/bin
 export PATH=\${M2}:\${PATH}
+# unset JAVA_HOME so mvn picks the (1.7) jdk from /usr/bin/java
+export JAVA_HOME=
 EOF
 fi
 
