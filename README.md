@@ -1,63 +1,68 @@
 # axle-healthcare-benchmark #
 
-Synthetic healthcare database generator and decision support benchmark
+Synthetic healthcare database generator and decision support benchmark.
 
-### Requires ###
+## Components ##
+
+* CDA Generator and Loading Engine:
+  Generate and load synthetic healthcare data
+* Data Lake:
+  Database containing the synthetic healthcare data
+* Benchmark queries:
+  Queries that can be executed on the Data Lake
+
+### Requirements ###
 * minimally 4GB RAM
-* Oracle JDK 7 or OpenJDK
-* Maven 2.2
 * CentOS 6 or Ubuntu 12.04
 
-The project contains for CentOS and Ubuntu scripts that must be run as root,
-and will take care of installing the prerequisites.
+## Getting started ##
 
-* CentOS 6
-  * `yum install -y git` (as root)
-  * `git clone https://github.com/AXLEproject/axle-healthcare-benchmark`
-  * `bash -c axle-healthcare-benchmark/bootstrap/centosroot.sh` (as root)
-* Ubuntu 12.04
-  * `sudo apt-get update`
-  * `sudo apt-get install -y git-core`
-  * `git clone https://github.com/AXLEproject/axle-healthcare-benchmark`
-  * `sudo bash -c axle-healthcare-benchmark/bootstrap/ubunturoot.sh`
-
-# Components #
-
-## CDA Generator ##
-
-Generates an endless stream of CDA documents.  The structure and distribution
-of the content of the documents is defined in a set of models in the models/
-directory.  Terminology data is read from the terminology/ directory that
-defines the value types and display names of all acts and coded values.
-
-## Staging HL7v3 RIM database ##
-
-The staging database is used to 'stage' the persisted CDA documents.  The XML
-documents are loaded by the example CDA R2 parser that is part of the MGRID
-Messaging SDK.
-
-## Data Warehouse and ETL ##
-
-The data warehouse follows a star schema design.  Data from the staging
-database is transformed using ETL, that is programmed as stored procedures.
-
-# Preparation #
+### Preparation ###
 
 * Mail info@portavita.eu for the 'axle synthetic models' password and put it in
   `axle-healthcare-benchmark/cda-generator/password.txt`
-* Configure the CDA generator
-  `nano axle-healthcare-benchmark/default_settings`
-  * Configure `NUMBEROFCDAS` to generate.
-* `make prepare` will
- * generate the CDA documents
- * create a PostgreSQL cluster with staging and datawarehouse databases
- * transform XML documents and load the datawarehouse
-* `echo 'export PATH=/home/${USER}/axle-healthcare-benchmark/database/postgres/bin:${PATH}' >> ~/.bashrc`
-* `source ~/.bashrc`
 
-# Run queries #
-* `make runone QUERY=1`
+### Dataset generation (CentOS 6 only) ###
 
-# Delete data #
-* `make clean`
+Dataset generation is performed by the CDA Generator and Loading Engine. The
+Generator generates an endless stream of CDA documents. The structure and
+distribution of the content of the documents is defined in a set of models in
+the models/ directory.  Terminology data is read from the terminology/ directory
+that defines the value types and display names of all acts and coded values.
+
+Generated documents are processed by the Loading Engine such that they can be
+loaded in a database. The engine can run in a single node or distributed setup.
+Documents are transformed to SQL using the MGRID Messaging SDK, and loaded in
+small databases called data ponds. Data ponds are HL7v3 Reference Information
+Model (RIM) databases on which pre-processing is performed before data is
+uploaded to the data lake.
+
+For setting up a complete chain for dataset generation on a single node
+(including the data lake), clone this repository in your home directory and do:
+
+* `cd $HOME`
+* `sudo axle-healthcare-benchmark/bootstrap/centos-setup-singlenode.sh`
+* `sudo start axle-cdagen`
+
+Note that this requires installing and setting up several dependencies so you
+probably want this on a dedicated (virtual) machine.
+
+### Create a data lake ###
+
+If your main interest is getting access to a data lake and running queries on
+it, you can create an (empty) data lake by running the following from the project root:
+
+* `make prepare_database`
+* `make -C lake`
+
+Note that this involves building and running a PostgreSQL server, so make sure
+there is no server already running.
+
+To obtain an example dataset that can be loaded in the data lake, send a mail to
+info@portavita.eu.
+
+### Querying ###
+
+Once you have a data lake with some data in it, you can run the benchmark
+queries on it. They can be found in the `queries/` directory.
 
