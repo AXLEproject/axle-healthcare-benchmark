@@ -45,6 +45,13 @@ pip install https://github.com/celery/py-amqp/archive/v1.4.4.tar.gz
 
 sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make installmsg"
 
+cat << EOF > ${MESSAGING_DIR}/transformer.json
+{"broker": {"username": "${RABBITMQUSER}", "password": "${RABBITMQPASSWORD}"},
+ "broker_export": {"hostname": "${BROKERHOST}"},
+ "transformer": {"prefetch": 50},
+ "xfm": {"persistence":"NON_PERSISTENT"} }
+EOF
+
 CPUS=`grep MHz /proc/cpuinfo | wc -l`
 
 for i in $(seq $CPUS)
@@ -58,7 +65,7 @@ respawn
 
 script
   exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- python ${MESSAGING_DIR}/integration/rabbitmq/transformer.py \
-    ${RABBITMQUSER} ${RABBITMQPASSWORD} ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
+    ${MESSAGING_DIR}/transformer.json 2>&1 | logger -t axle-xfm$i
 end script
 EOF
 

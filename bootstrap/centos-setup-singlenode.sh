@@ -129,6 +129,13 @@ EOF
 MESSAGING_DIR=${USERDIR}/mgrid-messaging-${MGRIDMSGVERSION}
 test -d ${MESSAGING_DIR} || sudo -u ${USER} sh -c "cd ${AXLE}/bootstrap && make installmsg"
 
+cat << EOF > ${MESSAGING_DIR}/transformer.json
+{"broker": {"username": "${RABBITMQUSER}", "password": "${RABBITMQPASSWORD}"},
+ "broker_export": {"hostname": "${BROKERHOST}"},
+ "transformer": {"prefetch": 50},
+ "xfm": {"persistence":"NON_PERSISTENT"} }
+EOF
+
 TRANSFORMERS=1
 for i in $(seq $TRANSFORMERS)
 do
@@ -141,7 +148,7 @@ respawn
 
 script
   exec su -s /bin/sh -c 'exec "\$0" "\$@"' ${USER} -- python ${MESSAGING_DIR}/integration/rabbitmq/transformer.py \
-     ${RABBITMQUSER} ${RABBITMQPASSWORD} ${BROKERHOST} 2>&1 | logger -t axle-xfm$i
+     ${MESSAGING_DIR}/transformer.json 2>&1 | logger -t axle-xfm$i
 end script
 EOF
 
