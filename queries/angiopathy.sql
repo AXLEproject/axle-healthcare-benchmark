@@ -156,7 +156,7 @@ SELECT row_number() over()                          AS row_number
   ,       (record_id->>'age_in_days')::numeric      AS age_in_days
   ,       (record_id->>'gender')                    AS gender
 -- classifier
-  ,       (record_id->>'pvd_time')                  AS peripheral_vascular_disease
+  ,       (record_id->>'pvd_time') IS NULL          AS peripheral_vascular_disease
 -- smoking
   ,       CASE WHEN smoking->>'value' = '266919005' THEN 0 -- never
                WHEN smoking->>'value' = '8517006'   THEN 1 -- used to
