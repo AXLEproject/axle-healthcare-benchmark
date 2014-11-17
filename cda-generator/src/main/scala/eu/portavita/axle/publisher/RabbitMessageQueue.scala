@@ -73,4 +73,5 @@ object RabbitMessageQueue {
 	val patientRoutingKey = "generator.fhir.patient"
 	val treatmentRoutingKey = "generator.hl7v3.treatment"
 	val examinationRoutingKey = "generator.hl7v3.examination"
+  val consentRoutingKey = "generator.hl7v3.consent"
 }
