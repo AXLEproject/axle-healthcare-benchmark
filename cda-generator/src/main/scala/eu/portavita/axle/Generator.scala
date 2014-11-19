@@ -12,6 +12,7 @@ import eu.portavita.axle.generators.PatientGenerator
 import eu.portavita.axle.model.OrganizationModel
 import eu.portavita.axle.model.PatientProfile
 import eu.portavita.axle.publisher.RabbitMessageQueueActor
+import eu.portavita.axle.generators.ConsentGenerator
 
 /**
  * Application that generates random CDA documents.
@@ -34,6 +35,9 @@ object Generator extends App {
 
 	private val patientProfile = PatientProfile.read(GeneratorConfig.modelsDirectory)
 	system.log.info("Loaded patient profile")
+  
+  private val consentGenerator = system.actorOf(Props(new ConsentGenerator()), name = "consentGenerator")
+  system.log.info("Created consent generator.")
 
 	// Create patient generator actor.
 	private val patientGenerator = system.actorOf(
