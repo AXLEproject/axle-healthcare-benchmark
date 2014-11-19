@@ -36,6 +36,7 @@ class PatientGenerator(
 
 	private val milisecondsPerDay = 1000 * 60 * 60 * 24
 	private val publisher = new PublishHelper(context.actorSelection("/user/publisher"))
+  lazy private val consentGeneratorActor = context.actorSelection("/user/consentGenerator")
 
 	private val queue = new PatientPublisher
 
@@ -61,6 +62,7 @@ class PatientGenerator(
 	private def generate(organization: Organization) = {
 		val patient = Patient.sample(patientProfile, organization)
 		queue.publish(patient)
+    consentGeneratorActor ! ConsentGenerationRequest(patient)
 		generateExaminations(patient)
 	}
 

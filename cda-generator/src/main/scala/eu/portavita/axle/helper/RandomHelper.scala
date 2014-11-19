@@ -59,4 +59,6 @@ object RandomHelper {
 	}
 
 	def randomElement[T](list: List[T]): T = list(Random.nextInt(list.length))
+  
+  def coinFlip: Boolean = Random.nextBoolean()
 }

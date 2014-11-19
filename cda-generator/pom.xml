@@ -82,10 +82,8 @@
 			<groupId>eu.portavita.databus</groupId>
 			<artifactId>message-builders</artifactId>
 			<version>1.0-SNAPSHOT</version>
-			<!-- 
 			<scope>system</scope>
 			<systemPath>${basedir}/lib/message-builders-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
-			 -->
 		</dependency>
 		<dependency>
 			<groupId>com.rabbitmq</groupId>

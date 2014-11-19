@@ -29,6 +29,9 @@ class ConsentGenerator extends Actor with ActorLogging {
    */
   def receive = {
     case request @ ConsentGenerationRequest(patient) =>
+      val custodian = patient.organization
+      val consent = Consent.sample(patient, custodian)
+      queue.publish(consent)
 
     case x =>
       log.warning("Received message that I cannot handle: " + x.toString)
@@ -51,13 +54,7 @@ class ConsentGenerator extends Actor with ActorLogging {
     def publish(consent: Consent) {
       val message = buildConsentMessage(consent)
       val marshalledMessage = MarshalHelper.marshal(message, marshaller)
-      publisher.publish(marshalledMessage, RabbitMessageQueue.examinationRoutingKey)
-    }
-
-    def addText(text: String, message: ExaminationMessageContent) {
-      val textElement = new StrucDocText
-      textElement.getContent().add(text)
-      message.getExaminationSections().get(0).setText(textElement)
+      publisher.publish(marshalledMessage, RabbitMessageQueue.consentRoutingKey)
     }
 
     private def buildConsentMessage(consent: Consent): ConsentMessageContent = {

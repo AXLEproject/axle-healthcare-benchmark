@@ -16,7 +16,14 @@ class TerminologyValueTypeProvider(terminology: LocalTerminologyCache) extends I
 		cache.getOrElseUpdate(code, getValueTypeOf(code))
 	}
 
-	private def getValueTypeOf(code: String) =
-		ValueType.valueOf(terminology.getConcept(CodeSystemProvider.get(code), code).getValueType())
+	private def getValueTypeOf(code: String) = {
+    val x = terminology.getConcept(CodeSystemProvider.get(code), code).getValueType()
+    if (x == null) {
+      System.err.println(code)
+      System.err.println(CodeSystemProvider.get(code))
+      System.err.println(terminology.getConcept(CodeSystemProvider.get(code), code))
+    }
+		ValueType.valueOf(x)
+  }
 
 }
