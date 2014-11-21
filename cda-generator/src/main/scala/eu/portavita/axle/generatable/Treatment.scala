@@ -4,6 +4,9 @@ import java.util.Arrays
 import java.util.Date
 
 import eu.portavita.axle.helper.RandomHelper
+import eu.portavita.databus.CodeSystem
+import eu.portavita.databus.data.dto.ActDTO
+import eu.portavita.databus.data.dto.ActRelationshipDTO
 import eu.portavita.databus.data.dto.ParticipationDTO
 import eu.portavita.databus.data.dto.TreatmentDTO
 import eu.portavita.databus.data.dto.TreatmentOfExaminationDTO
@@ -18,18 +21,28 @@ class Treatment(
 	val principalPractitioner: Practitioner) {
 
 	def toPortavitaTreatment(subject: ParticipationDTO, performer: ParticipationDTO, author: ParticipationDTO): TreatmentDTO = {
-		val treatment = new TreatmentDTO()
-		treatment.setActId(id)
-		treatment.setClassCode("PCPR")
-		treatment.setMoodCode("EVN")
-		treatment.setCode(code)
-		treatment.setFromTime(from)
-		treatment.setToTime(to)
+		val treatmentAct = toTreatmentAct
+		val actRelationships = Arrays.asList[ActRelationshipDTO]()
+		val actDetails = Arrays.asList[ActDTO]()
+		val participants = Arrays.asList[ParticipationDTO](subject, performer, author)
+		val treatment = new TreatmentDTO(treatmentAct, actRelationships, actDetails, participants)
 		treatment.setTreatmentPlanActId(treatmentPlan.id)
-		treatment.setParticipants(Arrays.asList[ParticipationDTO](subject, performer, author))
-		treatment.setStatusCode(if (completed) "completed" else "active")
 		treatment.setTreatmentPlan(treatmentPlan.toPortavitaTreatmentPlan)
 		treatment
+	}
+
+	def toTreatmentAct: ActDTO = {
+		val act = new ActDTO
+		act.setId(id)
+		act.setClassCode("PCPR")
+		act.setMoodCode("EVN")
+		act.setNegationIndicator("N")
+		act.setCode(code)
+		act.setCodeSystemOid(CodeSystem.guess(code).getOid())
+		act.setFromTime(from)
+		act.setToTime(to)
+		act.setStatusCode(if (completed) "completed" else "active")
+		act
 	}
 
 	def toPortavitaTreatmentOfExamination(examinationActId: Long): TreatmentOfExaminationDTO = {
