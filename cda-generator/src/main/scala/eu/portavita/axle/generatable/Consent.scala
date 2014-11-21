@@ -33,7 +33,7 @@ class Consent(patient: Patient,
     actRelationships.add(relate(consentDirective, observationRelatedProblem, "COMP", null))
 
     val participants: ArrayList[ParticipationDTO] = createParticipants(consentDirective.getId)
-    participants.add(createReceivingProvider(observationAction.getId))
+    participants.add(createReceivingProvider(consentDirective.getId))
 
     new ConsentDocumentDTO(consentDirective, actRelationships, Arrays.asList(observationAction, observationRelatedProblem), participants)
   }
