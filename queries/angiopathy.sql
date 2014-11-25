@@ -36,13 +36,15 @@
  * Copyright (c) 2014, Portavita B.V.
  */
 
--- DROP MATERIALIZED VIEW angiopathy_base_values CASCADE;
-CREATE MATERIALIZED VIEW angiopathy_base_values
-AS
-    WITH pvd AS
-    (
-      SELECT  ptnt.player                           AS peso_id
-      ,       obse._effective_time_low              AS pvd_time
+
+DROP VIEW classifier CASCADE;
+CREATE VIEW classifier AS
+      SELECT * FROM (
+      SELECT  abs(hashtext('4xl3' || ptnt.player::text))  AS pseudonym
+      ,       obse._code_code                       AS code
+      ,       obse._effective_time_low              AS time
+      ,       RANK() OVER (PARTITION BY ptnt.player, obse._code_code
+                           ORDER BY obse._effective_time_low DESC, obse._id DESC) AS rocky
       FROM    "Patient"                                ptnt
       JOIN    "Participation"                          obse_ptcp
       ON      ptnt._id                                 = obse_ptcp.role
@@ -50,29 +52,35 @@ AS
       ON      peso._id                                 = ptnt.player
       JOIN    "Observation"                            obse
       ON      obse._id                                 = obse_ptcp.act
-      WHERE  NOT (obse."negationInd")
-      AND    obse._code_codesystem = '2.16.840.1.113883.6.96'
-      AND    obse._code_code = '400047006' -- peripheral vascular disease
-      AND    obse._value_code_code = 'Y'
-    )
-   , base_values AS
-    (
-      SELECT  ptnt.player                           AS peso_id
+      WHERE  (NOT (obse."negationInd")
+              AND    obse._code_codesystem = '2.16.840.1.113883.6.96'
+              AND    obse._code_code = '400047006'    -- peripheral vascular disease
+              AND    obse._value_code_code = 'Y')
+      OR
+             (NOT (obse."negationInd")
+              AND    obse._code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
+              AND    obse._code_code = 'Portavita220' -- diabetic retinopathy
+              AND    obse._value_code_code IN ('RETINOPATHIE_RECHTEROOG', 'RETINOPATHIE_LINKER_RECHTEROOG', 'RETINOPATHIE_LINKEROOG'))
+      ) a
+      WHERE rocky = 1;
+
+DROP VIEW base_values CASCADE;
+CREATE VIEW base_values
+AS
+      SELECT  abs(hashtext('4xl3' || ptnt.player::text))  AS pseudonym
       ,       obse._code_code                       AS code
-      ,       extract(days from (current_timestamp - peso."birthTime"::timestamptz))  AS age_in_days
+      ,       CASE WHEN
+                   extract(year from current_timestamp) - extract(year from peso."birthTime"::timestamptz) < 90
+                   THEN
+                   extract(year from current_timestamp) - extract(year from peso."birthTime"::timestamptz)
+                   ELSE 95
+              END  AS age_in_years
       ,       peso."administrativeGenderCode"->>'code' AS gender
       ,       obse._value_code_code                 AS value_code
       ,       obse._value_ivl_real                  AS value_ivl
-      ,       COALESCE(obse._value_pq_value::float8, obse._value_real, obse._value_int)  AS value_float8
+      ,       COALESCE(obse._value_pq_value::float8, obse._value_real, obse._value_int)  AS value_float
       ,       obse._effective_time_low              AS obs_time
-      ,       pvd_time                              AS pvd_time
-      ,       COALESCE(pvd_time, '20140501') AS t0
-      ,      (COALESCE(pvd_time, '20140501')::ts - '6 mo'::pq_time)::timestamptz AS t6m
-      ,      width_bucket(obse._effective_time_low,
-                          ARRAY[ (COALESCE(pvd_time, '20140501')::ts - '6 mo'::pq_time)::timestamptz
-                                , COALESCE(pvd_time, '20140501')]) as bucket
-      ,      (EXTRACT(days FROM COALESCE(pvd_time, '20140501')
-                                - obse._effective_time_low)/7)::int AS wk_to_t0
+      ,       obse."negationInd"                    AS negation_ind
       FROM    "Patient"                                ptnt
       JOIN    "Participation"                          obse_ptcp
       ON      ptnt._id                                 = obse_ptcp.role
@@ -80,34 +88,50 @@ AS
       ON      peso._id                                 = ptnt.player
       JOIN    "Observation"                            obse
       ON      obse._id                                 = obse_ptcp.act
-      LEFT JOIN    pvd
-      ON      peso_id = ptnt.player
-      WHERE  NOT (obse."negationInd")
-      -- we want only observations before t0
-      AND    obse._effective_time_low <= COALESCE(pvd_time, '20140501')
-      AND
-           (
-             (obse._code_codesystem = '2.16.840.1.113883.6.96' AND
-              (obse._code_code IN ('365980008' -- smoking
-                                   ,'266918002' -- smoking quantity
-                                   ,'219006' -- alcohol
-                                   ,'160573003' -- alcohol quantity
-                                   ,'228450008' -- exercise
-                                   ,'102737005' -- HDL cholestol
-                                   ,'166842003' -- total/hdl cholesterol
-                                   )
-               )
-             )
-             OR
-             (obse._code_codesystem = '2.16.840.1.113883.6.1' AND
-              ((obse._code_code IN ('8480-6' -- systolic
-                                   , '8462-4' -- diastolic
-                                   )
-                                   )))
-           )
-      ORDER BY peso_id, code
-      )
-SELECT * FROM base_values;
+;
+
+-- observation lists with classifier for retinopathy
+-- DROP VIEW rtp_base_values CASCADE;
+CREATE VIEW rtp_base_values
+AS
+WITH base_values_with_classifier AS (
+        SELECT    v.*
+        ,         COALESCE(c.time, '20140501') AS t0
+        ,         c.time IS NOT NULL           AS classifier
+        FROM      base_values v
+        LEFT JOIN classifier c
+        ON        c.pseudonym = v.pseudonym
+        AND       c.code = 'Portavita220' -- diabetic retinopathy
+)
+SELECT  pseudonym
+        ,      code
+        ,      age_in_years
+        ,      gender
+        ,      value_code
+        ,      value_ivl
+        ,      value_float
+        ,      EXTRACT(days FROM t0 - obs_time) AS days_to_t0
+        ,      classifier
+FROM    base_values_with_classifier
+WHERE   1=1 -- NOT negation_ind
+AND     obs_time <= t0
+AND     code IN ('365980008' -- smoking
+              ,'266918002' -- smoking quantity
+              ,'219006' -- alcohol
+              ,'160573003' -- alcohol quantity
+              ,'228450008' -- exercise
+              ,'102737005' -- HDL cholestol
+              ,'166842003' -- total/hdl cholesterol
+              ,'103232008' -- HBA1c/GlycHb
+              ,'250745003' -- albumine/kreatinine ratio
+              ,'275792000' -- kreatinine
+              ,'Portavita189' -- cockroft kreatinine derivate
+              ,'Portavita304' -- MDRD kreatinine derivate
+              ,'8480-6' -- systolic
+              ,'8462-4' -- diastolic
+)
+ORDER BY pseudonym, code, t0 desc;
+
 
 /*
  * Calculate statistics aggregates per person,observation code.
@@ -116,202 +140,253 @@ SELECT * FROM base_values;
  * See http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE
  * for a list.
  */
-DROP VIEW angiopathy_base_summaries;
-CREATE VIEW angiopathy_base_summaries
+-- DROP VIEW rtp_base_summaries CASCADE;
+CREATE VIEW rtp_base_summaries
 AS
 SELECT * FROM (
-      SELECT   peso_id, code, age_in_days, gender
-      ,        obs_time, pvd_time, wk_to_t0
-      ,        value_code
-      ,        value_float8
-      ,        RANK() OVER (PARTITION BY peso_id, code   ORDER BY obs_time DESC)           AS rocky
-
-      ,        count(1)                                  OVER (PARTITION BY peso_id, code) AS count_value
-      ,        avg( value_float8 )                       OVER (PARTITION BY peso_id, code) AS avg
-      ,        regr_slope( value_float8,  wk_to_t0)      OVER (PARTITION BY peso_id, code) AS regr_slope
-      ,        regr_intercept( value_float8, wk_to_t0)   OVER (PARTITION BY peso_id, code) AS regr_intercept
-      ,        stddev_samp( value_float8 )               OVER (PARTITION BY peso_id, code) AS stddev_samp
-      ,        var_samp( value_float8 )                  OVER (PARTITION BY peso_id, code) AS var_samp
-      ,        string_agg( value_code, '|')              OVER (PARTITION BY peso_id, code) AS codes
-
-      ,        count(1)                                FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS count_value2
-      ,        avg( value_float8 )                     FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS avg2
-      ,        regr_slope( value_float8,  wk_to_t0)    FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS regr_slope2
-      ,        regr_intercept( value_float8, wk_to_t0) FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS regr_intercept2
-      ,        stddev_samp( value_float8 )             FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS stddev_samp2
-      ,        var_samp( value_float8 )                FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS var_samp2
-      ,        string_agg( value_code, '|')            FILTER (WHERE bucket>=1) OVER (PARTITION BY peso_id, code) AS codes2
-
-       FROM angiopathy_base_values
+      SELECT   *
+      ,        RANK() OVER (PARTITION BY pseudonym, code  ORDER BY days_to_t0 ASC)  AS rocky
+      ,        count(1)                  OVER (PARTITION BY pseudonym, code)  AS count_value
+      ,        avg(value_float)          OVER (PARTITION BY pseudonym, code)  AS avg
+      ,        min(value_float)          OVER (PARTITION BY pseudonym, code)  AS min
+      ,        max(value_float)          OVER (PARTITION BY pseudonym, code)  AS max
+      ,        max(days_to_t0)           OVER (PARTITION BY pseudonym, code)  AS max_days_to_t0
+      ,        stddev_pop(value_float)   OVER (PARTITION BY pseudonym, code)  AS stddev_pop
+--      ,        string_agg( value_code, '|')    OVER (PARTITION BY pseudonym, code)  AS codes
+       FROM rtp_base_values
 ) a
 WHERE rocky = 1;
 
-/* Pivot the per person, code summary list into columns per peso_id. */
-
-DROP VIEW angiopathy_tabular_data CASCADE;
-CREATE VIEW angiopathy_tabular_data
+/* Pivot the per pseudonym, code summary list into columns per peso_id. */
+DROP MATERIALIZED VIEW rtp_tabular_data CASCADE;
+CREATE MATERIALIZED VIEW rtp_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
-  ,       (record_id->>'peso_id')::numeric          AS peso_id
-  ,       (record_id->>'age_in_days')::numeric      AS age_in_days
+  ,       (record_id->>'pseudonym')::numeric        AS pseudonym
+  ,       (record_id->>'age_in_years')::numeric     AS age_in_years
   ,       (record_id->>'gender')                    AS gender
 -- classifier
-  ,       (record_id->>'pvd_time') IS NULL          AS peripheral_vascular_disease
+  ,       (record_id->>'classifier') IS NULL        AS classifier
 -- smoking
-  ,       CASE WHEN smoking->>'value' = '266919005' THEN 0 -- never
-               WHEN smoking->>'value' = '8517006'   THEN 1 -- used to
-               WHEN smoking->>'value' = '77176002'  THEN 2 -- yes
+  ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
+               WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
+               WHEN smoking->>'value_code' = '77176002'  THEN 2 -- yes
                ELSE                          NULL
           END                                             AS smok_lv                 -- last observed value of smoking observation
   ,       (smoking_quantity->>'wk_to_t0')::numeric        AS smok_lv_wk_to_t0        -- number of weeks before t0
-  ,       round((smoking_quantity->>'value')::numeric)    AS smok_du_lv              -- smoking daily units last value
+  ,       (smoking_quantity->>'max_days_to_t0')::numeric  AS smok_max_days_to_t0       -- max number of weeks before t0
+  ,       round((smoking_quantity->>'value_float')::numeric) AS smok_du_lv              -- smoking daily units last value
   ,       (smoking_quantity->>'count')::numeric           AS smok_du_count           -- number of smoking observations before t0
-  ,       (smoking_quantity->>'count2')::numeric          AS smok_du_count2          -- number of smoking observations in 6m before t0
   ,       (smoking_quantity->>'avg')::numeric             AS smok_du_avg
-  ,       (smoking_quantity->>'avg2')::numeric            AS smok_du_avg2
-  ,       (smoking_quantity->>'regr_slope')::numeric      AS smok_du_rgr_slope       -- linear regression slope
-  ,       (smoking_quantity->>'regr_slope2')::numeric     AS smok_du_rgr_slope2
-  ,       (smoking_quantity->>'regr_intercept')::numeric  AS smok_du_rgr_itcept      -- linear regression y intercept
-  ,       (smoking_quantity->>'regr_intercept2')::numeric AS smok_du_rgr_itcept2
+  ,       (smoking_quantity->>'min')::numeric             AS smok_du_min
+  ,       (smoking_quantity->>'max')::numeric             AS smok_du_max
   ,       (smoking_quantity->>'stddev_samp')::numeric     AS smok_du_std_samp        -- sample standard deviation
-  ,       (smoking_quantity->>'stddev_samp2')::numeric    AS smok_du_std_samp2
-  ,       (smoking_quantity->>'var_samp')::numeric        AS smok_du_var_samp        -- sample variance
-  ,       (smoking_quantity->>'var_samp2')::numeric       AS smok_du_var_samp2
 -- alcohol
-  ,       alcohol->>'value'                               AS alcohol_lv
-  ,       (alcohol->>'wk_to_t0')::numeric                 AS alcohol_lv_wk_to_t0
-  ,       round((alcohol_quantity->>'value')::numeric)    AS alc_wu_lv
+  ,       alcohol->>'value_code'                          AS alcohol_lv
+  ,       (alcohol->>'days_to_t0')::numeric               AS alcohol_lv_days_to_t0
+  ,       (alcohol->>'max_days_to_t0')::numeric           AS alcohol_max_days_to_t0
+  ,       round((alcohol_quantity->>'value_float')::numeric)    AS alc_wu_lv
   ,       (alcohol_quantity->>'count')::numeric           AS alc_wu_count
-  ,       (alcohol_quantity->>'count2')::numeric          AS alc_wu_count2
   ,       (alcohol_quantity->>'avg')::numeric             AS alc_wu_avg
-  ,       (alcohol_quantity->>'avg2')::numeric            AS alc_wu_avg2
-  ,       (alcohol_quantity->>'regr_slope')::numeric      AS alc_wu_rgr_slope
-  ,       (alcohol_quantity->>'regr_slope2')::numeric     AS alc_wu_rgr_slope2
-  ,       (alcohol_quantity->>'regr_intercept')::numeric  AS alc_wu_rgr_itcept
-  ,       (alcohol_quantity->>'regr_intercept2')::numeric AS alc_wu_rgr_itcept2
+  ,       (alcohol_quantity->>'min')::numeric             AS alc_wu_min
+  ,       (alcohol_quantity->>'max')::numeric             AS alc_wu_max
   ,       (alcohol_quantity->>'stddev_samp')::numeric     AS alc_wu_std_samp
-  ,       (alcohol_quantity->>'stddev_samp2')::numeric    AS alc_wu_std_samp2
-  ,       (alcohol_quantity->>'var_samp')::numeric        AS alc_wu_var_samp
-  ,       (alcohol_quantity->>'var_samp2')::numeric       AS alc_wu_var_samp2
 -- exercise days per week
-  ,       CASE WHEN exercise->>'value' = 'A' THEN 0
-               WHEN exercise->>'value' = 'B' THEN 2
-               WHEN exercise->>'value' = 'C' THEN 4
-               WHEN exercise->>'value' = 'D' THEN 5
+  ,       CASE WHEN exercise->>'value_code' = 'A' THEN 0
+               WHEN exercise->>'value_code' = 'B' THEN 2
+               WHEN exercise->>'value_code' = 'C' THEN 4
+               WHEN exercise->>'value_code' = 'D' THEN 5
                ELSE                          NULL
           END                                AS exercise_dpw_lv
-  ,       (exercise->>'wk_to_t0')::numeric   AS exercise_dpw_lv_wk_to_t0
+  ,       (exercise->>'days_to_t0')::numeric AS exercise_dpw_lv_days_to_t0
+  ,       (exercise->>'count')::numeric      AS exercise_count
 -- hdl
-  ,       (hdl->>'value')::numeric           AS hdl_lv
-  ,       (hdl->>'wk_to_t0')::numeric        AS hdl_lv_wk_to_t0
+  ,       (hdl->>'value_float')::numeric     AS hdl_lv
+  ,       (hdl->>'days_to_t0')::numeric      AS hdl_lv_days_to_t0
+  ,       (hdl->>'max_days_to_t0')::numeric  AS hdl_max_days_to_t0
   ,       (hdl->>'count')::numeric           AS hdl_count
-  ,       (hdl->>'count2')::numeric          AS hdl_count2
   ,       (hdl->>'avg')::numeric             AS hdl_avg
-  ,       (hdl->>'avg2')::numeric            AS hdl_avg2
-  ,       (hdl->>'regr_slope')::numeric      AS hdl_rgr_slope
-  ,       (hdl->>'regr_slope2')::numeric     AS hdl_rgr_slope2
-  ,       (hdl->>'regr_intercept')::numeric  AS hdl_rgr_itcept
-  ,       (hdl->>'regr_intercept2')::numeric AS hdl_rgr_itcept2
+  ,       (hdl->>'min')::numeric             AS hdl_min
+  ,       (hdl->>'max')::numeric             AS hdl_max
   ,       (hdl->>'stddev_samp')::numeric     AS hdl_std_samp
-  ,       (hdl->>'stddev_samp2')::numeric    AS hdl_std_samp2
-  ,       (hdl->>'var_samp')::numeric        AS hdl_var_samp
-  ,       (hdl->>'var_samp2')::numeric       AS hdl_var_samp2
 -- total cholesterol / hdl cholesterol
-  ,       (total_hdl->>'value')::numeric           AS total_hdl_lv
-  ,       (total_hdl->>'wk_to_t0')::numeric        AS total_hdl_lv_wk_to_t0
+  ,       (total_hdl->>'value_float')::numeric     AS total_hdl_lv
+  ,       (total_hdl->>'days_to_t0')::numeric      AS total_hdl_lv_days_to_t0
+  ,       (total_hdl->>'max_days_to_t0')::numeric  AS total_hdl_max_days_to_t0
   ,       (total_hdl->>'count')::numeric           AS total_hdl_count
-  ,       (total_hdl->>'count2')::numeric          AS total_hdl_count2
   ,       (total_hdl->>'avg')::numeric             AS total_hdl_avg
-  ,       (total_hdl->>'avg2')::numeric            AS total_hdl_avg2
-  ,       (total_hdl->>'regr_slope')::numeric      AS total_hdl_rgr_slope
-  ,       (total_hdl->>'regr_slope2')::numeric     AS total_hdl_rgr_slope2
-  ,       (total_hdl->>'regr_intercept')::numeric  AS total_hdl_rgr_itcept
-  ,       (total_hdl->>'regr_intercept2')::numeric AS total_hdl_rgr_itcept2
+  ,       (total_hdl->>'min')::numeric             AS total_hdl_min
+  ,       (total_hdl->>'max')::numeric             AS total_hdl_max
   ,       (total_hdl->>'stddev_samp')::numeric     AS total_hdl_std_samp
-  ,       (total_hdl->>'stddev_samp2')::numeric    AS total_hdl_std_samp2
-  ,       (total_hdl->>'var_samp')::numeric        AS total_hdl_var_samp
-  ,       (total_hdl->>'var_samp2')::numeric       AS total_hdl_var_samp2
 -- systolic blood pressure
-  ,       (systolic->>'value')::numeric           AS systolic_lv
-  ,       (systolic->>'wk_to_t0')::numeric        AS systolic_lv_wk_to_t0
+  ,       (systolic->>'value_float')::numeric     AS systolic_lv
+  ,       (systolic->>'days_to_t0')::numeric      AS systolic_lv_days_to_t0
+  ,       (systolic->>'max_days_to_t0')::numeric  AS systolic_max_days_to_t0
   ,       (systolic->>'count')::numeric           AS systolic_count
-  ,       (systolic->>'count2')::numeric          AS systolic_count2
   ,       (systolic->>'avg')::numeric             AS systolic_avg
-  ,       (systolic->>'avg2')::numeric            AS systolic_avg2
-  ,       (systolic->>'regr_slope')::numeric      AS systolic_rgr_slope
-  ,       (systolic->>'regr_slope2')::numeric     AS systolic_rgr_slope2
-  ,       (systolic->>'regr_intercept')::numeric  AS systolic_rgr_itcept
-  ,       (systolic->>'regr_intercept2')::numeric AS systolic_rgr_itcept2
+  ,       (systolic->>'min')::numeric             AS systolic_min
+  ,       (systolic->>'max')::numeric             AS systolic_max
   ,       (systolic->>'stddev_samp')::numeric     AS systolic_std_samp
-  ,       (systolic->>'stddev_samp2')::numeric    AS systolic_std_samp2
-  ,       (systolic->>'var_samp')::numeric        AS systolic_var_samp
-  ,       (systolic->>'var_samp2')::numeric       AS systolic_var_samp2
 -- diastolic blood pressure
-  ,       (diastolic->>'value')::numeric           AS diastolic_lv
-  ,       (diastolic->>'wk_to_t0')::numeric        AS diastolic_lv_wk_to_t0
+  ,       (diastolic->>'value_float')::numeric     AS diastolic_lv
+  ,       (diastolic->>'days_to_t0')::numeric      AS diastolic_lv_days_to_t0
+  ,       (diastolic->>'max_days_to_t0')::numeric  AS diastolic_max_days_to_t0
   ,       (diastolic->>'count')::numeric           AS diastolic_count
-  ,       (diastolic->>'count2')::numeric          AS diastolic_count2
   ,       (diastolic->>'avg')::numeric             AS diastolic_avg
-  ,       (diastolic->>'avg2')::numeric            AS diastolic_avg2
-  ,       (diastolic->>'regr_slope')::numeric      AS diastolic_rgr_slope
-  ,       (diastolic->>'regr_slope2')::numeric     AS diastolic_rgr_slope2
-  ,       (diastolic->>'regr_intercept')::numeric  AS diastolic_rgr_itcept
-  ,       (diastolic->>'regr_intercept2')::numeric AS diastolic_rgr_itcept2
+  ,       (diastolic->>'min')::numeric             AS diastolic_min
+  ,       (diastolic->>'max')::numeric             AS diastolic_max
   ,       (diastolic->>'stddev_samp')::numeric     AS diastolic_std_samp
-  ,       (diastolic->>'stddev_samp2')::numeric    AS diastolic_std_samp2
-  ,       (diastolic->>'var_samp')::numeric        AS diastolic_var_samp
-  ,       (diastolic->>'var_samp2')::numeric       AS diastolic_var_samp2
+-- hba1c
+  ,       (hba1c->>'value_float')::numeric     AS hba1c_lv
+  ,       (hba1c->>'days_to_t0')::numeric      AS hba1c_lv_days_to_t0
+  ,       (hba1c->>'max_days_to_t0')::numeric  AS hba1c_max_days_to_t0
+  ,       (hba1c->>'count')::numeric           AS hba1c_count
+  ,       (hba1c->>'avg')::numeric             AS hba1c_avg
+  ,       (hba1c->>'min')::numeric             AS hba1c_min
+  ,       (hba1c->>'max')::numeric             AS hba1c_max
+  ,       (hba1c->>'stddev_samp')::numeric     AS hba1c_std_samp
+-- albumine
+  ,       (albumine->>'value_float')::numeric     AS albumine_lv
+  ,       (albumine->>'days_to_t0')::numeric      AS albumine_lv_days_to_t0
+  ,       (albumine->>'max_days_to_t0')::numeric  AS albumine_max_days_to_t0
+  ,       (albumine->>'count')::numeric           AS albumine_count
+  ,       (albumine->>'avg')::numeric             AS albumine_avg
+  ,       (albumine->>'min')::numeric             AS albumine_min
+  ,       (albumine->>'max')::numeric             AS albumine_max
+  ,       (albumine->>'stddev_samp')::numeric     AS albumine_std_samp
+-- kreatinine
+  ,       (kreatinine->>'value_float')::numeric     AS kreatinine_lv
+  ,       (kreatinine->>'days_to_t0')::numeric      AS kreatinine_lv_days_to_t0
+  ,       (kreatinine->>'max_days_to_t0')::numeric  AS kreatinine_max_days_to_t0
+  ,       (kreatinine->>'count')::numeric           AS kreatinine_count
+  ,       (kreatinine->>'avg')::numeric             AS kreatinine_avg
+  ,       (kreatinine->>'min')::numeric             AS kreatinine_min
+  ,       (kreatinine->>'max')::numeric             AS kreatinine_max
+  ,       (kreatinine->>'stddev_samp')::numeric     AS kreatinine_std_samp
+-- cockroft
+  ,       (cockroft->>'value_float')::numeric     AS cockroft_lv
+  ,       (cockroft->>'days_to_t0')::numeric      AS cockroft_lv_days_to_t0
+  ,       (cockroft->>'max_days_to_t0')::numeric  AS cockroft_max_days_to_t0
+  ,       (cockroft->>'count')::numeric           AS cockroft_count
+  ,       (cockroft->>'avg')::numeric             AS cockroft_avg
+  ,       (cockroft->>'min')::numeric             AS cockroft_min
+  ,       (cockroft->>'max')::numeric             AS cockroft_max
+  ,       (cockroft->>'stddev_samp')::numeric     AS cockroft_std_samp
+-- mdrd
+  ,       (mdrd->>'value_float')::numeric     AS mdrd_lv
+  ,       (mdrd->>'days_to_t0')::numeric        AS mdrd_lv_days_to_t0
+  ,       (mdrd->>'max_days_to_t0')::numeric  AS mdrd_max_days_to_t0
+  ,       (mdrd->>'count')::numeric           AS mdrd_count
+  ,       (mdrd->>'avg')::numeric             AS mdrd_avg
+  ,       (mdrd->>'min')::numeric             AS mdrd_min
+  ,       (mdrd->>'max')::numeric             AS mdrd_max
+  ,       (mdrd->>'stddev_samp')::numeric     AS mdrd_std_samp
 FROM crosstab($ct$
-    SELECT json_object(('{ peso_id, '          || peso_id        ||
-                        ', age_in_days, '      || age_in_days    ||
-                        ', gender, '           || gender         ||
-                        ', pvd_time, '        || COALESCE(pvd_time::text, 'NULL') ||
+    SELECT json_object(('{ pseudonym, '         || pseudonym       ||
+                        ', age_in_years, '      || age_in_years    ||
+                        ', gender, '            || gender          ||
+                        ', classifier, '        || classifier      ||
                         '}')::text[])::text                           AS record_id
     ,       code                                                      AS category
-    ,       json_object(('{value, '           ||  COALESCE(value_code, value_float8::text) ||
 
-                         ',count, '           || COALESCE(count_value::text, 'NULL') ||
-                         ',avg, '             || COALESCE(avg::text, 'NULL') ||
-                         ',regr_slope, '      || COALESCE(regr_slope::text, 'NULL') ||
-                         ',regr_intercept, '  || COALESCE(regr_intercept::text, 'NULL') ||
-                         ',stddev_samp, '     || COALESCE(stddev_samp::text, 'NULL') ||
-                         ',var_samp, '        || COALESCE(var_samp::text, 'NULL') ||
-                         ',codes, '           || COALESCE(codes::text, 'NULL') ||
-
-                         ',count2, '           || COALESCE(count_value2::text, 'NULL') ||
-                         ',avg2, '             || COALESCE(avg2::text, 'NULL') ||
-                         ',regr_slope2, '      || COALESCE(regr_slope2::text, 'NULL') ||
-                         ',regr_intercept2, '  || COALESCE(regr_intercept2::text, 'NULL') ||
-                         ',stddev_samp2, '     || COALESCE(stddev_samp2::text, 'NULL') ||
-                         ',var_samp2, '        || COALESCE(var_samp2::text, 'NULL') ||
-                         ',codes2, '           || COALESCE(codes2::text, 'NULL') ||
-
-                         ',wk_to_t0, '        || COALESCE(wk_to_t0::text, 'NULL') ||
+    ,       json_object(('{value_code, '      || COALESCE(value_code::text, 'NULL')     ||
+                         ',value_float, '     || COALESCE(value_float::text, 'NULL')    ||
+                         ',count, '           || COALESCE(count_value::text, 'NULL')    ||
+                         ',avg, '             || COALESCE(avg::text, 'NULL')            ||
+                         ',min, '             || COALESCE(min::text, 'NULL')            ||
+                         ',max, '             || COALESCE(max::text, 'NULL')            ||
+                         ',stddev_pop, '      || COALESCE(stddev_pop::text, 'NULL')     ||
+                         ',max_days_to_t0, '  || COALESCE(max_days_to_t0::text, 'NULL') ||
+                         ',days_to_t0, '      || COALESCE(days_to_t0::text, 'NULL')     ||
                          '}')::text[])::text                          AS value
-    FROM  angiopathy_base_summaries
+    FROM  rtp_base_summaries
     ORDER BY record_id, category
   $ct$,
-  $ct$VALUES('365980008'::text)
-     ,      ('266918002')
-     ,      ('219006')
-     ,      ('160573003')
-     ,      ('228450008')
-     ,      ('102737005')
-     ,      ('166842003')
-     ,      ('400047006')
+  $ct$VALUES('365980008'::text) --smoking
+     ,      ('266918002') -- smoking quant
+     ,      ('219006') -- alcohol
+     ,      ('160573003') -- alcohol quantity
+     ,      ('228450008') -- exercise
+     ,      ('102737005') -- hdl cholesterol
+     ,      ('166842003') -- total/hdl cholesterol
+     ,      ('103232008') -- HBA1c/GlycHb
+     ,      ('250745003') -- albumine/kreatinine ratio
+     ,      ('275792000') -- kreatinine
+     ,      ('Portavita189') -- cockroft kreatinine derivate
+     ,      ('Portavita304') -- MDRD kreatinine derivate
      ,      ('8480-6')
-     ,      ('8462-4') $ct$
+     ,      ('8462-4')
+     $ct$
   )
-  AS ct(record_id jsonb
-       ,"smoking"      jsonb
-       ,"smoking_quantity"       jsonb
-       ,"alcohol" jsonb
+  AS ct(record_id            jsonb
+       ,"smoking"            jsonb
+       ,"smoking_quantity"   jsonb
+       ,"alcohol"            jsonb
        ,"alcohol_quantity"   jsonb
-       ,"exercise"     jsonb
-       ,"hdl" jsonb
-       ,"total_hdl" jsonb
-       ,"peripheral_vascular_disease"     jsonb
-       ,"systolic" jsonb
-       ,"diastolic" jsonb
+       ,"exercise"           jsonb
+       ,"hdl"                jsonb
+       ,"total_hdl"          jsonb
+       ,"hba1c"              jsonb
+       ,"albumine"           jsonb
+       ,"kreatinine"         jsonb
+       ,"cockroft"           jsonb
+       ,"mdrd"               jsonb
+       ,"systolic"           jsonb
+       ,"diastolic"          jsonb
   ) -- select from crosstab
 ;
+
+/*
+ * Prosecutor risk
+ */
+
+/*
+ * List equivalence classes, frequencies and prosecutor risk for the X most risky classes.
+ */
+WITH equivalence_classes AS
+(
+select age_in_years
+,      gender
+,      smok_lv
+,      row_number() over (partition by age_in_years, gender, smok_lv) as rocky
+,      count(1)     over (partition by age_in_years, gender, smok_lv) as count
+from
+rtp_tabular_data
+)
+SELECT age_in_years
+,      gender
+,      smok_lv
+,      count AS "fk" -- frequency
+, CASE WHEN count > 0 THEN 1::float/count ELSE NULL END as "1/fk" -- prosecutor risk
+FROM equivalence_classes WHERE rocky = 1
+order by count asc
+limit 10;
+
+
+/*
+ * Calculate percentage of rows in the dataset at risk, given threshold of 0.05
+ */
+WITH equivalence_classes AS (
+ select age_in_years
+ , gender
+ , smok_lv
+ , row_number() over (partition by age_in_years, gender, smok_lv) as rocky
+ , count(1)     over (partition by age_in_years, gender, smok_lv) as classsize
+ from
+ rtp_tabular_data
+),
+size AS (
+ select count(*) AS denom
+ from rtp_tabular_data
+),
+records_at_risk AS (
+ select sum(classsize) as num
+ from equivalence_classes
+ where (CASE WHEN classsize > 0 THEN 1::float/classsize ELSE NULL END) > 0.05
+ and rocky = 1
+)
+SELECT num
+,      denom
+,      ROUND(num::float / denom * 100) AS perc_records_at_risk_prosecutor
+FROM size, records_at_risk;
+
