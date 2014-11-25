@@ -2,10 +2,10 @@ package eu.portavita.axle.generatable
 
 import java.util.ArrayList
 import java.util.Date
-
 import eu.portavita.databus.data.dto.ActDTO
 import eu.portavita.databus.data.dto.ActRelationshipDTO
 import eu.portavita.databus.data.dto.TreatmentPlanDTO
+import eu.portavita.databus.data.dto.ParticipationDTO
 
 class TreatmentPlan(
 		val id: Long,
@@ -18,8 +18,8 @@ class TreatmentPlan(
 	def toPortavitaTreatmentPlan: TreatmentPlanDTO = {
 		val componentRelationships = new ArrayList[ActRelationshipDTO]()
 		val componentDetails = new ArrayList[ActDTO]()
-		val plan = new TreatmentPlanDTO(createMainAct, componentRelationships, componentDetails)
-		plan
+		val participations = new ArrayList[ParticipationDTO]()
+		new TreatmentPlanDTO(createMainAct, componentRelationships, componentDetails, participations)
 	}
 
 	private def createMainAct: ActDTO = {
