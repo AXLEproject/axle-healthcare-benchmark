@@ -121,9 +121,9 @@ class Consent(patient: Patient,
 object Consent {
   def sample(patient: Patient,
     custodian: Organization): Consent = {
-    val treatment = RandomHelper.randomElement(patient.treatments) // TODO take random element, or generate a consent for each treatment
+    val treatment = RandomHelper.randomElement(patient.treatments)
     val consentStartDate = treatment.from
-    val optOut: Boolean = RandomHelper.coinFlip
+    val optOut: Boolean = RandomHelper.coinFlip(0.1)
     val receiver = treatment.principalPractitioner
     val enterer = treatment.principalPractitioner
     new Consent(patient, consentStartDate, treatment, custodian, enterer, receiver, optOut)
