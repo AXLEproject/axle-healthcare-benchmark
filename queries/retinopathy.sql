@@ -158,29 +158,29 @@ SELECT * FROM (
 WHERE rocky = 1;
 
 /* Pivot the per pseudonym, code summary list into columns per peso_id. */
-DROP MATERIALIZED VIEW rtp_tabular_data CASCADE;
-CREATE MATERIALIZED VIEW rtp_tabular_data
+DROP TABLE IF EXISTS rtp_tabular_data CASCADE;
+CREATE TABLE rtp_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
   ,       (record_id->>'pseudonym')::numeric        AS pseudonym
   ,       (record_id->>'age_in_years')::numeric     AS age_in_years
   ,       (record_id->>'gender')                    AS gender
 -- classifier
-  ,       (record_id->>'classifier') IS NULL        AS classifier
+  ,       (record_id->>'classifier')::boolean       AS classifier
 -- smoking
   ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
                WHEN smoking->>'value_code' = '77176002'  THEN 2 -- yes
                ELSE                          NULL
           END                                             AS smok_lv                 -- last observed value of smoking observation
-  ,       (smoking_quantity->>'wk_to_t0')::numeric        AS smok_lv_wk_to_t0        -- number of weeks before t0
+  ,       (smoking_quantity->>'days_to_t0')::numeric      AS smok_lv_days_to_t0        -- number of weeks before t0
   ,       (smoking_quantity->>'max_days_to_t0')::numeric  AS smok_max_days_to_t0       -- max number of weeks before t0
   ,       round((smoking_quantity->>'value_float')::numeric) AS smok_du_lv              -- smoking daily units last value
   ,       (smoking_quantity->>'count')::numeric           AS smok_du_count           -- number of smoking observations before t0
   ,       (smoking_quantity->>'avg')::numeric             AS smok_du_avg
   ,       (smoking_quantity->>'min')::numeric             AS smok_du_min
   ,       (smoking_quantity->>'max')::numeric             AS smok_du_max
-  ,       (smoking_quantity->>'stddev_samp')::numeric     AS smok_du_std_samp        -- sample standard deviation
+  ,       (smoking_quantity->>'stddev_pop')::numeric      AS smok_du_std_pop        -- sample standard deviation
 -- alcohol
   ,       alcohol->>'value_code'                          AS alcohol_lv
   ,       (alcohol->>'days_to_t0')::numeric               AS alcohol_lv_days_to_t0
@@ -190,7 +190,7 @@ SELECT row_number() over()                          AS row_number
   ,       (alcohol_quantity->>'avg')::numeric             AS alc_wu_avg
   ,       (alcohol_quantity->>'min')::numeric             AS alc_wu_min
   ,       (alcohol_quantity->>'max')::numeric             AS alc_wu_max
-  ,       (alcohol_quantity->>'stddev_samp')::numeric     AS alc_wu_std_samp
+  ,       (alcohol_quantity->>'stddev_pop')::numeric      AS alc_wu_std_pop
 -- exercise days per week
   ,       CASE WHEN exercise->>'value_code' = 'A' THEN 0
                WHEN exercise->>'value_code' = 'B' THEN 2
@@ -208,7 +208,7 @@ SELECT row_number() over()                          AS row_number
   ,       (hdl->>'avg')::numeric             AS hdl_avg
   ,       (hdl->>'min')::numeric             AS hdl_min
   ,       (hdl->>'max')::numeric             AS hdl_max
-  ,       (hdl->>'stddev_samp')::numeric     AS hdl_std_samp
+  ,       (hdl->>'stddev_pop')::numeric      AS hdl_std_pop
 -- total cholesterol / hdl cholesterol
   ,       (total_hdl->>'value_float')::numeric     AS total_hdl_lv
   ,       (total_hdl->>'days_to_t0')::numeric      AS total_hdl_lv_days_to_t0
@@ -217,7 +217,7 @@ SELECT row_number() over()                          AS row_number
   ,       (total_hdl->>'avg')::numeric             AS total_hdl_avg
   ,       (total_hdl->>'min')::numeric             AS total_hdl_min
   ,       (total_hdl->>'max')::numeric             AS total_hdl_max
-  ,       (total_hdl->>'stddev_samp')::numeric     AS total_hdl_std_samp
+  ,       (total_hdl->>'stddev_pop')::numeric      AS total_hdl_std_pop
 -- systolic blood pressure
   ,       (systolic->>'value_float')::numeric     AS systolic_lv
   ,       (systolic->>'days_to_t0')::numeric      AS systolic_lv_days_to_t0
@@ -226,7 +226,7 @@ SELECT row_number() over()                          AS row_number
   ,       (systolic->>'avg')::numeric             AS systolic_avg
   ,       (systolic->>'min')::numeric             AS systolic_min
   ,       (systolic->>'max')::numeric             AS systolic_max
-  ,       (systolic->>'stddev_samp')::numeric     AS systolic_std_samp
+  ,       (systolic->>'stddev_pop')::numeric      AS systolic_std_pop
 -- diastolic blood pressure
   ,       (diastolic->>'value_float')::numeric     AS diastolic_lv
   ,       (diastolic->>'days_to_t0')::numeric      AS diastolic_lv_days_to_t0
@@ -235,7 +235,7 @@ SELECT row_number() over()                          AS row_number
   ,       (diastolic->>'avg')::numeric             AS diastolic_avg
   ,       (diastolic->>'min')::numeric             AS diastolic_min
   ,       (diastolic->>'max')::numeric             AS diastolic_max
-  ,       (diastolic->>'stddev_samp')::numeric     AS diastolic_std_samp
+  ,       (diastolic->>'stddev_pop')::numeric      AS diastolic_std_pop
 -- hba1c
   ,       (hba1c->>'value_float')::numeric     AS hba1c_lv
   ,       (hba1c->>'days_to_t0')::numeric      AS hba1c_lv_days_to_t0
@@ -244,7 +244,7 @@ SELECT row_number() over()                          AS row_number
   ,       (hba1c->>'avg')::numeric             AS hba1c_avg
   ,       (hba1c->>'min')::numeric             AS hba1c_min
   ,       (hba1c->>'max')::numeric             AS hba1c_max
-  ,       (hba1c->>'stddev_samp')::numeric     AS hba1c_std_samp
+  ,       (hba1c->>'stddev_pop')::numeric      AS hba1c_std_pop
 -- albumine
   ,       (albumine->>'value_float')::numeric     AS albumine_lv
   ,       (albumine->>'days_to_t0')::numeric      AS albumine_lv_days_to_t0
@@ -253,7 +253,7 @@ SELECT row_number() over()                          AS row_number
   ,       (albumine->>'avg')::numeric             AS albumine_avg
   ,       (albumine->>'min')::numeric             AS albumine_min
   ,       (albumine->>'max')::numeric             AS albumine_max
-  ,       (albumine->>'stddev_samp')::numeric     AS albumine_std_samp
+  ,       (albumine->>'stddev_pop')::numeric      AS albumine_std_pop
 -- kreatinine
   ,       (kreatinine->>'value_float')::numeric     AS kreatinine_lv
   ,       (kreatinine->>'days_to_t0')::numeric      AS kreatinine_lv_days_to_t0
@@ -262,7 +262,7 @@ SELECT row_number() over()                          AS row_number
   ,       (kreatinine->>'avg')::numeric             AS kreatinine_avg
   ,       (kreatinine->>'min')::numeric             AS kreatinine_min
   ,       (kreatinine->>'max')::numeric             AS kreatinine_max
-  ,       (kreatinine->>'stddev_samp')::numeric     AS kreatinine_std_samp
+  ,       (kreatinine->>'stddev_pop')::numeric      AS kreatinine_std_pop
 -- cockroft
   ,       (cockroft->>'value_float')::numeric     AS cockroft_lv
   ,       (cockroft->>'days_to_t0')::numeric      AS cockroft_lv_days_to_t0
@@ -271,16 +271,16 @@ SELECT row_number() over()                          AS row_number
   ,       (cockroft->>'avg')::numeric             AS cockroft_avg
   ,       (cockroft->>'min')::numeric             AS cockroft_min
   ,       (cockroft->>'max')::numeric             AS cockroft_max
-  ,       (cockroft->>'stddev_samp')::numeric     AS cockroft_std_samp
+  ,       (cockroft->>'stddev_pop')::numeric      AS cockroft_std_pop
 -- mdrd
   ,       (mdrd->>'value_float')::numeric     AS mdrd_lv
-  ,       (mdrd->>'days_to_t0')::numeric        AS mdrd_lv_days_to_t0
+  ,       (mdrd->>'days_to_t0')::numeric      AS mdrd_lv_days_to_t0
   ,       (mdrd->>'max_days_to_t0')::numeric  AS mdrd_max_days_to_t0
   ,       (mdrd->>'count')::numeric           AS mdrd_count
   ,       (mdrd->>'avg')::numeric             AS mdrd_avg
   ,       (mdrd->>'min')::numeric             AS mdrd_min
   ,       (mdrd->>'max')::numeric             AS mdrd_max
-  ,       (mdrd->>'stddev_samp')::numeric     AS mdrd_std_samp
+  ,       (mdrd->>'stddev_pop')::numeric      AS mdrd_std_pop
 FROM crosstab($ct$
     SELECT json_object(('{ pseudonym, '         || pseudonym       ||
                         ', age_in_years, '      || age_in_years    ||
