@@ -9,6 +9,10 @@ UPDATE "Act"
 SET _code_code       = code->>'code'
 ,   _code_codesystem = code->>'codeSystem';
 
+UPDATE "Entity"
+SET _code_code       = code->>'code'
+,   _code_codesystem = code->>'codeSystem';
+
 UPDATE "Observation"
 SET _value_pq              = value::"PQ"::pq
 ,   _value_pq_value        = value(value::"PQ"::pq)

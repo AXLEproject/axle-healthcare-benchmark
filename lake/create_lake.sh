@@ -90,9 +90,10 @@ gpext2sql() {
 WITH (appendonly = false)\
 DISTRIBUTED BY (_id);
 }' \
-        -e '/CREATE TABLE "Participation"/ {s/;//}' \
+        -e '/CREATE TABLE "[[:alpha:]]*"/ {s/ INHERITS (\"Participation\")//}' \
+        -e '/CREATE TABLE "Participation"/ {s/ INHERITS (\"[[:alpha:]]*\");//}' \
         -e '/CREATE TABLE "Participation"/ {a\
-WITH (appendonly = true, compresslevel = 6)\
+WITH (appendonly = true, orientation = column, compresslevel = 6)\
 DISTRIBUTED BY (act);\
 ALTER TABLE "Participation" SET DISTRIBUTED BY (act);
 }' \
@@ -106,7 +107,7 @@ PARTITION BY RANGE (_effective_time_low_year)\
     SUBPARTITION TEMPLATE (\
       START (1) END (13) EVERY (1),\
       DEFAULT SUBPARTITION other_months )\
-  (START (2008) END (2016) EVERY (1),\
+  (START (2012) END (2015) EVERY (1),\
    DEFAULT PARTITION other_years );
 }' | PGOPTIONS='--client-min-messages=warning' ${PSQL} -q1 --dbname $1 --log-file=log.txt || fail "could not load SQL script from extension $2, see log.txt"
     rm log.txt
