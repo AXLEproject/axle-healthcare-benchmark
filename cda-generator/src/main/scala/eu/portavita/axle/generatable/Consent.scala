@@ -70,7 +70,7 @@ class Consent(patient: Patient,
     act.setId(ActId.next)
     act.setCode("IDISCL")
     act.setCodeSystemOid("2.16.840.1.113883.5.4")
-    act.setNegationIndicator(if (optOut) "N" else "Y")
+    act.setNegationIndicator(if (optOut) "Y" else "N")
     act.setClassCode("OBS")
     act.setMoodCode("DEF")
     act.setFromTime(date)
