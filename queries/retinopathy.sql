@@ -17,25 +17,34 @@
  *  renal failure
  *  foot complication)
  *
- * This script creates
- * - angiopathy_base_values, a materialized view with the base values in a time series list.
+ * This script creates the following views:
  *
- * - angiopathy_base_summaries, for each observation kinds, the following statistical summaries:
- *       count, avg, linear regression slope and y intercept, sample stddev and variance.
- *       for all observations before t0 (the date 20140501 for persons without PVD
- *                                       and the date of PVD for persons with PVD)
- *       and for all observations in the 6 months before t0.
- *       count = count for all observations, count2 is of 6 months before 60.
+ *  classifier          a list of retinopathy and PVD observations
+ *  base_values         a list of observations and basic patient data
+ *                        birthtime is safe harbor de-identified:
+ *                        age in years and all >89 as 95
+ *  rtp_base_values     classifier and base_values combined for only
+ *                      observations that are risk factor for PVD.
+ *                        t0 is time of classifier diagnosis or fixed 20140501
+ *                        observation dates replaced with time before t0
+ *  rtp_base_summaries  convert base_values list into one record per patient, code
  *
- * - angiopathy_tabular_data, the base summaries pivoted.
- *       for each observation kind, is shown:
- *          the last observed value
- *          amount of weeks before t0 of this last known values
- *          the statistical aggregates of the two groups (all before t0 and six months before t0)
+ * Based on the base_summaries, the following table is materialized:
+ *
+ *  rtp_tabular_data    convert base_summaries into one record per patient.
  *
  * Copyright (c) 2014, Portavita B.V.
  */
 
+\set ON_ERROR_STOP on
+
+\echo
+\echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
+\echo
+SET session_authorization TO research_user;
+SET SEARCH_PATH TO research, public, rim2011, pg_hl7, hl7, "$user";
+
+\set ON_ERROR_STOP off
 
 DROP VIEW classifier CASCADE;
 CREATE VIEW classifier AS
