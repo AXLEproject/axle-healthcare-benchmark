@@ -13,7 +13,7 @@ CREATE SCHEMA research;
 
 CREATE USER research_user LOGIN;
 GRANT CONNECT ON DATABASE lake TO research_user;
-ALTER USER research_user SET SEARCH_PATH TO research, pg_hl7, hl7, "$user";
+ALTER USER research_user SET SEARCH_PATH TO research, public, "$user";
 GRANT USAGE ON SCHEMA research, rim2011, pg_hl7, hl7 TO research_user;
 
 GRANT ALL PRIVILEGES ON SCHEMA research TO research_user;

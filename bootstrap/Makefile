@@ -7,7 +7,7 @@
 #
 include ../default_settings
 
-.PHONY: prepare start stop psql login
+.PHONY: prepare start stop psql login installhdl installmsg installquantile installbinning installblocksample
 
 BASEDIR=$(shell pwd)/../$(DATABASEDIR)
 AXLEPWD=$(shell cat ../$(CDAGENERATOR)/password.txt)
@@ -21,7 +21,7 @@ MGRIDMSG=mgridmsg-$(MGRIDMSGVERSION)-linux-x64-installer.run
 MGRIDMSGFILE=$(BASEDIR)/$(MGRIDMSG)
 MGRIDMSGURL=http://www.mgrid.net/system/files/downloads/msg/$(MGRIDMSGVERSION)/$(MGRIDMSG)
 
-prepare: start installhdl installmsg installhdl
+prepare: start installhdl installmsg installhdl installbinning installquantile installblocksample
 
 # Get PostgreSQL source code.
 # Note that only HEAD is fetched
@@ -40,7 +40,22 @@ $(PGSERVER): $(PGSOURCE)
 # Get pgtune
 $(PGTUNE):
 	mkdir -p $(BASEDIR)
-	cd $(BASEDIR) ; git clone --depth 1 $(PGTUNEGIT)
+	cd $(BASEDIR) && git clone --depth 1 $(PGTUNEGIT)
+	touch $@
+
+# Get quantile and binning
+$(PGQUANTILE):
+	mkdir -p $(BASEDIR)
+	cd $(BASEDIR) && git clone --depth 1 $(PGQUANTILEGIT)
+	touch $@
+
+$(PGBINNING):
+	mkdir -p $(BASEDIR)
+	cd $(BASEDIR) && wget $(PGBINNINGTGZ) && tar zxvf $(shell basename $(PGBINNINGTGZ)) && rm $(shell basename $(PGBINNINGTGZ))
+
+$(PGBLOCKSAMPLE):
+	mkdir -p $(BASEDIR)
+	cd $(BASEDIR) && git clone --depth 1 $(PGBLOCKSAMPLEGIT)
 	touch $@
 
 # Initialise cluster
@@ -76,6 +91,15 @@ $(MGRIDMSGFILE): login
 # Install messaging SDK
 installmsg: $(MGRIDMSGFILE)
 	$(MGRIDMSGFILE) --mode unattended
+
+installquantile: $(PGQUANTILE) $(PGSERVER)
+	cd $(PGQUANTILE) && PATH=$(PGSERVER)/bin:${PATH} make USE_PGXS=1 install
+
+installbinning: $(PGBINNING) $(PGSERVER)
+	cd $(PGBINNING) && PATH=$(PGSERVER)/bin:${PATH} make USE_PGXS=1 install
+
+installblocksample: $(PGBLOCKSAMPLE) $(PGSERVER)
+	cd $(PGBLOCKSAMPLE) && PATH=$(PGSERVER)/bin:${PATH} make USE_PGXS=1 install
 
 # Some other useful targets
 stop:

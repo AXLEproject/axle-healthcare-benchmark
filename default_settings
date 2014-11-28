@@ -20,6 +20,9 @@ PGSOURCE=$(BASEDIR)/pgsource
 PGSERVER=$(BASEDIR)/pgserver
 PGDATA=$(BASEDIR)/data
 PGTUNE=$(BASEDIR)/pgtune
+PGQUANTILE=$(BASEDIR)/quantile
+PGBINNING=$(BASEDIR)/binning
+PGBLOCKSAMPLE=$(BASEDIR)/blocksample
 
 #------------------------------------------------------------------------------
 # RABBITMQ
@@ -72,6 +75,11 @@ PGTUNEGIT=https://github.com/gregs1104/pgtune.git
 PGTUNEMAXCONN=$(shell expr 4 \* `grep MHz /proc/cpuinfo | wc -l`)
 PGTUNEDBTYPE=DW
 PGTUNESYSTEMTYPE=Linux
+
+# Quantile and binning
+PGQUANTILEGIT=https://github.com/tvondra/quantile.git
+PGBINNINGTGZ=https://github.com/biolab/orange3/releases/download/3.1/binning.tar.gz
+PGBLOCKSAMPLEGIT=https://github.com/2ndQuadrant/blocksample
 
 # Add non default parameters for the pond postgresql.conf here
 define NONDEFAULTPOSTGRESQLCONFPOND

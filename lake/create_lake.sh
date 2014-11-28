@@ -147,6 +147,8 @@ then
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 else
+        # Install HDL modules in PostgreSQL
+
         pgcommand $DBNAME "CREATE EXTENSION hl7basetable"
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
@@ -197,12 +199,16 @@ fi
 
         pgcommandfromfile $DBNAME "entity_resolution_src.sql"
 
-
 #        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
         ;;
+
+        echo "..Installing Quantile and Binning extension for Orange"
+        pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
+        pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
+        pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION blocksample"
 
     *)
         usage
