@@ -5,7 +5,6 @@
  * Entity resolution source procedures
  */
 
-
 CREATE OR REPLACE FUNCTION resolution(
        rimschema   text
 ,      rimtable    text
@@ -22,6 +21,15 @@ BEGIN
     PERFORM resolution_execute(rimschema, rimtable, rimfkeys);
     PERFORM resolution_end(rimschema, rimtable);
   END IF;
+
+  DROP TABLE IF EXISTS _I;
+  DROP TABLE IF EXISTS _A;
+  DROP TABLE IF EXISTS _E;
+  DROP TABLE IF EXISTS _N;
+  DROP TABLE IF EXISTS _Gc;
+  DROP TABLE IF EXISTS _C1;
+  DROP TABLE IF EXISTS _C2;
+  DROP TABLE IF EXISTS _Cm;
 END;
 $resolution$
 LANGUAGE plpgsql;

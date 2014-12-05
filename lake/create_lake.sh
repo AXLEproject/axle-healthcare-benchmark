@@ -203,13 +203,20 @@ fi
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
-        ;;
 
-        echo "..Installing Quantile and Binning extension for Orange"
+        echo "..Installing Quantile, Blocksample and Binning extension for Orange"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION blocksample"
 
+        echo "..Create OptOutConsent and LinkActPcpr tables"
+        pgcommandfromfile $DBNAME "auxiliary_tables.sql"
+        pgcommandfromfile $DBNAME "opt_out_consent.sql"
+
+        echo "..Create research schema and user"
+        pgcommandfromfile $DBNAME "create_research_schema.sql"
+
+        ;;
     *)
         usage
 ;;
