@@ -69,7 +69,7 @@ pushd
 cd /etc/yum.repos.d/
 wget http://linuxsoft.cern.ch/cern/scl/slc6-scl.repo
 rpm --import http://ftp.mirrorservice.org/sites/ftp.scientificlinux.org/linux/scientific/51/i386/RPM-GPG-KEYs/RPM-GPG-KEY-cern
-yum install devtoolset-3
+yum install -y devtoolset-3
 popd
 cat >> .bashrc <<EOF
 export DEVTOOLSET=/opt/rh/devtoolset-3/root/usr/bin
