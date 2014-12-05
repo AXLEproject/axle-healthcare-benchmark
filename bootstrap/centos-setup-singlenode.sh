@@ -56,13 +56,28 @@ yum install -y bc
 sh ${AXLE}/bootstrap/sysctl.sh
 
 # Add EPEL repository
-rpm -q epel-release || rpm -Uvh http://mirrors.nl.eu.kernel.org/fedora-epel/6/x86_64/epel-release-6-8.noarch.rpm
+yum install -y epel-release
 
 yum install -y wget screen man-pages man joe htop erlang curl \
                git gcc bison flex gdb make readline-devel zlib-devel uuid-devel \
                perf graphviz readline-devel zlib-devel pgagent_92 libxslt-devel \
                java-1.7.0-openjdk-devel python-pip python-lxml \
                httpd php autossh gettext
+
+# Newer GCC
+pushd
+cd /etc/yum.repos.d/
+wget http://linuxsoft.cern.ch/cern/scl/slc6-scl.repo
+rpm --import http://ftp.mirrorservice.org/sites/ftp.scientificlinux.org/linux/scientific/51/i386/RPM-GPG-KEYs/RPM-GPG-KEY-cern
+yum install devtoolset-3
+popd
+cat >> .bashrc <<EOF
+export DEVTOOLSET=/opt/rh/devtoolset-3/root/usr/bin
+export CC=${DEVTOOLSET}/gcc
+export CPP=${DEVTOOLSET}/cpp
+export CXX=${DEVTOOLSET}/c++
+export PATH=${DEVTOOLSET}:${PATH}
+EOF
 
 # Maven
 if [ ! -d ${USERDIR}/bin/apache-maven* ];
