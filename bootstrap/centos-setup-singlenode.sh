@@ -76,7 +76,7 @@ export DEVTOOLSET=/opt/rh/devtoolset-3/root/usr/bin
 export CC=${DEVTOOLSET}/gcc
 export CPP=${DEVTOOLSET}/cpp
 export CXX=${DEVTOOLSET}/c++
-export PATH=${DEVTOOLSET}:${PATH}
+export PATH=\${DEVTOOLSET}:\${PATH}
 EOF
 
 # Maven
