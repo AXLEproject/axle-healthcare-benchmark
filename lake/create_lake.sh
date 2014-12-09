@@ -209,9 +209,9 @@ fi
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION blocksample"
 
-        echo "..Create OptOutConsent and LinkActPcpr tables"
+        echo "..Create OptOutConsent and LinkActPcpr tables, add RLS policy."
         pgcommandfromfile $DBNAME "auxiliary_tables.sql"
-        pgcommandfromfile $DBNAME "opt_out_consent.sql"
+        pgcommandfromfile $DBNAME "observation_opt_out_rls.sql"
 
         echo "..Create research schema and user"
         pgcommandfromfile $DBNAME "create_research_schema.sql"
