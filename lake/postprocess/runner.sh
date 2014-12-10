@@ -22,6 +22,8 @@ OPTIONS:
 EOF
 }
 
+test -f $HOME/.bashrc && source $HOME/.bashrc
+
 # ingest part of the default_settings include makefile
 sed -e 's/(/{/g' -e 's/)/}/g' ${AXLE}/default_settings | sed '/shell/d' | sed -n '/^define/,$!p'  > /tmp/default_settings_bash_runner
 source /tmp/default_settings_bash_runner
