@@ -71,23 +71,14 @@ while getopts "hn:u:H:N:U:P:" opt; do
         esac
 done
 
-# If there are no roles we can exit
-R=`psql -U ${DPUSER} -d ${DPDB} -tAc 'SELECT 1 FROM "Role" LIMIT 1'`
-test "X${R}" = "X1" || exit 0
-#logger -t axle-pond-upload "database is empty"
-
 # Execute all pre-processing SQL files first.
-for i in $(ls $(dirname $0)/preprocess/*sql)
-do
-    SECS=`TIME="%e" PGOPTIONS='--client-min-messages=warning' psql -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} -f ${i}`
-    logger -t axle-pond-upload "${i} execution time ${SECONDS} seconds"
-done
+echo $(ls $(dirname $0)/preprocess/*sql) | logger -t axle-pond-upload
 
 t_before=$(timestamp)
-psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_recordids()"
+cat $(ls $(dirname $0)/preprocess/*sql) | \
+PGOPTIONS='--client-min-messages=warning' psql -vON_ERROR_STOP=on -U ${DPUSER} -d ${DPDB} > /dev/null
 t_after=$(timestamp)
-
-logger -t axle-pond-upload "pond_recordids() execution time $(( t_after - t_before )) seconds"
+##logger -t axle-pond-upload "preprocess execution time $(( t_after - t_before ))  seconds"
 
 t_before=$(timestamp)
 PGOPTIONS='--hdl.concept_print_mode=complex_r1' pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
@@ -96,11 +87,9 @@ PGOPTIONS='--hdl.concept_print_mode=complex_r1' pg_dump -aOx -n stream -n rim201
     -e '/pg_catalog.setval/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
 t_after=$(timestamp)
-
-logger -t axle-pond-upload "dump and upload total execution time $(( t_after - t_before )) seconds"
+##logger -t axle-pond-upload "dump and upload total execution time $(( t_after - t_before )) seconds"
 
 t_before=$(timestamp)
 psql -U ${DPUSER} -d ${DPDB} -c "SELECT pond_empty()"
 t_after=$(timestamp)
-
-logger -t axle-pond-upload "pond_empty() execution time $(( t_after - t_before )) seconds"
+#logger -t axle-pond-upload "pond_empty() execution time $(( t_after - t_before )) seconds"
