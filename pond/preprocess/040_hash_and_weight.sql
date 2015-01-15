@@ -255,11 +255,10 @@ SET    _record_weight = 2000 * (_mif LIKE 'TZDU%')::int
                     "recertificationTime"
 ))));
 
-\quit
-
+/***
 select _mif, "classCode", avg(_record_weight) from "Entity" group by _mif, "classCode";
 select _mif, "classCode", avg(_record_weight) from "Role" group by _mif, "classCode";
 
 explain analyze select distinct _mif, "classCode" from "Entity" where _record_weight is null;
 explain analyze select distinct _mif, "classCode" from "Role" where _record_weight is null;
-
+***/
