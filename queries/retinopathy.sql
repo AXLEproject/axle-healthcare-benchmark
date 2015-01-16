@@ -1,6 +1,6 @@
 /*
- * query      : angiopathy.sql
- * description: create angiopathy tabular data for Orange
+ * query      : retinopathy.sql
+ * description: create retinopathy tabular data for Orange
  * user       : researchers, de-identification required
  *
  * Observation kinds:
@@ -11,6 +11,7 @@
  * - total / HDL cholesterol
  * - gender
  * - age
+ * and others
  *
  * Classifier is '400047006' peripheral vascular disease (PVD)
  * (retinopathy
@@ -19,24 +20,26 @@
  *
  * This script creates the following views:
  *
- *  classifier          a list of retinopathy and PVD observations
- *  base_values         a list of observations and basic patient data
- *                        birthtime is safe harbor de-identified:
- *                        age in years and all >89 as 95
- *  rtp_base_values     classifier and base_values combined for only
- *                      observations that are risk factor for PVD.
- *                        t0 is time of classifier diagnosis or fixed 20140501
- *                        observation dates replaced with time before t0
- *  rtp_base_summaries  convert base_values list into one record per patient, code
+ *  base_values                 a list of observations and basic patient data
  *
- * Based on the base_summaries, the following table is materialized:
- *
- *  rtp_tabular_data    convert base_summaries into one record per patient.
+ *  retinopathy_class           class variables for retinopathy and related complications
+ *  retinopathy_base_values     base_values specific for retinopathy:
+ *                              - added class variable
+ *                              - times related to t0, class date or fixed 20140501
+ *                              - restricted features to retinopathy risks
+ *                              - no observations after t0
+ *  retinopathy_base_summaries  summarize time into last value, avg, min, max, count etc.
+ *                              one record per patient and code
+ *  retinopathy_tabular_data    select interesting summaries, pivot
+ *                              one record per patient
  *
  * Copyright (c) 2014, Portavita B.V.
  */
 
 \set ON_ERROR_STOP on
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS tablefunc;
 
 \echo
 \echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
@@ -57,7 +60,7 @@ AS
 ;
 
 /** step one create base values **/
-DROP TABLE base_values CASCADE;
+--DROP TABLE base_values CASCADE;
 CREATE TABLE base_values
 AS
       /** person birth time **/
@@ -115,11 +118,11 @@ AS
       ON      ptnt.player = ptnt_player
 ;
 
-/** classifier is defined as the first observation in the group of
+/** the class var is defined as the first observation in the group of
     micro-vascular complications **/
 
-DROP VIEW retinopathy_classifier CASCADE;
-CREATE VIEW retinopathy_classifier AS
+DROP VIEW retinopathy_class CASCADE;
+CREATE VIEW retinopathy_class AS
       SELECT * FROM (
       SELECT  *
       ,       RANK() OVER (PARTITION BY pseudonym, code
@@ -138,16 +141,16 @@ CREATE VIEW retinopathy_classifier AS
       WHERE rocky = 1;
 
 
--- observation lists with classifier for retinopathy
+-- observation lists with class for retinopathy
 DROP VIEW retinopathy_base_values CASCADE;
 CREATE VIEW retinopathy_base_values
 AS
-WITH base_values_with_classifier AS (
+WITH base_values_with_class AS (
         SELECT    v.*
         ,         COALESCE(c.time_lowvalue, '20140501') AS t0
-        ,         c.time_lowvalue IS NOT NULL           AS classifier
+        ,         c.time_lowvalue IS NOT NULL           AS class
         FROM      base_values v
-        LEFT JOIN retinopathy_classifier c
+        LEFT JOIN retinopathy_class c
         ON        c.pseudonym = v.pseudonym
         AND       c.code = 'Portavita220' -- diabetic retinopathy
 )
@@ -159,8 +162,8 @@ SELECT  pseudonym
         ,      value_real
         ,      negation_ind
         ,      EXTRACT(days FROM t0 - time_lowvalue) AS days_to_t0
-        ,      classifier
-FROM    base_values_with_classifier
+        ,      class
+FROM    base_values_with_class
 WHERE   1=1 -- NOT negation_ind
 AND     time_lowvalue <= t0
 AND     code IN ('365980008' -- smoking
@@ -211,8 +214,8 @@ CREATE TABLE retinopathy_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
   ,       (record_id->>'pseudonym')                 AS pseudonym
--- classifier
-  ,       (record_id->>'classifier')::boolean       AS classifier
+-- class
+  ,       (record_id->>'class')::boolean            AS class
 -- smoking
   ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
@@ -252,8 +255,8 @@ SELECT row_number() over()                          AS row_number
 -- mdrd
   ,       (mdrd->>'value_real')::numeric     AS mdrd_lv
 FROM crosstab($ct$
-    SELECT json_object(('{ pseudonym, '         || pseudonym       ||
-                        ', classifier, '        || classifier      ||
+    SELECT json_object(('{ pseudonym, '         || pseudonym  ||
+                        ', class, '             || class      ||
                         '}')::text[])::text                           AS record_id
     ,       code                                                      AS category
 
