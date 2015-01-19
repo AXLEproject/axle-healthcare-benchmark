@@ -60,19 +60,32 @@ AS
 ;
 
 /** step one create base values **/
---DROP TABLE base_values CASCADE;
+DROP TABLE base_values CASCADE;
 CREATE TABLE base_values
 AS
       /** person birth time **/
       SELECT  pseudonym                                          AS pseudonym
-      ,       '21112-8'::text                                    AS code  -- snomed would be 184099003
-      ,       '2.16.840.1.113883.6.1'::text                      AS codesystem -- snomed would be 6.96
+      ,       null::text                                         AS feature_id
+      ,       peso._id::text                                     AS source_id
+      ,       peso."classCode"->>'code'                          AS class_code
+      ,       null::text                                         AS mood_code
+      ,       null::text                                         AS status_code
+      ,       '184099003'::text                                  AS code
+      ,       '2.16.840.1.113883.6.96'::text                     AS code_codesystem
+      ,       'Date of birth'::text                              AS code_displayname
       ,       null::text                                         AS value_code
-      ,       null::text                                         AS value_ivl
+      ,       null::text                                         AS value_codesystem
+      ,       null::text                                         AS value_displayname
+      ,       null::text                                         AS value_text
+      ,       null::text                                         AS value_ivl_pq
       ,       null::numeric                                      AS value_real
+      ,       null::boolean                                      AS value_bool
+      ,       null::text                                         AS value_qset_ts
       ,       false::bool                                        AS negation_ind
       ,       peso."birthTime"::timestamptz                      AS time_lowvalue
       ,       null::timestamptz                                  AS time_highvalue
+      ,       null::numeric                                      AS time_to_t0
+      ,       peso._lake_timestamp::timestamptz                  AS time_availability
       FROM    "Patient"                                ptnt
       JOIN    "Person"                                 peso
       ON      peso._id                                 = ptnt.player
@@ -83,14 +96,27 @@ AS
 
       /** person gender **/
       SELECT  pseudonym                                          AS pseudonym
+      ,       null::text                                         AS feature_id
+      ,       peso._id::text                                     AS source_id
+      ,       peso."classCode"->>'code'                          AS class_code
+      ,       null::text                                         AS mood_code
+      ,       null::text                                         AS status_code
       ,       '263495000'::text                                  AS code
-      ,       '2.16.840.1.113883.6.1'::text                      AS codesystem -- snomed would be 6.96
+      ,       '2.16.840.1.113883.6.96'::text                     AS code_codesystem
+      ,       'Gender'::text                                     AS code_displayname
       ,       peso."administrativeGenderCode"->>'code'           AS value_code
-      ,       null::text                                         AS value_ivl
+      ,       peso."administrativeGenderCode"->>'codeSystem'     AS value_codesystem
+      ,       peso."administrativeGenderCode"->>'displayName'    AS value_displayname
+      ,       null::text                                         AS value_text
+      ,       null::text                                         AS value_ivl_pq
       ,       null::numeric                                      AS value_real
+      ,       null::boolean                                      AS value_bool
+      ,       null::text                                         AS value_qset_ts
       ,       false::bool                                        AS negation_ind
-      ,       null::timestamptz                                  AS time_lowvalue
+      ,       peso."birthTime"::timestamptz                      AS time_lowvalue
       ,       null::timestamptz                                  AS time_highvalue
+      ,       null::numeric                                      AS time_to_t0
+      ,       peso._lake_timestamp::timestamptz                  AS time_availability
       FROM    "Patient"                                ptnt
       JOIN    "Person"                                 peso
       ON      peso._id                                 = ptnt.player
@@ -100,15 +126,28 @@ AS
       UNION ALL
 
       /** observation **/
-      SELECT  pseudonym                             AS pseudonym
-      ,       obse._code_code                       AS code
-      ,       obse._code_codesystem                 AS codesystem
-      ,       obse._value_code_code                 AS value_code
-      ,       obse._value_ivl_real::text            AS value_ivl
+      SELECT  pseudonym                                          AS pseudonym
+      ,       null::text                                         AS feature_id
+      ,       obse._id::text                                     AS source_id
+      ,       obse."classCode"->>'code'                          AS class_code
+      ,       obse."moodCode"->>'code'                           AS mood_code
+      ,       obse."statusCode"->>'code'                         AS status_code
+      ,       obse._code_code                                    AS code
+      ,       obse._code_codesystem                              AS code_codesystem
+      ,       obse.code->>'displayName'                          AS code_displayname
+      ,       obse._value_code_code                              AS value_code
+      ,       obse.value->>'codeSystem'                          AS value_codesystem
+      ,       obse.value->>'displayName'                         AS value_displayname
+      ,       null::text                                         AS value_text
+      ,       obse._value_ivl_real::text                         AS value_ivl_pq
       ,       COALESCE(obse._value_pq_value::float8, obse._value_real, obse._value_int)  AS value_real
-      ,       obse."negationInd"::bool              AS negation_ind
-      ,       obse._effective_time_low              AS time_lowvalue
-      ,       obse._effective_time_high             AS time_highvalue
+      ,       null::boolean                                      AS value_bool
+      ,       null::text                                         AS value_qset_ts
+      ,       obse."negationInd"::bool                           AS negation_ind
+      ,       obse._effective_time_low                           AS time_lowvalue
+      ,       obse._effective_time_high                          AS time_highvalue
+      ,       null::numeric                                      AS time_to_t0
+      ,       obse._lake_timestamp::timestamptz                  AS time_availability
       FROM    "Patient"                                ptnt
       JOIN    "Participation"                          obse_ptcp
       ON      ptnt._id                                 = obse_ptcp.role
@@ -118,28 +157,84 @@ AS
       ON      ptnt.player = ptnt_player
 ;
 
-/** the class var is defined as the first observation in the group of
+CREATE INDEX ON base_values (pseudonym, code);
+
+/** add new feature class var.
+    the class var is defined as the first observation in the group of
     micro-vascular complications **/
 
-DROP VIEW retinopathy_class CASCADE;
-CREATE VIEW retinopathy_class AS
-      SELECT * FROM (
+DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
+INSERT INTO base_values
+      SELECT pseudonym                                          AS pseudonym
+      ,      'has_retinopathy'::text                            AS feature_id
+      ,      null::text                                         AS source_id
+      ,      null::text                                         AS class_code
+      ,      null::text                                         AS mood_code
+      ,      null::text                                         AS status_code
+      ,      'has_retinopathy'::text                            AS code
+      ,      'FXP codesystem TBD'::text                         AS code_codesystem
+      ,      'Retinopathy class variable'::text                 AS code_displayname
+      ,      'Y'::text                                          AS value_code
+      ,      'some codesystem with y/n'::text                   AS value_codesystem
+      ,      'yes'::text                                        AS value_displayname
+      ,      null::text                                         AS value_text
+      ,      null::text                                         AS value_ivl_pq
+      ,      null::numeric                                      AS value_real
+      ,      null::boolean                                      AS value_bool
+      ,      null::text                                         AS value_qset_ts
+      ,      false::boolean                                     AS negation_ind
+      ,      time_lowvalue                                      AS time_lowvalue
+      ,      time_highvalue                                     AS time_highvalue
+      ,      null::numeric                                      AS time_to_t0
+      ,      time_availability                                  AS time_availability
+FROM (
       SELECT  *
       ,       RANK() OVER (PARTITION BY pseudonym, code
                            ORDER BY time_lowvalue DESC) AS rocky
       FROM    base_values
       WHERE  (NOT negation_ind
-              AND codesystem = '2.16.840.1.113883.6.96'
+              AND code_codesystem = '2.16.840.1.113883.6.96'
               AND code = '400047006'    -- peripheral vascular disease
               AND value_code = 'Y')
       OR
              (NOT negation_ind
-              AND codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
+              AND code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
               AND code = 'Portavita220' -- diabetic retinopathy
               AND value_code IN ('RETINOPATHIE_RECHTEROOG', 'RETINOPATHIE_LINKER_RECHTEROOG', 'RETINOPATHIE_LINKEROOG'))
       ) a
       WHERE rocky = 1;
 
+
+DELETE FROM base_values WHERE feature_id = 'age_in_years';
+INSERT INTO base_values
+      SELECT pseudonym                                          AS pseudonym
+      ,      'age_in_years'::text                               AS feature_id
+      ,      null::text                                         AS source_id
+      ,      null::text                                         AS class_code
+      ,      null::text                                         AS mood_code
+      ,      null::text                                         AS status_code
+      ,      'age_in_years'::text                               AS code
+      ,      'FXP codesystem TBD'::text                         AS code_codesystem
+      ,      'Age in years'::text                               AS code_displayname
+      ,      null::text                                         AS value_code
+      ,      null::text                                         AS value_codesystem
+      ,      null::text                                         AS value_displayname
+      ,      null::text                                         AS value_text
+      ,      null::text                                         AS value_ivl_pq
+      ,      (extract(year from current_timestamp)
+              - extract(year from time_lowvalue))::numeric      AS value_real
+      ,      null::boolean                                      AS value_bool
+      ,      null::text                                         AS value_qset_ts
+      ,      false::boolean                                     AS negation_ind
+      ,      time_lowvalue                                      AS time_lowvalue
+      ,      time_highvalue                                     AS time_highvalue
+      ,      null::numeric                                      AS time_to_t0
+      ,      time_availability                                  AS time_availability
+      FROM    base_values
+      WHERE   code='184099003'
+      AND     code_codesystem = '2.16.840.1.113883.6.96'
+      AND     NOT negation_ind
+;
 
 -- observation lists with class for retinopathy
 DROP VIEW retinopathy_base_values CASCADE;
@@ -150,19 +245,33 @@ WITH base_values_with_class AS (
         ,         COALESCE(c.time_lowvalue, '20140501') AS t0
         ,         c.time_lowvalue IS NOT NULL           AS class
         FROM      base_values v
-        LEFT JOIN retinopathy_class c
+        LEFT JOIN base_values c
         ON        c.pseudonym = v.pseudonym
-        AND       c.code = 'Portavita220' -- diabetic retinopathy
+        AND       c.code = 'has_retinopathy'
+        AND       c.value_code = 'Y'
 )
 SELECT  pseudonym
+        ,      feature_id
+        ,      source_id
+        ,      class_code
+        ,      mood_code
+        ,      status_code
         ,      code
-        ,      codesystem
+        ,      code_codesystem
+        ,      code_displayname
         ,      value_code
-        ,      value_ivl
+        ,      value_codesystem
+        ,      value_displayname
+        ,      value_text
+        ,      value_ivl_pq
         ,      value_real
+        ,      value_bool
+        ,      value_qset_ts
         ,      negation_ind
-        ,      EXTRACT(days FROM t0 - time_lowvalue) AS days_to_t0
-        ,      class
+        ,      time_lowvalue
+        ,      time_highvalue
+        ,      EXTRACT(days FROM t0 - time_lowvalue) AS time_to_t0
+        ,      time_availability
 FROM    base_values_with_class
 WHERE   1=1 -- NOT negation_ind
 AND     time_lowvalue <= t0
@@ -171,15 +280,40 @@ AND     code IN ('365980008' -- smoking
               ,'219006' -- alcohol
               ,'160573003' -- alcohol quantity
               ,'228450008' -- exercise
+              ,'102739008' -- LDL cholesterol
               ,'102737005' -- HDL cholestol
               ,'166842003' -- total/hdl cholesterol
               ,'103232008' -- HBA1c/GlycHb
+              ,'271000000' -- albumine in urine
+              ,'275795003' -- Albumin in sample
               ,'250745003' -- albumine/kreatinine ratio
               ,'275792000' -- kreatinine
               ,'Portavita189' -- cockroft kreatinine derivate
               ,'Portavita304' -- MDRD kreatinine derivate
               ,'8480-6' -- systolic
               ,'8462-4' -- diastolic
+              ,'5600001' -- Triglyceride
+              ,'275789004' -- Potassium
+              ,'52302001' -- Fasting blood glucose (venous)
+              ,'38082009' -- Hemoglobine (Hb)
+              ,'302866003' -- Hypoglycemia (y/n) There are other indicators related to this.
+              ,'38341003' -- Hypertension (y/n)
+              ,'228450008' -- exercise (A,B,C,D)
+              ,'365275006' -- well being, aka coenesthesia
+              ,'396552003' -- Waist circumference
+              ,'60621009' -- BMI
+              ,'Portavita1157' -- Nephropathy (y/n) Risk factor
+              ,'312975006'   -- Microalbuminuria (y/n) Risk factor
+              ,'Portavita1161' -- Retinopathie (y/n) Risk factor
+              ,'Portavita1232' -- diabetes diagnosis: the values are Type 1, 2, LADA, MODY, Generic diabetes mellitus
+              ,'Portavita1233' -- Date of Diagnosis diabetes
+              ,'Portavita70' -- Hypertensie bij 1e graads familieleden (y/n)
+              ,'Portavita68' -- Diabetes bij 1e of 2e graads familieleden (y/n)
+              ,'Portavita71' -- Cardiovascular disease with 1st degree family member. (y/n)
+              ,'Portavita220' -- retinopathy complication
+              ,'has_retinopathy' -- has retinopathy feature
+              ,'age_in_years'    -- age in years feature
+              ,'263495000' -- Gender
 )
 ORDER BY pseudonym, code, t0 desc;
 
@@ -196,12 +330,12 @@ CREATE VIEW retinopathy_base_summaries
 AS
 SELECT * FROM (
       SELECT   *
-      ,        RANK() OVER (PARTITION BY pseudonym, code  ORDER BY days_to_t0 ASC)  AS rocky
+      ,        RANK() OVER (PARTITION BY pseudonym, code  ORDER BY time_to_t0 ASC)  AS rocky
       ,        count(1)                  OVER (PARTITION BY pseudonym, code)  AS count_value
       ,        avg(value_real)           OVER (PARTITION BY pseudonym, code)  AS avg
       ,        min(value_real)           OVER (PARTITION BY pseudonym, code)  AS min
       ,        max(value_real)           OVER (PARTITION BY pseudonym, code)  AS max
-      ,        max(days_to_t0)           OVER (PARTITION BY pseudonym, code)  AS max_days_to_t0
+      ,        max(time_to_t0)           OVER (PARTITION BY pseudonym, code)  AS max_time_to_t0
       ,        stddev_pop(value_real)    OVER (PARTITION BY pseudonym, code)  AS stddev_pop
       ,        string_agg( value_code, '|')    OVER (PARTITION BY pseudonym, code)  AS codes
        FROM retinopathy_base_values
@@ -214,8 +348,10 @@ CREATE TABLE retinopathy_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
   ,       (record_id->>'pseudonym')                 AS pseudonym
+  ,       (age_in_years->>'value_real')::numeric    AS age_in_years
+  ,       gender->>'value_code'                     AS gender
 -- class
-  ,       (record_id->>'class')::boolean            AS class
+  ,       has_retinopathy->>'value_code'            AS class
 -- smoking
   ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
@@ -254,7 +390,6 @@ SELECT row_number() over()                          AS row_number
   ,       (mdrd->>'value_real')::numeric                  AS mdrd_lv
 FROM crosstab($ct$
     SELECT json_object(('{ pseudonym, '         || pseudonym  ||
-                        ', class, '             || class      ||
                         '}')::text[])::text                           AS record_id
     ,       code                                                      AS category
 
@@ -265,8 +400,8 @@ FROM crosstab($ct$
                          ',min, '             || COALESCE(min::text, 'NULL')            ||
                          ',max, '             || COALESCE(max::text, 'NULL')            ||
                          ',stddev_pop, '      || COALESCE(stddev_pop::text, 'NULL')     ||
-                         ',max_days_to_t0, '  || COALESCE(max_days_to_t0::text, 'NULL') ||
-                         ',days_to_t0, '      || COALESCE(days_to_t0::text, 'NULL')     ||
+                         ',max_time_to_t0, '  || COALESCE(max_time_to_t0::text, 'NULL') ||
+                         ',time_to_t0, '      || COALESCE(time_to_t0::text, 'NULL')     ||
                          '}')::text[])::text                          AS value
     FROM  retinopathy_base_summaries
     ORDER BY record_id, category
@@ -285,6 +420,9 @@ FROM crosstab($ct$
      ,      ('Portavita304') -- MDRD kreatinine derivate
      ,      ('8480-6')
      ,      ('8462-4')
+     ,      ('has_retinopathy')
+     ,      ('age_in_years')
+     ,      ('263495000')  -- gender
      $ct$
   )
   AS ct(record_id            jsonb
@@ -302,12 +440,11 @@ FROM crosstab($ct$
        ,"mdrd"               jsonb
        ,"systolic"           jsonb
        ,"diastolic"          jsonb
+       ,"has_retinopathy"    jsonb
+       ,"age_in_years"       jsonb
+       ,"gender"             jsonb
   ) -- select from crosstab
 ;
-
-\quit
-/** rest is WIP **/
-
 
 /*
  * Prosecutor risk
@@ -324,7 +461,7 @@ select age_in_years
 ,      row_number() over (partition by age_in_years, gender, smok_lv) as rocky
 ,      count(1)     over (partition by age_in_years, gender, smok_lv) as count
 from
-rtp_tabular_data
+retinopathy_tabular_data
 )
 SELECT age_in_years
 ,      gender
@@ -346,11 +483,11 @@ WITH equivalence_classes AS (
  , row_number() over (partition by age_in_years, gender, smok_lv) as rocky
  , count(1)     over (partition by age_in_years, gender, smok_lv) as classsize
  from
- rtp_tabular_data
+ retinopathy_tabular_data
 ),
 size AS (
  select count(*) AS denom
- from rtp_tabular_data
+ from retinopathy_tabular_data
 ),
 records_at_risk AS (
  select sum(classsize) as num
