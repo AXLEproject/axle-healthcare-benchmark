@@ -164,7 +164,28 @@ CREATE INDEX ON base_values (pseudonym, code);
     micro-vascular complications **/
 
 DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
-INSERT INTO base_values
+INSERT INTO base_values (pseudonym
+, feature_id
+, source_id
+, class_code
+, mood_code
+, status_code
+, code
+, code_codesystem
+, code_displayname
+, value_code
+, value_codesystem
+, value_displayname
+, value_text
+, value_ivl_pq
+, value_real
+, value_bool
+, value_qset_ts
+, negation_ind
+, time_lowvalue
+, time_highvalue
+, time_to_t0
+, time_availability)
       SELECT pseudonym                                          AS pseudonym
       ,      'has_retinopathy'::text                            AS feature_id
       ,      null::text                                         AS source_id
@@ -174,13 +195,36 @@ INSERT INTO base_values
       ,      'has_retinopathy'::text                            AS code
       ,      'FXP codesystem TBD'::text                         AS code_codesystem
       ,      'Retinopathy class variable'::text                 AS code_displayname
-      ,      'Y'::text                                          AS value_code
-      ,      'some codesystem with y/n'::text                   AS value_codesystem
-      ,      'yes'::text                                        AS value_displayname
+      ,      null::text                                         AS value_code
+      ,      null::text                                         AS value_codesystem
+      ,      null::text                                         AS value_displayname
       ,      null::text                                         AS value_text
       ,      null::text                                         AS value_ivl_pq
       ,      null::numeric                                      AS value_real
-      ,      null::boolean                                      AS value_bool
+      ,      CASE WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
+                   AND code = 'Portavita308')
+                  THEN value_code IN ('Portavita309',
+                                 'Portavita310',
+                                 'Portavita309,Portavita310')
+                  WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
+                   AND code = 'Portavita220')
+                   AND value_code IN ('RETINOPATHIE_LINKER_RECHTEROOG'
+                                   ,'RETINOPATHIE_LINKEROOG'
+                                   ,'RETINOPATHIE_RECHTEROOG'
+                                   ,'LEFT_UNKNOWN_RIGHT_TRUE'
+                                   ,'LEFT_TRUE_RIGHT_UNKNOWN'
+                                   ,'LEFT_TRUE_RIGHT_TRUE'
+                                   ,'LEFT_TRUE_RIGHT_FALSE'
+                                   ,'LEFT_TRUE_RIGHT_UNCLEAR'
+                                   ,'LEFT_FALSE_RIGHT_TRUE'
+                                   ,'LEFT_UNCLEAR_RIGHT_TRUE')
+                                   THEN true
+                  WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
+                   AND code = 'Portavita220')
+                   AND value_code IN ('GEEN_RETINOPATHIE'
+                                   ,'LEFT_FALSE_RIGHT_FALSE')
+                                   THEN false
+             END = NOT /*xor*/ (negation_ind::bool)             AS value_bool
       ,      null::text                                         AS value_qset_ts
       ,      false::boolean                                     AS negation_ind
       ,      time_lowvalue                                      AS time_lowvalue
@@ -189,21 +233,11 @@ INSERT INTO base_values
       ,      time_availability                                  AS time_availability
 FROM (
       SELECT  *
-      ,       RANK() OVER (PARTITION BY pseudonym, code
-                           ORDER BY time_lowvalue DESC) AS rocky
       FROM    base_values
-      WHERE  (NOT negation_ind
-              AND code_codesystem = '2.16.840.1.113883.6.96'
-              AND code = '400047006'    -- peripheral vascular disease
-              AND value_code = 'Y')
-      OR
-             (NOT negation_ind
-              AND code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
-              AND code = 'Portavita220' -- diabetic retinopathy
-              AND value_code IN ('RETINOPATHIE_RECHTEROOG', 'RETINOPATHIE_LINKER_RECHTEROOG', 'RETINOPATHIE_LINKEROOG'))
+      WHERE   code IN ('Portavita308'
+                      ,'Portavita220')
       ) a
-      WHERE rocky = 1;
-
+;
 
 DELETE FROM base_values WHERE feature_id = 'age_in_years';
 INSERT INTO base_values
@@ -233,7 +267,7 @@ INSERT INTO base_values
       FROM    base_values
       WHERE   code='184099003'
       AND     code_codesystem = '2.16.840.1.113883.6.96'
-      AND     NOT negation_ind
+      AND     NOT (negation_ind::bool)
 ;
 
 -- observation lists with class for retinopathy
@@ -248,7 +282,7 @@ WITH base_values_with_class AS (
         LEFT JOIN base_values c
         ON        c.pseudonym = v.pseudonym
         AND       c.code = 'has_retinopathy'
-        AND       c.value_code = 'Y'
+        AND       c.value_bool
 )
 SELECT  pseudonym
         ,      feature_id
@@ -338,6 +372,7 @@ SELECT * FROM (
       ,        max(time_to_t0)           OVER (PARTITION BY pseudonym, code)  AS max_time_to_t0
       ,        stddev_pop(value_real)    OVER (PARTITION BY pseudonym, code)  AS stddev_pop
       ,        string_agg( value_code, '|')    OVER (PARTITION BY pseudonym, code)  AS codes
+      ,        bool_or(value_bool)        OVER (PARTITION BY pseudonym, code)  AS bool_or
        FROM retinopathy_base_values
 ) a
 WHERE rocky = 1;
