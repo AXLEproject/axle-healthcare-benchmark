@@ -82,7 +82,7 @@ t_after=$(timestamp)
 
 t_before=$(timestamp)
 PGOPTIONS='--hdl.concept_print_mode=complex_r1' pg_dump -aOx -n stream -n rim2011 ${DPDB} -U ${DPUSER} | sed \
-    -e '/SET search_path/ s/;/, hl7;/' \
+    -e '/SET search_path/ s/;/, hl7, hdl, r1;/' \
     -e '/SET lock_timeout/d' \
     -e '/pg_catalog.setval/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
