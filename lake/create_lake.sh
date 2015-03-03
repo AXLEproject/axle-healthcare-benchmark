@@ -139,12 +139,12 @@ then
 	test "x${PGV}" = "xPostgreSQL 8.2.15" || fail "pg_config is not set to Greenplum"
 
         # Install HDL modules in Greenplum
-        # install_hdl includes installation of hl7v3datatypes_r1--2.0.sql
+        # install_hdl includes installation of hl7v3datatypes.sql
         $(pg_config --sharedir)/contrib/install_hdl.sh ${DBNAME} ${PG_PORT} ${PG_HOST} ${PG_USER} || fail "could not install hdl"
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 else
         # Install HDL modules in PostgreSQL
@@ -155,32 +155,16 @@ else
         pgcommand $DBNAME "CREATE EXTENSION adminpack"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
 
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, pg_hl7, \"\$user\";"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
-
-        pgcommand $DBNAME "CREATE SCHEMA rim2005"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2005, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql_unlogged $DBNAME hl7v3rim_edition2005--2.0.sql
-
-        pgcommand $DBNAME "CREATE SCHEMA rim2006"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2006, public, hl7, pg_hl7, \"\$user\";"
-        pgext2sql_unlogged $DBNAME hl7v3rim_edition2006--2.0.sql
-
-#        pgcommand $DBNAME "CREATE SCHEMA rim2008"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2008, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql_unlogged $DBNAME hl7v3rim_edition2008--2.0.sql
-
-#        pgcommand $DBNAME "CREATE SCHEMA rim2009"
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2009, public, hl7, pg_hl7, \"\$user\";"
-#        pgext2sql_unlogged $DBNAME hl7v3rim_edition2009--2.0.sql
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, hdl, r1, \"\$user\";"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes"
 
         pgcommand $DBNAME "CREATE SCHEMA rim2010"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, hdl, r1, \"\$user\";"
         pgext2sql_unlogged $DBNAME hl7v3rim_edition2010--2.0.sql
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
         pgext2sql_unlogged $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
@@ -198,8 +182,6 @@ fi
         pgcommand $DBNAME "CREATE INDEX \"rim2011.Observation_code_code_idx\" ON rim2011.\"Observation\" (_code_code)"
 
         pgcommandfromfile $DBNAME "entity_resolution_src.sql"
-
-#        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, rim2011, rim2010, rim2009, rim2008, rim2006, rim2005, hl7, pg_hl7, \"\$user\";"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"

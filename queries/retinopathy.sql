@@ -45,7 +45,7 @@ CREATE EXTENSION IF NOT EXISTS tablefunc;
 \echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
 \echo
 SET session_authorization TO research_user;
-SET SEARCH_PATH TO research, public, rim2011, pg_hl7, hl7, "$user";
+SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 
 \set ON_ERROR_STOP off
 

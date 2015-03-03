@@ -27,7 +27,7 @@ ponds:	reconfig template
 	@echo
 	@echo "CREATING DATABASES pond1 .. pond$(PONDCOUNT)"
 	@echo
-	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} createdb --template=$(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) pond$$i ; PATH=$(PGSERVER)/bin:${PATH} psql --dbname $(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) -c "ALTER DATABASE pond$$i SET search_path=rim2011, public,pg_hl7,hl7,\"\$$user\";" ; done
+	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} createdb --template=$(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) pond$$i ; PATH=$(PGSERVER)/bin:${PATH} psql --dbname $(TEMPLATEDB) --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER) -c "ALTER DATABASE pond$$i SET search_path=rim2011, public, hdl,hl7, r1, \"\$$user\";" ; done
 
 desert:
 	for i in {1..$(PONDCOUNT)} ; do PATH=$(PGSERVER)/bin:${PATH} psql --dbname postgres --host $(PONDHOST) --port $(PONDPORT) --user $(PONDUSER)  -c "DROP DATABASE IF EXISTS pond$$i" ; done

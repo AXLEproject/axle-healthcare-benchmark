@@ -80,14 +80,14 @@ case "${ACTION}" in
         pgcommand $DBNAME "CREATE EXTENSION ucum"
         pgcommand $DBNAME "CREATE EXTENSION hl7"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public,pg_hl7,hl7,\"\$user\";"
-        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes_r1"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hdl, hl7, r1, \"\$user\";"
+        pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes"
         pgcommand $DBNAME "CREATE EXTENSION snomedctvocab_20140131"
         pgcommand $DBNAME "CREATE EXTENSION loinc_2_42"
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, pg_hl7, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hdl, hl7, r1, \"\$user\";"
         pgext2sql_unlogged $DBNAME "hl7v3rim_edition2011--2.0.sql"
         pgext2sql_unlogged $DBNAME "hl7v3crud_edition2011--2.0.sql"
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
