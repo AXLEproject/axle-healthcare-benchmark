@@ -221,39 +221,37 @@ SELECT row_number() over()                          AS row_number
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
                WHEN smoking->>'value_code' = '77176002'  THEN 2 -- yes
                ELSE                          NULL
-          END                                             AS smok_lv                 -- last observed value of smoking observation
-  ,       round((smoking_quantity->>'value_real')::numeric) AS smok_du_lv              -- smoking daily units last value
-  ,       (smoking_quantity->>'count')::numeric           AS smok_du_count           -- number of smoking observations before t0
-  ,       (smoking_quantity->>'avg')::numeric             AS smok_du_avg
+          END                                               AS smok_lv       -- last observed value of smoking observation
+  ,       round((smoking_quantity->>'value_real')::numeric) AS smok_du_lv    -- smoking daily units last value
+  ,       (smoking_quantity->>'count')::numeric             AS smok_du_count -- number of smoking observations before t0
 -- alcohol
-  ,       alcohol->>'value_code'                          AS alcohol_lv
-  ,       round((alcohol_quantity->>'value_real')::numeric)    AS alc_wu_lv
-  ,       (alcohol_quantity->>'avg')::numeric             AS alc_wu_avg
+  ,       alcohol->>'value_code'                            AS alcohol_lv
+  ,       round((alcohol_quantity->>'value_real')::numeric) AS alc_wu_lv
 -- exercise days per week
   ,       CASE WHEN exercise->>'value_code' = 'A' THEN 0
                WHEN exercise->>'value_code' = 'B' THEN 2
                WHEN exercise->>'value_code' = 'C' THEN 4
                WHEN exercise->>'value_code' = 'D' THEN 5
                ELSE                          NULL
-          END                                AS exercise_dpw_lv
+          END                                             AS exercise_dpw_lv
 -- hdl
-  ,       (hdl->>'value_real')::numeric             AS hdl_lv
+  ,       (hdl->>'value_real')::numeric                   AS hdl_lv
 -- total cholesterol / hdl cholesterol
   ,       (total_hdl->>'value_real')::numeric             AS total_hdl_lv
 -- systolic blood pressure
-  ,       (systolic->>'value_real')::numeric             AS systolic_lv
+  ,       (systolic->>'value_real')::numeric              AS systolic_lv
 -- diastolic blood pressure
   ,       (diastolic->>'value_real')::numeric             AS diastolic_lv
 -- hba1c
-  ,       (hba1c->>'value_real')::numeric             AS hba1c_lv
+  ,       (hba1c->>'value_real')::numeric                 AS hba1c_lv
 -- albumine
-  ,       (albumine->>'value_real')::numeric     AS albumine_lv
+  ,       (albumine->>'value_real')::numeric              AS albumine_lv
 -- kreatinine
-  ,       (kreatinine->>'value_real')::numeric     AS kreatinine_lv
+  ,       (kreatinine->>'value_real')::numeric            AS kreatinine_lv
 -- cockroft
-  ,       (cockroft->>'value_real')::numeric     AS cockroft_lv
+  ,       (cockroft->>'value_real')::numeric              AS cockroft_lv
 -- mdrd
-  ,       (mdrd->>'value_real')::numeric     AS mdrd_lv
+  ,       (mdrd->>'value_real')::numeric                  AS mdrd_lv
 FROM crosstab($ct$
     SELECT json_object(('{ pseudonym, '         || pseudonym  ||
                         ', class, '             || class      ||
@@ -261,7 +259,7 @@ FROM crosstab($ct$
     ,       code                                                      AS category
 
     ,       json_object(('{value_code, '      || COALESCE(value_code::text, 'NULL')     ||
-                         ',value_real, '     || COALESCE(value_real::text, 'NULL')    ||
+                         ',value_real, '      || COALESCE(value_real::text, 'NULL')    ||
                          ',count, '           || COALESCE(count_value::text, 'NULL')    ||
                          ',avg, '             || COALESCE(avg::text, 'NULL')            ||
                          ',min, '             || COALESCE(min::text, 'NULL')            ||
