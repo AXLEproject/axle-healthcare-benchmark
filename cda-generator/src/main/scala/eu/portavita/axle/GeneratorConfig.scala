@@ -23,6 +23,8 @@ object GeneratorConfig {
 	val cdaJaxbContext = new CdaJaxbContext
 	val fhirJaxbContext = new FhirJaxbContext
 
+        val patientsPerOrganizationRatio = config.getInt("patientsPerOrganizationRatio")
+
 	val rabbitConfig = new RabbitMessageQueueConfig(
 		username = config.getString("rabbit.username"),
 		password = config.getString("rabbit.password"),

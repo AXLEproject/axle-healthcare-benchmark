@@ -8,6 +8,7 @@ import java.util.ArrayList
 import java.util.Date
 import scala.annotation.tailrec
 import scala.util.Random
+import eu.portavita.axle.GeneratorConfig
 import eu.portavita.axle.helper.DateTimes
 import eu.portavita.axle.helper.RandomHelper
 import eu.portavita.axle.model.OrganizationModel
@@ -81,7 +82,7 @@ object Organization {
 		val name = RandomHelper.string(RandomHelper.startingWithCapital, min=8, max=24)
 		val startDate = DateTimes.getRelativeDate(RandomHelper.between(minimalDaysOld, maximalDaysOld))
 		val code = randomOrganizationCode()
-		val nrOfPatients = model.sampleNrOfPatients
+		val nrOfPatients = model.sampleNrOfPatients * GeneratorConfig.patientsPerOrganizationRatio
 		val nrOfPractitioners = Math.max(1, RandomHelper.between(0, nrOfPatients / 10))
 		val practitioners = for (i <- 0 to nrOfPractitioners) yield Practitioner.sample(id)
 		val careGroupEmployees = List[Practitioner]()
