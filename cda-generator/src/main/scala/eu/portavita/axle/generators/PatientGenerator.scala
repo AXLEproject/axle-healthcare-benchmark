@@ -98,7 +98,9 @@ class PatientGenerator(
 
 	private def generatePerformanceDates(nrOfExaminations: Int, age: Int, patient: Patient): IndexedSeq[Date] = {
                 var amount = nrOfExaminations / GeneratorConfig.patientsPerOrganizationRatio
-        	log.info("Generating $amount = $nrOfExaminations / $GeneratorConfig.patientsPerOrganizationRatio examinations")
+                if (amount > 0) {
+                        	log.info(s"Generating $nrOfExaminations / ${GeneratorConfig.patientsPerOrganizationRatio} = $amount examinations")
+                }
 		for (i <- 0 to amount) yield {
 			generatePerformanceDate(age, patient)
 		}
