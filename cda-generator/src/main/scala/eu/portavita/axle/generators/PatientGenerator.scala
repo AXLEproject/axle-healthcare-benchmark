@@ -97,7 +97,7 @@ class PatientGenerator(
 	}
 
 	private def generatePerformanceDates(nrOfExaminations: Int, age: Int, patient: Patient): IndexedSeq[Date] = {
-                for (i <- 1 to nrOfExaminations
+                for (i <- 0 to nrOfExaminations
                      // randomly omit dates in proportion to increased patients per org ratio
                      if Random.nextInt(GeneratorConfig.patientsPerOrganizationRatio) == 0) yield {
 	               	generatePerformanceDate(age, patient)
