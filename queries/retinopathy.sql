@@ -237,15 +237,15 @@ SELECT row_number() over()                          AS row_number
                ELSE                          NULL
           END                                AS exercise_dpw_lv
 -- hdl
-  ,       (hdl->>'max')::numeric             AS hdl_max
+  ,       (hdl->>'value_real')::numeric             AS hdl_lv
 -- total cholesterol / hdl cholesterol
-  ,       (total_hdl->>'avg')::numeric             AS total_hdl_avg
+  ,       (total_hdl->>'value_real')::numeric             AS total_hdl_lv
 -- systolic blood pressure
-  ,       (systolic->>'avg')::numeric             AS systolic_avg
+  ,       (systolic->>'value_real')::numeric             AS systolic_lv
 -- diastolic blood pressure
-  ,       (diastolic->>'min')::numeric             AS diastolic_min
+  ,       (diastolic->>'value_real')::numeric             AS diastolic_lv
 -- hba1c
-  ,       (hba1c->>'avg')::numeric             AS hba1c_avg
+  ,       (hba1c->>'value_real')::numeric             AS hba1c_lv
 -- albumine
   ,       (albumine->>'value_real')::numeric     AS albumine_lv
 -- kreatinine
