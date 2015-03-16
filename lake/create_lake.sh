@@ -194,19 +194,10 @@ fi
         pgcommand $DBNAME "CREATE INDEX \"Participation_act_idx\" ON rim2011.\"Participation\" (act)"
         pgcommand $DBNAME "CREATE INDEX \"Observation_code_code_idx\" ON rim2011.\"Observation\" (_code_code)"
 
-
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_player_idx\" ON rim2011.\"Role\" (player)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_scoper_idx\" ON rim2011.\"Role\" (scoper)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_player_original_idx\" ON rim2011.\"Role\" (player_original)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_scoper_original_idx\" ON rim2011.\"Role\" (scoper_original)"
-
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Person_id_idx\" ON rim2011.\"Person\" using gist(id)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_player_idx\" ON rim2011.\"Patient\" (player)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_scoper_idx\" ON rim2011.\"Patient\" (scoper)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_scoper_original_idx\" ON rim2011.\"Patient\" (scoper_original)"
-#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_player_original_idx\" ON rim2011.\"Patient\" (player_original)"
-#        pgcommand $DBNAME "CREATE INDEX \"append_id_id_idx\" ON stream.append_id (id)"
-
+        pgcommand $DBNAME "CREATE INDEX \"Role_player_idx\" ON rim2011.\"Role\" (player)"
+        pgcommand $DBNAME "CREATE INDEX \"Role_scoper_idx\" ON rim2011.\"Role\" (scoper)"
+        pgcommand $DBNAME "CREATE INDEX \"Patient_player_idx\" ON rim2011.\"Patient\" (player)"
+        pgcommand $DBNAME "CREATE INDEX \"Patient_scoper_idx\" ON rim2011.\"Patient\" (scoper)"
 
         pgcommandfromfile $DBNAME "entity_resolution_src.sql"
 

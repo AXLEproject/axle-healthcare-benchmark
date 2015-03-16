@@ -68,6 +68,9 @@ BEGIN
     LIMIT 10000
    $sql$;
 
+  CREATE INDEX ON _A USING GIN(_id_extension);
+  ANALYZE _A;
+
   /* check block against existing clusters */
   EXECUTE $sql$
   CREATE TEMP TABLE _E ON COMMIT DROP AS
