@@ -58,6 +58,6 @@ cd ${SCRIPTDIR}
 while true
 do PGOPTIONS='--client-min-messages=warning' \
     ${PSQL} -f runner.sql
-    ${PSQL} -c "VACUUM VERBOSE stream.append_id"
+    ${PSQL} -c "VACUUM stream.append_id"
     sleep 2
 done

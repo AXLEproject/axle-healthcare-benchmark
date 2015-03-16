@@ -56,6 +56,7 @@ BEGIN
   CREATE TEMP TABLE _A ON COMMIT DROP AS
     SELECT _id
     ,      _id_cluster
+    ,      _id_extension
     ,      _record_hash
     ,      _record_weight
     ,      t.id
@@ -64,7 +65,7 @@ BEGIN
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
     AND    t._id            = i.id
-    LIMIT 1500
+    LIMIT 10000
    $sql$;
 
   /* check block against existing clusters */
@@ -74,9 +75,12 @@ BEGIN
       a._id AS _id
     , a._record_hash
     , t._id_cluster
+    , t._id AS dedup_new_id
     FROM _A a
     JOIN ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
-    ON   t.id @> a.id
+    ON   t._id_extension && a._id_extension
+    AND  t.id && a.id
+    AND  t._record_hash = a._record_hash
     AND  t._id_cluster IS NOT NULL
   $sql$;
   GET DIAGNOSTICS number = ROW_COUNT;
@@ -127,11 +131,8 @@ BEGIN
   INSERT INTO _I
     SELECT e._id
     ,      e._id_cluster
-    ,      t._id AS dedup_new_id
+    ,      e.dedup_new_id
     FROM _E e
-    LEFT JOIN ONLY "$sql$||rimschema||'"."'||rimtable||$sql$" t
-    ON   e._id_cluster = t._id_cluster
-    AND  e._record_hash = t._record_hash
   $sql$;
 
 END;
@@ -152,11 +153,11 @@ BEGIN
 
   /* group the new records for clustering and deduplication  */
   CREATE TEMP TABLE _Gc ON COMMIT DROP AS
-    SELECT id, array_agg(_id) AS set__id
+    SELECT id,_id_extension, array_agg(_id) AS set__id
     FROM _N
-    GROUP BY id;
+    GROUP BY id,_id_extension;
 
-  CREATE INDEX _Gci ON _Gc USING GIST(id);
+  CREATE INDEX _Gci ON _Gc USING GIN(_id_extension);
 
   /* cluster records */
   CREATE TEMP TABLE _C1 ON COMMIT DROP AS
@@ -164,43 +165,49 @@ BEGIN
     ,      b.id AS id_b
     ,      a.set__id AS set__id_a
     ,      b.set__id AS set__id_b
-    ,      a.set__id || b.set__id AS unid
-    FROM _Gc a
-    JOIN _Gc b
-    ON   a.id @> b.id -- change to && when implemented
-    AND  a.id <> b.id
-    UNION ALL
-    SELECT a.id AS id_a
-    ,      NULL
-    ,      a.set__id AS set__id_a
-    ,      NULL
-    ,      a.set__id  AS unid
+    ,      CASE WHEN b.id IS NOT NULL THEN
+                uniq(sort(a.set__id || b.set__id))
+           ELSE
+                a.set__id
+           END AS unid
     FROM _Gc a
     LEFT JOIN _Gc b
-    ON   a.id @> b.id -- change to && when implemented
+    ON   a._id_extension && b._id_extension
+    AND  a.id && b.id
     AND  a.id <> b.id
-    WHERE b.id IS NULL
   ;
+
+  CREATE INDEX ON _C1 USING GIN(unid);
+  ANALYZE _C1;
+
+  /* remove contained clusters */
+  DELETE FROM _C1 a
+  USING _C1 b
+  WHERE a.unid <@ b.unid
+  AND a.unid <> b.unid;
+
+  /* at this point, this query should not error
+    select 1 / (not exists(select * from _c1 a join _c1 b on a.unid && b.unid and a.unid <> b.unid limit 1))::int; */
 
   /* merge clusters */
   CREATE TEMP TABLE _C2 ON COMMIT DROP AS
     SELECT cluster, md5(textin(array_out(cluster))) AS cluster_hash FROM
     (
-      SELECT DISTINCT uniq(sort(a.unid || b.unid)) AS cluster
+      SELECT DISTINCT
+             CASE WHEN b.unid IS NOT NULL
+             THEN uniq(sort(a.unid || b.unid))
+             ELSE a.unid
+             END AS cluster
       FROM _C1 a
-      JOIN _C1 b
-      ON a.unid && b.unid
-      AND a.unid <> b.unid
-      UNION ALL
-      SELECT a.unid FROM _C1 a
       LEFT JOIN _C1 b
       ON a.unid && b.unid
       AND a.unid <> b.unid
-      WHERE b.unid IS NULL
     ) distinct_cluster
   ;
 
   /* select cluster master */
+  CREATE INDEX ON _C2 USING GIN(cluster);
+  ANALYZE _N; ANALYZE _C2;
   CREATE TEMP TABLE _Cm ON COMMIT DROP AS
     SELECT * FROM
     (
@@ -209,7 +216,7 @@ BEGIN
       ,       _record_weight
       ,       cluster
       ,       cluster_hash
-      ,      rank() OVER (mywindow) AS rank
+      ,      row_number() OVER (mywindow) AS rank
       FROM _N
       JOIN _C2
       ON ARRAY[_N._id] <@ _C2.cluster
@@ -220,6 +227,9 @@ BEGIN
   ;
 
   /* Update new records with cluster masters */
+  CREATE INDEX ON _Cm USING GIN(cluster);
+  ANALYZE _cm;
+
   UPDATE _N
   SET _id_cluster = cluster_master
   FROM _Cm

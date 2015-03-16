@@ -79,3 +79,8 @@ END$$;
 **/
 
 COMMIT;
+
+
+/* Test: should be empty
+select a._id,  a._id_cluster, a._id_extension, b._id, b._id_cluster, b._id_extension from "Patient" a join "Patient" b on a._id_extension && b._id_extension and a.id && b.id and a._id <> b._id;
+*/
