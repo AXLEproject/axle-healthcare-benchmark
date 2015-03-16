@@ -44,7 +44,7 @@ pgext2sql_unlogged() {
     echo "Manually loading extension $2"
     EXTDIR=$(pg_config --sharedir)/extension
     cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
-        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
+        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT, _id_extension text[],/g' \
         -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _record_hash TEXT, _record_weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \

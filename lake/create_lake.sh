@@ -40,11 +40,11 @@ pgcommandfromfile() {
     ${PSQL} --dbname $1 -f $2 || fail "error while executing commands from $2"
 }
 
-pgext2sql_unlogged() {
+pgext2sql() {
     echo "Manually loading extension $2"
     EXTDIR=$(pg_config --sharedir)/extension
     cat ${EXTDIR}/$2 | sed -e 's/MODULE_PATHNAME/\$libdir\/hl7/g' \
-        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
+        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT, _id_extension text[],/g' \
         -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _record_hash TEXT, _record_weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
@@ -73,7 +73,7 @@ gpext2sql() {
         -e 's/\([^a-z]\)cv\(([^)]\+)\)/\1"CS"\2/gi' \
         -e 's/\([^a-z]CS"*\)([^)]\+)/\1/gi' \
         -e 's/\([^a-z]set"*\)([^)]\+)/\1/gi' \
-        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT,/g' \
+        -e 's/PRIMARY KEY,/PRIMARY KEY, _id_cluster BIGINT, _id_extension text[],/g' \
         -e 's/_clonename TEXT,/_clonename TEXT, _pond_timestamp TIMESTAMPTZ, _lake_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _record_hash TEXT, _record_weight INT,/g' \
         -e 's/"source" BIGINT, "target" BIGINT,/"source" BIGINT, "target" BIGINT, "source_original" BIGINT, "target_original" BIGINT,/g' \
         -e 's/"act" BIGINT, "role" BIGINT,/"act" BIGINT, "role" BIGINT, "act_original" BIGINT, "role_original" BIGINT,/g' \
@@ -157,14 +157,10 @@ else
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, hdl, r1, \"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes"
 
-        pgcommand $DBNAME "CREATE SCHEMA rim2010"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2010, public, hl7, hdl, r1, \"\$user\";"
-        pgext2sql_unlogged $DBNAME hl7v3rim_edition2010--2.0.sql
-
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
-        pgext2sql_unlogged $DBNAME hl7v3rim_edition2011--2.0.sql
+        pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
         pgcommandfromfile $DBNAME "rim_dropforeignkeys.sql"
@@ -174,16 +170,12 @@ else
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
         pgcommand $DBNAME "CREATE EXTENSION tablefunc"
-fi
 
-        pgcommand $DBNAME "CREATE INDEX \"rim2011.Participation_role_idx\" ON rim2011.\"Participation\" (role)"
-        pgcommand $DBNAME "CREATE INDEX \"rim2011.Participation_act_idx\" ON rim2011.\"Participation\" (act)"
-        pgcommand $DBNAME "CREATE INDEX \"rim2011.Observation_code_code_idx\" ON rim2011.\"Observation\" (_code_code)"
-
-        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
-
-        echo "..Restricting login to owner"
-        pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
+        pgcommand $DBNAME "CREATE INDEX \"Person_id_extension_idx\" ON rim2011.\"Person\" USING GIN(_id_extension)"
+        pgcommand $DBNAME "CREATE INDEX \"Organization_id_extension_idx\" ON rim2011.\"Organization\" USING GIN(_id_extension)"
+        pgcommand $DBNAME "CREATE INDEX \"Role_id_extension_idx\" ON rim2011.\"Role\" USING GIN(_id_extension)"
+        pgcommand $DBNAME "CREATE INDEX \"LicensedEntity_id_extension_idx\" ON rim2011.\"LicensedEntity\" USING GIN(_id_extension)"
+        pgcommand $DBNAME "CREATE INDEX \"Patient_id_extension_idx\" ON rim2011.\"Patient\" USING GIN(_id_extension)"
 
         echo "..Installing Quantile, Blocksample and Binning extension for Orange"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
@@ -196,6 +188,30 @@ fi
 
         echo "..Create research schema and user"
         pgcommandfromfile $DBNAME "create_research_schema.sql"
+fi
+
+        pgcommand $DBNAME "CREATE INDEX \"Participation_role_idx\" ON rim2011.\"Participation\" (role)"
+        pgcommand $DBNAME "CREATE INDEX \"Participation_act_idx\" ON rim2011.\"Participation\" (act)"
+        pgcommand $DBNAME "CREATE INDEX \"Observation_code_code_idx\" ON rim2011.\"Observation\" (_code_code)"
+
+
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_player_idx\" ON rim2011.\"Role\" (player)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_scoper_idx\" ON rim2011.\"Role\" (scoper)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_player_original_idx\" ON rim2011.\"Role\" (player_original)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Role_scoper_original_idx\" ON rim2011.\"Role\" (scoper_original)"
+
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Person_id_idx\" ON rim2011.\"Person\" using gist(id)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_player_idx\" ON rim2011.\"Patient\" (player)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_scoper_idx\" ON rim2011.\"Patient\" (scoper)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_scoper_original_idx\" ON rim2011.\"Patient\" (scoper_original)"
+#        pgcommand $DBNAME "CREATE INDEX \"rim2011.Patient_player_original_idx\" ON rim2011.\"Patient\" (player_original)"
+#        pgcommand $DBNAME "CREATE INDEX \"append_id_id_idx\" ON stream.append_id (id)"
+
+
+        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
+
+        echo "..Restricting login to owner"
+        pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
 
         ;;
     *)

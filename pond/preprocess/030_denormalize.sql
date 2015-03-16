@@ -7,11 +7,22 @@
  */
 UPDATE "Act"
 SET _code_code       = code->>'code'
-,   _code_codesystem = code->>'codeSystem';
+,   _code_codesystem = code->>'codeSystem'
+,   _id_extension    =
+  (SELECT array_agg(elements->>'extension') FROM
+  (SELECT jsonb_array_elements(id::text::jsonb) AS elements) e);
+
+UPDATE "Role"
+SET    _id_extension    =
+  (SELECT array_agg(elements->>'extension') FROM
+  (SELECT jsonb_array_elements(id::text::jsonb) AS elements) e);
 
 UPDATE "Entity"
 SET _code_code       = code->>'code'
-,   _code_codesystem = code->>'codeSystem';
+,   _code_codesystem = code->>'codeSystem'
+,   _id_extension    =
+  (SELECT array_agg(elements->>'extension') FROM
+  (SELECT jsonb_array_elements(id::text::jsonb) AS elements) e);
 
 UPDATE "Observation"
 SET _value_pq              = value::"PQ"::pq
