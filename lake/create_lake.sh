@@ -171,12 +171,6 @@ else
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
         pgcommand $DBNAME "CREATE EXTENSION tablefunc"
 
-        pgcommand $DBNAME "CREATE INDEX \"Person_id_extension_idx\" ON rim2011.\"Person\" USING GIN(_id_extension)"
-        pgcommand $DBNAME "CREATE INDEX \"Organization_id_extension_idx\" ON rim2011.\"Organization\" USING GIN(_id_extension)"
-        pgcommand $DBNAME "CREATE INDEX \"Role_id_extension_idx\" ON rim2011.\"Role\" USING GIN(_id_extension)"
-        pgcommand $DBNAME "CREATE INDEX \"LicensedEntity_id_extension_idx\" ON rim2011.\"LicensedEntity\" USING GIN(_id_extension)"
-        pgcommand $DBNAME "CREATE INDEX \"Patient_id_extension_idx\" ON rim2011.\"Patient\" USING GIN(_id_extension)"
-
         echo "..Installing Quantile, Blocksample and Binning extension for Orange"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
