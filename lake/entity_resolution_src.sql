@@ -51,6 +51,10 @@ BEGIN
   )
   ON COMMIT DROP;
 
+  EXECUTE $sql$
+    SET random_page_cost to 0.2;
+  $sql$;
+
   /* select block of added objects */
   EXECUTE $sql$
   CREATE TEMP TABLE _A ON COMMIT DROP AS
@@ -65,7 +69,7 @@ BEGIN
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
     AND    t._id            = i.id
-    LIMIT 10000
+    LIMIT 20000
    $sql$;
 
   CREATE INDEX ON _A USING GIN(_id_extension);
@@ -275,6 +279,7 @@ DECLARE
   fk_orig TEXT;
   sta     TEXT[];
   r       RECORD;
+  number int;
 BEGIN
   /*
    * Lock exclusively all tables we will update in alphabetic order, to prevent
@@ -300,9 +305,7 @@ BEGIN
     END;
   END LOOP;
 
-  EXECUTE $sql$
-    ANALYZE _I; SET random_page_cost to 0.2; SET enable_mergejoin to false;  SET enable_hashjoin to false;
-  $sql$;
+  ANALYZE _I;
 
   /* Update foreign keys */
   FOR i IN array_lower(rimfkeys, 1) .. array_upper(rimfkeys, 1)
@@ -320,6 +323,8 @@ BEGIN
       AND   (t."$sql$||fk||$sql$"       <> i._id_cluster
       OR     t."$sql$||fk_orig||$sql$"  <> COALESCE(i.dedup_new_id, t."$sql$||fk_orig||$sql$"))
     $sql$;
+  GET DIAGNOSTICS number = ROW_COUNT;
+  RAISE INFO 'updated foreign % records', number;
 
   END LOOP;
 
@@ -338,10 +343,6 @@ BEGIN
     FROM   _I i
     WHERE  t._id       = i._id
     AND    t._id_cluster IS DISTINCT FROM i._id_cluster
-  $sql$;
-
-  EXECUTE $sql$
-    SET random_page_cost to default; SET enable_mergejoin to default; SET enable_hashjoin to false;
   $sql$;
 
 END;
