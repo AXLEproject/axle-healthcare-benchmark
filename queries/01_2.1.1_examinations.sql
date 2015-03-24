@@ -33,3 +33,5 @@ CREATE TABLE examinations AS
   SELECT *
   FROM   examinations_view
 ;
+
+ANALYZE examinations;
