@@ -44,7 +44,7 @@ BASEDIR=$(cd "$BASEDIR"; pwd)
 if [ $# -lt 4 ]; then
     usage
 else
-    QUERY=$1
+    QUERY=$(printf "%02d" $1)
     PWD=`pwd`
     PGDATADIR=$2;
     DWHDB=$3;
@@ -56,7 +56,7 @@ test [ ${PGDATADIR:0:1} == "/" ] || PGDATADIR="$PWD/$PGDATADIR"
 DB_NAME=${DWHDB}
 
 ### Query to be executed
-f=`ls queries/${QUERY}*.sql`
+f=`ls queries/${QUERY}_*.sql`
 
 Q=`mktemp`
 echo "set search_path to rim2011, public, hl7, hdl, r1;" | cat - "$BASEDIR/$f" > $Q
