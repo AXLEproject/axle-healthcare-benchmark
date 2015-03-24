@@ -162,17 +162,23 @@ restart_drop_caches
 ${SUDO} chown $USER:$USER *
 chmod 775 .
 
-cgf="../${QUERY}-callgraph.pdf"
+cgf="${QUERY}-callgraph"
 echo "Creating the call graph: $cgf"
-perf script | python "$BASEDIR/gprof2dot.py" -f perf | dot -Tpdf -o $cgf &
+perf script | python "$BASEDIR/gprof2dot.py" -f perf | dot -Tpdf -o "../${cgf}.pdf" &
+perf script | python "$BASEDIR/gprof2dot.py" -f perf | dot -Tpng -o "../${cgf}.png" &
 
-fgf="../${QUERY}-flamegraph.svg"
-fgfw="../${QUERY}-flamegraph-warm.svg"
+fgf="${QUERY}-flamegraph.svg"
+fgfw="${QUERY}-flamegraph-warm.svg"
 echo "Creating the flame graph: $fgf"
 perf script | "$BASEDIR/stackcollapse-perf.pl" | \
-    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} cold" > $fgf
+    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} cold" > ../$fgf
 perf script -i perf.data.warm | "$BASEDIR/stackcollapse-perf.pl" | \
-    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} warm" > $fgfw
+    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} warm" > ../$fgfw
+
+echo "<p>Query ${QUERY}</p>" >> ../index.html
+###echo "<img width=100% src=\"${cgf}.png\">" >> ../index.html
+echo "<img src=\"${fgf}\">" >> ../index.html
+echo "<img src=\"${fgfw}\">" >> ../index.html
 
 cd - >/dev/null
 
