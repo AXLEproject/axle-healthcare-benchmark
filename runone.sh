@@ -1,14 +1,17 @@
 #!/bin/bash
 #
 # runone.sh
-# Run a single query with profiline
+# Run a single query with profiling
 #
 # This file is part of the AXLE Healthcare Benchmark.
 #
 # Copyright (c) 2013, Portavita BV Netherlands
 #
+set -e
+
 usage() {
-    echo "USAGE: $0 <QUERY> <PGDATA> <DWHDB> <STDBR> <PERFDATADIR>"
+    echo "USAGE: $0 <QUERY> <PGDATA> <DWHDB> <PERFDATADIR>"
+    echo "e.g. $0 2.1.1 database/data lake perfresults"
     exit 1
 }
 
@@ -38,46 +41,47 @@ perf_set_kernel_params() {
 BASEDIR=$(dirname "$0")
 BASEDIR=$(cd "$BASEDIR"; pwd)
 
-if [ $# -lt 5 ]; then
+if [ $# -lt 4 ]; then
     usage
 else
-    ii=$(printf "%02d" $1)
+    QUERY=$1
+    PWD=`pwd`
     PGDATADIR=$2;
     DWHDB=$3;
-    STDB=$4;
-    PERFDATADIR=$5;
+    PERFDATADIR=$4;
 fi
+
+test [ ${PGDATADIR:0:1} == "/" ] || PGDATADIR="$PWD/$PGDATADIR"
 
 DB_NAME=${DWHDB}
 
 ### Query to be executed
-f="queries/q$ii.sql"
+f=`ls queries/${QUERY}*.sql`
 
-if [ `head -1 $f | awk '{print $3}'` = "staging" ] ; then
-    DB_NAME=${STDB}
-fi
+Q=`mktemp`
+echo "set search_path to rim2011, public, hl7, hdl, r1;" | cat - "$BASEDIR/$f" > $Q
 
 ################ from here script follows pg-tpch/tpch_runone ###################
 
 perf_set_kernel_params
 
-dir="$PERFDATADIR/q${ii}"
+dir="$PERFDATADIR/${QUERY}"
 mkdir -p $dir
 cd "$dir"
 
 ### Get execution time without perf
 /usr/bin/time -f '%e\n%Uuser %Ssystem %Eelapsed %PCPU (%Xtext+%Ddata %Mmax)k'\
     -o exectime.txt \
-    postgres --single -j -D $PGDATADIR $DB_NAME <"$BASEDIR/$f"
+    postgres --single -j -D $PGDATADIR $DB_NAME < $Q
 
 ### Collect data with perf to generate callgraph
-perf record -g postgres --single -j -D $PGDATADIR $DB_NAME <"$BASEDIR/$f"
+perf record -g -- postgres --single -j -D $PGDATADIR $DB_NAME < $Q
 
 ### Collect basic stats with perf
 perf stat -B --log-fd 2 --\
-    postgres --single -j -D $PGDATADIR $DB_NAME <"$BASEDIR/$f" 2> stats.txt
+    postgres --single -j -D $PGDATADIR $DB_NAME < $Q 2> stats.txt
 
-cgf="../q${ii}-callgraph.pdf"
+cgf="../${QUERY}-callgraph.pdf"
 echo "Creating the call graph: $cgf"
 perf script | python "$BASEDIR/gprof2dot.py" -f perf | dot -Tpdf -o $cgf &
 cd - >/dev/null
@@ -87,3 +91,4 @@ do
   wait $p
 done
 
+rm $Q
