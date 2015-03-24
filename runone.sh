@@ -108,7 +108,6 @@ echo "set search_path to rim2011, public, hl7, hdl, r1;" | cat - "$BASEDIR/$f" >
 perf_set_kernel_params
 
 ## Start a new instance of Postgres
-# Start a new instance of Postgres
 ${SUDO} -u $PGUSER taskset -c 2 $PGBINDIR/postgres -D "$PGDATADIR" -p $PGPORT &
 PGPID=$!
 while ! ${SUDO} -u $PGUSER $PGBINDIR/pg_ctl status -D $PGDATADIR | grep "server is running" -q; do
@@ -116,9 +115,14 @@ while ! ${SUDO} -u $PGUSER $PGBINDIR/pg_ctl status -D $PGDATADIR | grep "server 
   sleep 1
 done
 
+
+
 # wait for it to finish starting
 sleep 5
 echo "Postgres running"
+
+# Get size
+SIZE=`$PGBINDIR/psql -p $PGPORT -d $DB_NAME -tAc "select pg_size_pretty(pg_database_size('${DB_NAME}'));"`
 
 dir="$PERFDATADIR/${QUERY}"
 mkdir -p $dir
@@ -141,6 +145,12 @@ echo "Collect data with perf to generate callgraph"
   ${SUDO} -u $PGUSER perf record -a -C 2 -s -g -m 512 --\
   $PGBINDIR/psql -h /tmp -p $PGPORT -d $DB_NAME < $Q 2> exectime_perf.txt
 tail -n 2 exectime_perf.txt > exectime_p.txt && mv exectime_p.txt exectime_perf.txt
+
+### Call the query second time and record in perf.data.warm
+/usr/bin/time -f '%e\n%Uuser %Ssystem %Eelapsed %PCPU (%Xtext+%Ddata %Mmax)k'\
+  ${SUDO} -u $PGUSER perf record -o perf.data.warm -a -C 2 -s -g -m 512 --\
+  $PGBINDIR/psql -h /tmp -p $PGPORT -d $DB_NAME < $Q 2> /dev/null
+
 restart_drop_caches
 
 ### Collect basic stats with perf
@@ -156,8 +166,13 @@ cgf="../${QUERY}-callgraph.pdf"
 echo "Creating the call graph: $cgf"
 perf script | python "$BASEDIR/gprof2dot.py" -f perf | dot -Tpdf -o $cgf &
 
-echo "Creating the flame graph: $cgf"
-perf script | "$BASEDIR/stackcollapse-perf.pl" | "$BASEDIR/flamegraph.pl" > ${QUERY}-flamegraph.svg
+fgf="../${QUERY}-flamegraph.svg"
+fgfw="../${QUERY}-flamegraph-warm.svg"
+echo "Creating the flame graph: $fgf"
+perf script | "$BASEDIR/stackcollapse-perf.pl" | \
+    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} cold" > $fgf
+perf script -i perf.data.warm | "$BASEDIR/stackcollapse-perf.pl" | \
+    "$BASEDIR/flamegraph.pl" --title "Portavita Benchmark ${SIZE} Query ${QUERY} warm" > $fgfw
 
 cd - >/dev/null
 
