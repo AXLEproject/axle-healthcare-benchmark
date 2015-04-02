@@ -62,6 +62,8 @@ $(PGBLOCKSAMPLE):
 $(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
 	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T $(PGTUNEDBTYPE) -P $(PGTUNESYSTEMTYPE) -c $(PGTUNEMAXCONN) || rm -rf $(PGDATA)
+# fix removal of checkpoint_segments in 9.5 servers
+	PATH=$(PGSERVER)/bin:${PATH} test "`pg_config --version`" != "PostgreSQL 9.5devel" || sed -i '/checkpoint_segments/c\max_wal_size = 1GB' $(PGDATA)/postgresql.conf
 
 # Start cluster
 start: $(PGDATA)
