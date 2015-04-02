@@ -38,5 +38,5 @@ CREATE TABLE observation_history AS
   SELECT *
   FROM   observation_history_view
 ;
-CREATE INDEX ON observation_history (ptnt_id);
+CREATE INDEX observation_history_ptnt_id_idx ON observation_history (ptnt_id);
 ANALYZE observation_history;

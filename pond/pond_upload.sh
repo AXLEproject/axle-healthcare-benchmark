@@ -85,6 +85,7 @@ PGOPTIONS='--hdl.concept_print_mode=complex_r1' pg_dump -aOx -n stream -n rim201
     -e '/SET search_path/ s/;/, hl7, hdl, r1;/' \
     -e '/SET lock_timeout/d' \
     -e '/pg_catalog.setval/d' \
+    -e '/SET row_security/d' \
     | psql -1 -v ON_ERROR_STOP=true -h ${DLHOST} -p ${DLPORT} -d ${DLDB} -U ${DLUSER}
 t_after=$(timestamp)
 ##logger -t axle-pond-upload "dump and upload total execution time $(( t_after - t_before )) seconds"

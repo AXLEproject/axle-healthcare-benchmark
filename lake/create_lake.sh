@@ -145,6 +145,8 @@ then
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
+
+        pgcommandfromfile $DBNAME "entity_resolution_src_gp.sql"
 else
         # Install HDL modules in PostgreSQL
 
@@ -171,6 +173,8 @@ else
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
         pgcommand $DBNAME "CREATE EXTENSION tablefunc"
 
+        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
+
         echo "..Installing Quantile, Blocksample and Binning extension for Orange"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
@@ -179,6 +183,7 @@ else
         echo "..Create OptOutConsent and LinkActPcpr tables, add RLS policy."
         pgcommandfromfile $DBNAME "auxiliary_tables.sql"
         pgcommandfromfile $DBNAME "observation_opt_out_rls.sql"
+
 
         echo "..Create research schema and user"
         pgcommandfromfile $DBNAME "create_research_schema.sql"
@@ -193,7 +198,6 @@ fi
         pgcommand $DBNAME "CREATE INDEX \"Patient_player_idx\" ON rim2011.\"Patient\" (player)"
         pgcommand $DBNAME "CREATE INDEX \"Patient_scoper_idx\" ON rim2011.\"Patient\" (scoper)"
 
-        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
