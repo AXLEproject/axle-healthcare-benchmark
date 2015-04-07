@@ -228,7 +228,7 @@ BEGIN
       JOIN _C2
       ON ARRAY[_N._id] <@ _C2.cluster
       WINDOW mywindow AS (PARTITION BY cluster_hash
-                          ORDER BY _record_weight DESC)
+                          ORDER BY _record_weight DESC, _id ASC)
     ) master
     WHERE rank = 1
   ;
@@ -242,6 +242,18 @@ BEGIN
   FROM _Cm
   WHERE ARRAY[_id] <@ cluster;
 
+  number := 1;
+  WHILE number <> 0 LOOP
+    /* Make one step in resolving cluster masters */
+    UPDATE _N lev1
+    SET _id_cluster = lev2._id_cluster
+    FROM _N lev2
+    WHERE lev1._id_cluster = lev2._id
+    AND lev1._id_cluster <> lev2._id_cluster;
+    GET DIAGNOSTICS number = ROW_COUNT;
+    RAISE INFO '% recursive cluster masters resolved', number;
+  END LOOP;
+
   UPDATE _N
   SET _id_cluster = _id
   WHERE _id_cluster IS NULL;
@@ -250,7 +262,7 @@ BEGIN
   INSERT INTO _I
   SELECT _id
   ,      _id_cluster
-  ,      CASE WHEN rank() OVER (mywindow) = 1
+  ,      CASE WHEN row_number() OVER (mywindow) = 1
          THEN NULL
          ELSE
          first_value(_id) OVER (mywindow)
@@ -259,6 +271,23 @@ BEGIN
   WINDOW mywindow AS (PARTITION BY _id_cluster, _record_hash
                       ORDER BY _record_weight DESC, _id ASC)
   ;
+
+/**
+ Check some constraints:
+  for all _id_clusters: the dedup_new_id of their _id record must be null
+  for all dedup_new_id: the dedup_new_id of their _id record must be null
+**/
+  execute $sql$
+  select 1 / (not exists(
+  WITH keepthese AS
+  (SELECT _id_cluster AS keep FROM _I
+   UNION ALL
+  SELECT dedup_new_id AS keep FROM _I)
+  SELECT *
+  FROM _I JOIN keepthese ON _id=keep
+  WHERE dedup_new_id IS NOT NULL
+))::int;
+$sql$;
 
 END;
 $instructions_for_new_clusters$
@@ -320,8 +349,8 @@ BEGIN
       ,      "$sql$||fk_orig||$sql$"    =  COALESCE(i.dedup_new_id, "$sql$||fk_orig||$sql$")
       FROM   _I i
       WHERE  i._id                      =  t."$sql$||fk||$sql$"
-      AND   (t."$sql$||fk||$sql$"       <> i._id_cluster
-      OR     t."$sql$||fk_orig||$sql$"  <> COALESCE(i.dedup_new_id, t."$sql$||fk_orig||$sql$"))
+      AND   (t."$sql$||fk||$sql$"       IS DISTINCT FROM i._id_cluster
+      OR     t."$sql$||fk_orig||$sql$"  IS DISTINCT FROM COALESCE(i.dedup_new_id, t."$sql$||fk_orig||$sql$"))
     $sql$;
   GET DIAGNOSTICS number = ROW_COUNT;
   RAISE INFO 'updated foreign % records', number;
