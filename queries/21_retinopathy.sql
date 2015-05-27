@@ -31,11 +31,11 @@ WITH base_values_with_class AS (
         ,         c.time_lowvalue IS NOT NULL           AS class
         FROM      base_values v
         LEFT JOIN base_values c
-        ON        c.pseudonym = v.pseudonym
+        ON        c.unit_of_observation = v.unit_of_observation
         AND       c.code = 'has_retinopathy'
         AND       c.value_bool
 )
-SELECT  pseudonym
+SELECT  unit_of_observation
         ,      feature_id
         ,      source_id
         ,      class_code
@@ -100,10 +100,10 @@ AND     code IN ('365980008' -- smoking
               ,'age_in_years'    -- age in years feature
               ,'263495000' -- Gender
 )
-ORDER BY pseudonym, code, t0 desc;
+ORDER BY unit_of_observation, code, t0 desc;
 
 /*
- * Calculate statistics aggregates per person,observation code.
+ * Calculate statistics aggregates per person, observation code.
  *
  * Select the last value, the number of values and other aggregates.
  * See http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE
@@ -114,24 +114,24 @@ CREATE VIEW retinopathy_base_summaries
 AS
 SELECT * FROM (
       SELECT   *
-      ,        RANK() OVER (PARTITION BY pseudonym, code  ORDER BY time_to_t0 ASC)  AS rocky
-      ,        count(1)                  OVER (PARTITION BY pseudonym, code)  AS count_value
-      ,        avg(value_real)           OVER (PARTITION BY pseudonym, code)  AS avg
-      ,        min(value_real)           OVER (PARTITION BY pseudonym, code)  AS min
-      ,        max(value_real)           OVER (PARTITION BY pseudonym, code)  AS max
-      ,        max(time_to_t0)           OVER (PARTITION BY pseudonym, code)  AS max_time_to_t0
-      ,        stddev_pop(value_real)    OVER (PARTITION BY pseudonym, code)  AS stddev_pop
-      ,        string_agg( value_code, '|')    OVER (PARTITION BY pseudonym, code)  AS codes
-      ,        bool_or(value_bool)        OVER (PARTITION BY pseudonym, code)  AS bool_or
+      ,        RANK() OVER (PARTITION BY unit_of_observation, code  ORDER BY time_to_t0 ASC)  AS rocky
+      ,        count(1)                  OVER (PARTITION BY unit_of_observation, code)  AS count_value
+      ,        avg(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS avg
+      ,        min(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS min
+      ,        max(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS max
+      ,        max(time_to_t0)           OVER (PARTITION BY unit_of_observation, code)  AS max_time_to_t0
+      ,        stddev_pop(value_real)    OVER (PARTITION BY unit_of_observation, code)  AS stddev_pop
+      ,        string_agg( value_code, '|')    OVER (PARTITION BY unit_of_observation, code)  AS codes
+      ,        bool_or(value_bool)        OVER (PARTITION BY unit_of_observation, code)  AS bool_or
        FROM retinopathy_base_values
 ) a
 WHERE rocky = 1;
 
-/* Pivot the per pseudonym, code summary list into columns per peso_id. */
+/* Pivot the summary list into columns. */
 CREATE TABLE retinopathy_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
-  ,       (record_id->>'pseudonym')                 AS pseudonym
+  ,       (record_id->>'unit_of_observation')       AS unit_of_observation
   ,       (age_in_years->>'value_real')::numeric    AS age_in_years
   ,       gender->>'value_code'                     AS gender
 -- class
@@ -173,7 +173,7 @@ SELECT row_number() over()                          AS row_number
 -- mdrd
   ,       (mdrd->>'value_real')::numeric                  AS mdrd_lv
 FROM crosstab($ct$
-    SELECT json_object(('{ pseudonym, '         || pseudonym  ||
+    SELECT json_object(('{ unit_of_observation, '         || unit_of_observation  ||
                         '}')::text[])::text                           AS record_id
     ,       code                                                      AS category
 

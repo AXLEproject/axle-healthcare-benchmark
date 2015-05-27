@@ -18,4 +18,4 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 
 \set ON_ERROR_STOP off
 
-CREATE INDEX ON base_values (pseudonym, code);
+CREATE INDEX ON base_values (unit_of_observation, code);

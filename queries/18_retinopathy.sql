@@ -23,7 +23,13 @@ DROP TABLE IF EXISTS base_values CASCADE;
 CREATE TABLE base_values
 AS
       /** person birth time **/
-      SELECT  pseudonym                                          AS pseudonym
+      SELECT  pseudonym                                          AS unit_of_observation
+      ,       null::text                                         AS location
+      ,       null::text[]                                       AS provider
+      ,       null::text                                         AS organisation
+      ,       null::text                                         AS datasource_organisation
+      ,       null::text                                         AS datasource_standard
+      ,       null::text                                         AS datasource_software
       ,       null::text                                         AS feature_id
       ,       peso._id::text                                     AS source_id
       ,       peso."classCode"->>'code'                          AS class_code
@@ -54,7 +60,13 @@ AS
       UNION ALL
 
       /** person gender **/
-      SELECT  pseudonym                                          AS pseudonym
+      SELECT  pseudonym                                          AS unit_of_observation
+      ,       null::text                                         AS location
+      ,       null::text[]                                       AS provider
+      ,       null::text                                         AS organisation
+      ,       null::text                                         AS datasource_organisation
+      ,       null::text                                         AS datasource_standard
+      ,       null::text                                         AS datasource_software
       ,       null::text                                         AS feature_id
       ,       peso._id::text                                     AS source_id
       ,       peso."classCode"->>'code'                          AS class_code
@@ -85,7 +97,13 @@ AS
       UNION ALL
 
       /** observation **/
-      SELECT  pseudonym                                          AS pseudonym
+      SELECT  pseudonym                                          AS unit_of_observation
+      ,       null::text                                         AS location
+      ,       null::text[]                                       AS provider
+      ,       null::text                                         AS organisation
+      ,       null::text                                         AS datasource_organisation
+      ,       null::text                                         AS datasource_standard
+      ,       null::text                                         AS datasource_software
       ,       null::text                                         AS feature_id
       ,       obse._id::text                                     AS source_id
       ,       obse."classCode"->>'code'                          AS class_code

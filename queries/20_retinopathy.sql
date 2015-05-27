@@ -22,7 +22,8 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
     the class var is defined as the first observation in the group of
     micro-vascular complications **/
 DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
-INSERT INTO base_values (pseudonym
+INSERT INTO base_values
+(unit_of_observation
 , feature_id
 , source_id
 , class_code
@@ -44,7 +45,7 @@ INSERT INTO base_values (pseudonym
 , time_highvalue
 , time_to_t0
 , time_availability)
-      SELECT pseudonym                                          AS pseudonym
+      SELECT unit_of_observation                                AS unit_of_observation
       ,      'has_retinopathy'::text                            AS feature_id
       ,      null::text                                         AS source_id
       ,      null::text                                         AS class_code
@@ -100,7 +101,29 @@ FROM (
 /* Add age in years. */
 DELETE FROM base_values WHERE feature_id = 'age_in_years';
 INSERT INTO base_values
-      SELECT pseudonym                                          AS pseudonym
+(unit_of_observation
+, feature_id
+, source_id
+, class_code
+, mood_code
+, status_code
+, code
+, code_codesystem
+, code_displayname
+, value_code
+, value_codesystem
+, value_displayname
+, value_text
+, value_ivl_pq
+, value_real
+, value_bool
+, value_qset_ts
+, negation_ind
+, time_lowvalue
+, time_highvalue
+, time_to_t0
+, time_availability)
+      SELECT unit_of_observation                                AS unit_of_observation
       ,      'age_in_years'::text                               AS feature_id
       ,      null::text                                         AS source_id
       ,      null::text                                         AS class_code
