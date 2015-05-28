@@ -49,7 +49,8 @@ SELECT  unit_of_observation
         ,      value_displayname
         ,      value_text
         ,      value_ivl_pq
-        ,      value_real
+        ,      value_numeric
+        ,      value_unit
         ,      value_bool
         ,      value_qset_ts
         ,      negation_ind
@@ -116,13 +117,13 @@ SELECT * FROM (
       SELECT   *
       ,        RANK() OVER (PARTITION BY unit_of_observation, code  ORDER BY time_to_t0 ASC)  AS rocky
       ,        count(1)                  OVER (PARTITION BY unit_of_observation, code)  AS count_value
-      ,        avg(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS avg
-      ,        min(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS min
-      ,        max(value_real)           OVER (PARTITION BY unit_of_observation, code)  AS max
+      ,        avg(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS avg
+      ,        min(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS min
+      ,        max(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS max
       ,        max(time_to_t0)           OVER (PARTITION BY unit_of_observation, code)  AS max_time_to_t0
-      ,        stddev_pop(value_real)    OVER (PARTITION BY unit_of_observation, code)  AS stddev_pop
-      ,        string_agg( value_code, '|')    OVER (PARTITION BY unit_of_observation, code)  AS codes
-      ,        bool_or(value_bool)        OVER (PARTITION BY unit_of_observation, code)  AS bool_or
+      ,        stddev_pop(value_numeric) OVER (PARTITION BY unit_of_observation, code)  AS stddev_pop
+      ,        string_agg( value_code, '|')   OVER (PARTITION BY unit_of_observation, code)  AS codes
+      ,        bool_or(value_bool)       OVER (PARTITION BY unit_of_observation, code)  AS bool_or
        FROM retinopathy_base_values
 ) a
 WHERE rocky = 1;
@@ -132,7 +133,7 @@ CREATE TABLE retinopathy_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
   ,       (record_id->>'unit_of_observation')       AS unit_of_observation
-  ,       (age_in_years->>'value_real')::numeric    AS age_in_years
+  ,       (age_in_years->>'value_numeric')::numeric AS age_in_years
   ,       gender->>'value_code'                     AS gender
 -- class
   ,       has_retinopathy->>'value_code'            AS class
@@ -142,43 +143,43 @@ SELECT row_number() over()                          AS row_number
                WHEN smoking->>'value_code' = '77176002'  THEN 2 -- yes
                ELSE                          NULL
           END                                               AS smok_lv       -- last observed value of smoking observation
-  ,       round((smoking_quantity->>'value_real')::numeric) AS smok_du_lv    -- smoking daily units last value
-  ,       (smoking_quantity->>'count')::numeric             AS smok_du_count -- number of smoking observations before t0
+  ,       round((smoking_quantity->>'value_numeric')::numeric) AS smok_du_lv    -- smoking daily units last value
+  ,       (smoking_quantity->>'count')::numeric                AS smok_du_count -- number of smoking observations before t0
 -- alcohol
-  ,       alcohol->>'value_code'                            AS alcohol_lv
-  ,       round((alcohol_quantity->>'value_real')::numeric) AS alc_wu_lv
+  ,       alcohol->>'value_code'                               AS alcohol_lv
+  ,       round((alcohol_quantity->>'value_numeric')::numeric) AS alc_wu_lv
 -- exercise days per week
   ,       CASE WHEN exercise->>'value_code' = 'A' THEN 0
                WHEN exercise->>'value_code' = 'B' THEN 2
                WHEN exercise->>'value_code' = 'C' THEN 4
                WHEN exercise->>'value_code' = 'D' THEN 5
                ELSE                          NULL
-          END                                             AS exercise_dpw_lv
+          END                                                AS exercise_dpw_lv
 -- hdl
-  ,       (hdl->>'value_real')::numeric                   AS hdl_lv
+  ,       (hdl->>'value_numeric')::numeric                   AS hdl_lv
 -- total cholesterol / hdl cholesterol
-  ,       (total_hdl->>'value_real')::numeric             AS total_hdl_lv
+  ,       (total_hdl->>'value_numeric')::numeric             AS total_hdl_lv
 -- systolic blood pressure
-  ,       (systolic->>'value_real')::numeric              AS systolic_lv
+  ,       (systolic->>'value_numeric')::numeric              AS systolic_lv
 -- diastolic blood pressure
-  ,       (diastolic->>'value_real')::numeric             AS diastolic_lv
+  ,       (diastolic->>'value_numeric')::numeric             AS diastolic_lv
 -- hba1c
-  ,       (hba1c->>'value_real')::numeric                 AS hba1c_lv
+  ,       (hba1c->>'value_numeric')::numeric                 AS hba1c_lv
 -- albumine
-  ,       (albumine->>'value_real')::numeric              AS albumine_lv
+  ,       (albumine->>'value_numeric')::numeric              AS albumine_lv
 -- kreatinine
-  ,       (kreatinine->>'value_real')::numeric            AS kreatinine_lv
+  ,       (kreatinine->>'value_numeric')::numeric            AS kreatinine_lv
 -- cockroft
-  ,       (cockroft->>'value_real')::numeric              AS cockroft_lv
+  ,       (cockroft->>'value_numeric')::numeric              AS cockroft_lv
 -- mdrd
-  ,       (mdrd->>'value_real')::numeric                  AS mdrd_lv
+  ,       (mdrd->>'value_numeric')::numeric                  AS mdrd_lv
 FROM crosstab($ct$
     SELECT json_object(('{ unit_of_observation, '         || unit_of_observation  ||
                         '}')::text[])::text                           AS record_id
     ,       code                                                      AS category
 
     ,       json_object(('{value_code, '      || COALESCE(value_code::text, 'NULL')     ||
-                         ',value_real, '      || COALESCE(value_real::text, 'NULL')    ||
+                         ',value_numeric, '   || COALESCE(value_numeric::text, 'NULL')  ||
                          ',count, '           || COALESCE(count_value::text, 'NULL')    ||
                          ',avg, '             || COALESCE(avg::text, 'NULL')            ||
                          ',min, '             || COALESCE(min::text, 'NULL')            ||

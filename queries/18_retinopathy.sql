@@ -43,7 +43,8 @@ AS
       ,       null::text                                         AS value_displayname
       ,       null::text                                         AS value_text
       ,       null::text                                         AS value_ivl_pq
-      ,       null::numeric                                      AS value_real
+      ,       null::numeric                                      AS value_numeric
+      ,       null::text                                         AS value_unit
       ,       null::boolean                                      AS value_bool
       ,       null::text                                         AS value_qset_ts
       ,       false::bool                                        AS negation_ind
@@ -80,7 +81,8 @@ AS
       ,       peso."administrativeGenderCode"->>'displayName'    AS value_displayname
       ,       null::text                                         AS value_text
       ,       null::text                                         AS value_ivl_pq
-      ,       null::numeric                                      AS value_real
+      ,       null::numeric                                      AS value_numeric
+      ,       null::text                                         AS value_unit
       ,       null::boolean                                      AS value_bool
       ,       null::text                                         AS value_qset_ts
       ,       false::bool                                        AS negation_ind
@@ -117,7 +119,8 @@ AS
       ,       obse.value->>'displayName'                         AS value_displayname
       ,       null::text                                         AS value_text
       ,       obse._value_ivl_real::text                         AS value_ivl_pq
-      ,       COALESCE(obse._value_pq_value::float8, obse._value_real, obse._value_int)  AS value_real
+      ,       COALESCE(obse._value_pq_value, obse._value_real, obse._value_int)  AS value_numeric
+      ,       obse._value_pq_unit                                AS value_unit
       ,       null::boolean                                      AS value_bool
       ,       null::text                                         AS value_qset_ts
       ,       obse."negationInd"::bool                           AS negation_ind

@@ -37,7 +37,7 @@ INSERT INTO base_values
 , value_displayname
 , value_text
 , value_ivl_pq
-, value_real
+, value_numeric
 , value_bool
 , value_qset_ts
 , negation_ind
@@ -59,7 +59,7 @@ INSERT INTO base_values
       ,      null::text                                         AS value_displayname
       ,      null::text                                         AS value_text
       ,      null::text                                         AS value_ivl_pq
-      ,      null::numeric                                      AS value_real
+      ,      null::numeric                                      AS value_numeric
       ,      CASE WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
                    AND code = 'Portavita308')
                   THEN value_code IN ('Portavita309',
@@ -115,7 +115,7 @@ INSERT INTO base_values
 , value_displayname
 , value_text
 , value_ivl_pq
-, value_real
+, value_numeric
 , value_bool
 , value_qset_ts
 , negation_ind
@@ -138,7 +138,7 @@ INSERT INTO base_values
       ,      null::text                                         AS value_text
       ,      null::text                                         AS value_ivl_pq
       ,      (extract(year from current_timestamp)
-              - extract(year from time_lowvalue))::numeric      AS value_real
+              - extract(year from time_lowvalue))::numeric      AS value_numeric
       ,      null::boolean                                      AS value_bool
       ,      null::text                                         AS value_qset_ts
       ,      false::boolean                                     AS negation_ind
