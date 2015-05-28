@@ -36,6 +36,12 @@ WITH base_values_with_class AS (
         AND       c.value_bool
 )
 SELECT  unit_of_observation
+        ,      location
+        ,      provider
+        ,      organisation
+        ,      datasource_organisation
+        ,      datasource_standard
+        ,      datasource_software
         ,      feature_id
         ,      source_id
         ,      class_code
