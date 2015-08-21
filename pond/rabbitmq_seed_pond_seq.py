@@ -27,12 +27,13 @@ print("Seeding rabbitmq sequence_space with %ld partitions of %ld size"% (partit
 conn = Connection(host='localhost', userid='admin', password='tr4nz00m', virtual_host='/messaging')
 channel = conn.channel()
 
-for p in range(0, partitions):
-    channel.basic_publish(
-            Message(
-                "%ld:%ld" % ((S_start + (p * partsize)), (S_start + ((p + 2) * partsize) - 1)),
-                content_type='text/plain',
-                content_encoding='utf-8',
-                delivery_mode=2),
-            exchange='sequencer',
-            routing_key='pond')
+for p in range(0, partitions):
+    channel.basic_publish(
+            Message(
+                "%ld:%ld" % ((S_start + (p * partsize)), (S_start + ((p + 1) * partsize) - 1)),
+                content_type='text/plain',
+                content_encoding='utf-8',
+                delivery_mode=2),
+            exchange='sequencer',
+            routing_key='pond')
+    print "%ld:%ld" % ((S_start + (p * partsize)), (S_start + ((p + 1) * partsize) - 1))
