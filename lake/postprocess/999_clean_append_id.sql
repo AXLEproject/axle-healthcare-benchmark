@@ -7,6 +7,13 @@
  *
  */
 
+/*
+ * Delete only the types of tables that are not deleted by the entity
+ * resolution procedure. If we would delete all append_id's, we'd require
+ * running in serializable isolation mode to prevent deleting newly
+ * arrived records due to a nonrepeatable read.
+ */
+
 DELETE FROM stream.append_id
 WHERE schema_name = 'rim2011'
 AND   table_name IN ('ActRelationship','Act','Observation','ControlAct','Participation','Document');
