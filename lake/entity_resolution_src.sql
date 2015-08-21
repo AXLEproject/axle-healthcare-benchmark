@@ -43,6 +43,7 @@ $resolution_start$
 DECLARE
   number int;
   result bool := false;
+  blocksize int := 10000;
 BEGIN
   CREATE TEMP TABLE _I (
     _id          bigint
@@ -54,6 +55,11 @@ BEGIN
   EXECUTE $sql$
     SET random_page_cost to 0.2;
   $sql$;
+
+  IF rimtable = 'Role'
+  THEN
+    blocksize = 10000;
+  END IF;
 
   /* select block of added objects */
   EXECUTE $sql$
@@ -69,7 +75,7 @@ BEGIN
     ON     i.schema_name    = '$sql$||rimschema||$sql$'
     AND    i.table_name     = '$sql$||rimtable||$sql$'
     AND    t._id            = i.id
-    LIMIT 20000
+    LIMIT $sql$||blocksize||$sql$
    $sql$;
 
   CREATE INDEX ON _A USING GIN(_id_extension);
@@ -343,7 +349,62 @@ BEGIN
     fk := rimfkeys[i][2];
     fk_orig := rimfkeys[i][2] || '_original';
 
-    EXECUTE $sql$
+    IF rimfkeys[i][1] = 'Participation_in'
+    THEN
+     RAISE INFO 'about to move Participation records';
+     EXECUTE $sql$
+        INSERT INTO "Participation"
+        SELECT t."_id"
+,t."_id_cluster"
+,"_id_extension"
+,"_mif"
+,"_clonename"
+,"_pond_timestamp"
+,"_lake_timestamp"
+,"_record_hash"
+,"_record_weight"
+,"nullFlavor"
+,"realmCode"
+,"typeId"
+,"templateId"
+,"_origin"
+,"act"
+, i._id_cluster AS "$sql$||fk||$sql$" -- role
+,"act_original"
+,COALESCE(i.dedup_new_id, "$sql$||fk_orig||$sql$") -- role_original
+,"typeCode"
+,"functionCode"
+,"contextControlCode"
+,"sequenceNumber"
+,"priorityNumber"
+,"negationInd"
+,"noteText"
+,"time"
+,"modeCode"
+,"awarenessCode"
+,"signatureCode"
+,"signatureText"
+,"performInd"
+,"substitutionConditionCode"
+,"subsetCode"
+,"quantity"
+        FROM ONLY "Participation_in" t
+        JOIN _I i
+        ON   i._id                      =  t."$sql$||fk||$sql$"
+        ;
+     $sql$;
+     GET DIAGNOSTICS number = ROW_COUNT;
+     RAISE INFO 'inserted foreign participation % records', number;
+     EXECUTE $sql$
+        DELETE FROM "Participation_in" t
+        USING  _I i
+        WHERE  t."$sql$||fk||$sql$"     = i._id
+        ;
+     $sql$;
+     GET DIAGNOSTICS number = ROW_COUNT;
+     RAISE INFO 'deleted foreign participation % records', number;
+    ELSE
+     EXECUTE $sql$
       UPDATE "$sql$||rimschema||'"."'||rimfkeys[i][1]||$sql$" t
       SET    "$sql$||fk||$sql$"         =  i._id_cluster
       ,      "$sql$||fk_orig||$sql$"    =  COALESCE(i.dedup_new_id, "$sql$||fk_orig||$sql$")
@@ -351,10 +412,11 @@ BEGIN
       WHERE  i._id                      =  t."$sql$||fk||$sql$"
       AND   (t."$sql$||fk||$sql$"       IS DISTINCT FROM i._id_cluster
       OR     t."$sql$||fk_orig||$sql$"  IS DISTINCT FROM COALESCE(i.dedup_new_id, t."$sql$||fk_orig||$sql$"))
-    $sql$;
-  GET DIAGNOSTICS number = ROW_COUNT;
-  RAISE INFO 'updated foreign % records', number;
+     $sql$;
+     GET DIAGNOSTICS number = ROW_COUNT;
+     RAISE INFO 'updated foreign % records', number;
 
+    END IF;
   END LOOP;
 
   /* De-dup */

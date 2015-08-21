@@ -129,7 +129,7 @@ class Loader extends PondUtils with RabbitResourceProvider with RabbitUtils {
         val stderr = StringBuilder.newBuilder
         val processLogger = ProcessLogger(out => stdout.append(s"$out\n"), err => stderr.append(s"$err\n"))
 
-        val exitCode = s"$pondUploadScript -n $pondDatabase -u $pondUser -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!(processLogger)
+        val exitCode = s"$pondUploadScript -n $pondDatabase -u $pondUser -p $pondPort -H $lakeHost -N $lakeDatabase -U $lakeUser -P $lakePort".!(processLogger)
 
         if (logger.isDebugEnabled()) {
           val uploadEnd = System.currentTimeMillis()

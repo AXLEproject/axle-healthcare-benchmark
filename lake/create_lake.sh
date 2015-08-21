@@ -180,13 +180,17 @@ else
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION binning"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION blocksample"
 
+        # Add table to collect Participations in for faster entity resolution
+        pgcommand $DBNAME "CREATE TABLE \"Participation_in\" (LIKE \"Participation\"); ALTER TABLE \"Participation_in\" inherit \"Participation\";"
+
         echo "..Create OptOutConsent and LinkActPcpr tables, add RLS policy."
         pgcommandfromfile $DBNAME "auxiliary_tables.sql"
         pgcommandfromfile $DBNAME "observation_opt_out_rls.sql"
 
-
         echo "..Create research schema and user"
         pgcommandfromfile $DBNAME "create_research_schema.sql"
+
+        pgcommand $DBNAME "CREATE INDEX \"Participation_in_role_idx\" ON rim2011.\"Participation_in\" (role)"
 fi
 
         pgcommand $DBNAME "CREATE INDEX \"Participation_role_idx\" ON rim2011.\"Participation\" (role)"
