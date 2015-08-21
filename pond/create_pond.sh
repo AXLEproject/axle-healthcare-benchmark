@@ -89,6 +89,7 @@ case "${ACTION}" in
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hdl, hl7, r1, \"\$user\";"
         pgext2sql_unlogged $DBNAME "hl7v3rim_edition2011--2.0.sql"
+	pgcommand $DBNAME "ALTER SEQUENCE \"InfrastructureRoot__id_seq\" CACHE 32"
         pgext2sql_unlogged $DBNAME "hl7v3crud_edition2011--2.0.sql"
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
