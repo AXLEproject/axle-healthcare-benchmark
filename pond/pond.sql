@@ -175,7 +175,7 @@ BEGIN
         EXECUTE 'TRUNCATE TABLE stream.append_id';
         FOR r IN SELECT * FROM stream.table
         LOOP
-                EXECUTE 'TRUNCATE TABLE ' || r.table_schema || '."' || r.table_name || '" CASCADE';
+                EXECUTE 'TRUNCATE TABLE ONLY ' || r.table_schema || '."' || r.table_name || '" CASCADE';
                 GET DIAGNOSTICS current = ROW_COUNT;
                 total := total + current;
         END LOOP;
