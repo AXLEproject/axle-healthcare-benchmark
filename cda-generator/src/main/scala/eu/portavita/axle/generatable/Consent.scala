@@ -68,7 +68,7 @@ class Consent(patient: Patient,
   def createObservationAction(): ActDTO = {
     val act = new ActDTO
     act.setId(ActId.next)
-    act.setCode("IDISCL")
+    act.setCode("IDSCL")
     act.setCodeSystemOid("2.16.840.1.113883.5.4")
     act.setNegationIndicator(if (optOut) "Y" else "N")
     act.setClassCode("OBS")

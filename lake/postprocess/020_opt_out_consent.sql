@@ -57,7 +57,7 @@ ON 		ar_action.source 				= cd.cons_directive_id
 JOIN "Observation" action
 ON 		action._id						= ar_action.target
 WHERE 	action."code"->>'codeSystem'	= '2.16.840.1.113883.5.4'
-AND 	action."code"->>'code'			= 'IDISCL'
+AND 	action."code"->>'code'			= 'IDSCL'
 AND 	action."negationInd"			= 'true'
 AND 	principal_diagnosis."code"->>'code'= '8319008'
 AND 	principal_diagnosis."code"->>'codeSystem'= '2.16.840.1.113883.6.96'
