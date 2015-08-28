@@ -215,7 +215,7 @@ FROM crosstab($ct$
      ,      ('age_in_years')
      ,      ('263495000')  -- gender
      $ct$
-  )
+  )  -- select from crosstab
   AS ct(record_id            jsonb
        ,"smoking"            jsonb
        ,"smoking_quantity"   jsonb
@@ -234,6 +234,6 @@ FROM crosstab($ct$
        ,"has_retinopathy"    jsonb
        ,"age_in_years"       jsonb
        ,"gender"             jsonb
-  ) -- select from crosstab
+  )
 ;
 
