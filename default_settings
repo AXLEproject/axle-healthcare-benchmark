@@ -62,10 +62,10 @@ PGGIT=git://git.postgresql.org/git/postgresql.git
 PGGITDIR=$(shell basename $(PGGIT) | cut -d '.' -f 1)
 
 # PostgreSQL branch to checkout
-PGBRANCH=master
+PGBRANCH=REL9_5_STABLE
 
 # MGRID software versions
-MGRIDHDLVERSION=2.0dev
+MGRIDHDLVERSION=3.0dev
 MGRIDMSGVERSION=2.0dev
 
 # PGTune git repository
