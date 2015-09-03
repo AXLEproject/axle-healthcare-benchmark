@@ -183,6 +183,9 @@ else
         echo "..Create OptOutConsent and LinkActPcpr tables, add RLS policy."
         pgcommandfromfile $DBNAME "auxiliary_tables.sql"
         pgcommandfromfile $DBNAME "observation_opt_out_rls.sql"
+        
+        echo "..Create blobstore"
+        pgcommandfromfile $DBNAME "blobstore.sql"
 
         echo "..Create research schema and user"
         pgcommandfromfile $DBNAME "create_research_schema.sql"
@@ -198,8 +201,6 @@ fi
         pgcommand $DBNAME "CREATE INDEX \"Role_scoper_idx\" ON rim2011.\"Role\" (scoper)"
         pgcommand $DBNAME "CREATE INDEX \"Patient_player_idx\" ON rim2011.\"Patient\" (player)"
         pgcommand $DBNAME "CREATE INDEX \"Patient_scoper_idx\" ON rim2011.\"Patient\" (scoper)"
-
-        pgcommandfromfile $DBNAME "blobstore.sql"
 
         echo "..Restricting login to owner"
         pgcommand $DBNAME "BEGIN; REVOKE connect ON DATABASE $DBNAME FROM public; GRANT connect ON DATABASE $DBNAME TO $DBNAME; COMMIT;"
