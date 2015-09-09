@@ -143,7 +143,7 @@ then
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, r2, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 
 else
@@ -155,12 +155,12 @@ else
         pgcommand $DBNAME "CREATE EXTENSION adminpack"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3vocab_edition2011"
 
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, hdl, r1, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=public, hl7, hdl, r1, r2, \"\$user\";"
         pgcommand $DBNAME "CREATE EXTENSION hl7v3datatypes"
 
         echo "..Creating RIM in schema rim2011"
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
-        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, \"\$user\";"
+        pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, r2, \"\$user\";"
         pgext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
 	# In standard PostgreSQL, foreign keys cannot refer to inheritance child relations, so
 	# we need to disable these checks.
