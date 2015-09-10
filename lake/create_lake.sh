@@ -145,6 +145,7 @@ then
         pgcommand $DBNAME "CREATE SCHEMA rim2011"
         pgcommand $DBNAME "ALTER DATABASE $DBNAME SET search_path=rim2011, public, hl7, hdl, r1, r2, \"\$user\";"
         gpext2sql $DBNAME hl7v3rim_edition2011--2.0.sql
+        pgcommandfromfile $DBNAME "entity_resolution_src_gp.sql"
 
 else
         # Install HDL modules in PostgreSQL
@@ -171,6 +172,7 @@ else
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
         pgcommand $DBNAME "CREATE EXTENSION tablefunc"
+        pgcommandfromfile $DBNAME "entity_resolution_src.sql"
 
         echo "..Installing Quantile, Blocksample and Binning extension for Orange"
         pgcommand $DBNAME "SET search_path TO public; CREATE EXTENSION quantile"
