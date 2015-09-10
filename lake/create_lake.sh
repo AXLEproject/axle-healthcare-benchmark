@@ -172,6 +172,9 @@ else
 
         pgcommand $DBNAME "SELECT table_schema,count(*) from information_schema.tables where table_schema like 'rim%' group by table_schema;"
         pgcommand $DBNAME "CREATE EXTENSION tablefunc"
+        pgcommand $DBNAME "CREATE EXTENSION pgcrypto"
+        pgcommand $DBNAME "CREATE EXTENSION jsquery"
+
         pgcommandfromfile $DBNAME "entity_resolution_src.sql"
 
         echo "..Installing Quantile, Blocksample and Binning extension for Orange"
