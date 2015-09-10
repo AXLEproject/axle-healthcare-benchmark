@@ -9,25 +9,18 @@
  */
 
 \set ON_ERROR_STOP on
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS tablefunc;
-
-\echo
-\echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
-\echo
-SET session_authorization TO research_user;
-SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
-
+\i retinopathy_checks.sql
 \set ON_ERROR_STOP off
 
 /** create a one-time pseudonym **/
 DROP TABLE IF EXISTS pseudonyms;
 CREATE TABLE pseudonyms
 AS
-      SELECT  ptnt.player AS ptnt_player
-      ,       crypt(ptnt.player::text, gen_salt('md5'))   AS pseudonym
-      FROM    "Patient"                                ptnt
-      JOIN    "Person"                                 peso
-      ON      peso._id                                 = ptnt.player
+SELECT ids.value AS patient_id
+,      crypt(ids.value, gen_salt('md5')) AS pseudonym
+,      player AS patient_player
+FROM   "Patient",
+       -- select only the extension from the id array where root is ...31.3.3
+       jsonb_each_jsquery_text(id::"ANY"::jsonb, '#(root = "2.16.840.1.113883.2.4.3.31.3.3")') as ids
+WHERE ids.key = 'extension'
 ;
