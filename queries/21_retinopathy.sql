@@ -11,14 +11,9 @@
  */
 
 \set ON_ERROR_STOP on
-
-\echo
-\echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
-\echo
-SET session_authorization TO research_user;
-SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
-
+\i retinopathy_checks.sql
 \set ON_ERROR_STOP off
+
 
 DROP VIEW IF EXISTS retinopathy_base_values CASCADE;
 DROP VIEW IF EXISTS retinopathy_base_summaries CASCADE;
@@ -110,10 +105,19 @@ AND     code IN ('365980008' -- smoking
 ORDER BY unit_of_observation, code, t0 desc;
 
 /*
- * Calculate statistics aggregates per person, observation code.
+ * Calculate aggregates per person, observation code.
  *
- * Select the last value, the number of values and other aggregates.
- * See http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE
+ * To query correlated data in the synthetic dataset, the last value (rank on
+ * time) is queried. In the synthetic dataset, there exist only correlations
+ * between observation values from the same examination (document). (In
+ * addition, numerical values are only correlated to other numerical values,
+ * and categorical values only to other categorical values). Since all
+ * observations occur only in one kind of examination, getting the last value
+ * per observation kind will result in getting e.g. systolic and diastolic bp
+ * from the same document, and thus data will be paired.
+ *
+ * The other aggregates are for illustration purposes only. See
+ * http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE
  * for a list.
  *
  */
@@ -123,14 +127,10 @@ SELECT * FROM (
       SELECT   *
       ,        RANK() OVER (PARTITION BY unit_of_observation, code  ORDER BY time_to_t0 ASC)  AS rocky
       ,        count(1)                  OVER (PARTITION BY unit_of_observation, code)  AS count_value
-      ,        avg(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS avg
-      ,        min(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS min
       ,        max(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS max
       ,        max(time_to_t0)           OVER (PARTITION BY unit_of_observation, code)  AS max_time_to_t0
-      ,        stddev_pop(value_numeric) OVER (PARTITION BY unit_of_observation, code)  AS stddev_pop
-      ,        string_agg( value_code, '|')   OVER (PARTITION BY unit_of_observation, code)  AS codes
       ,        bool_or(value_bool)       OVER (PARTITION BY unit_of_observation, code)  AS bool_or
-       FROM retinopathy_base_values
+      FROM retinopathy_base_values
 ) a
 WHERE rocky = 1;
 
@@ -142,7 +142,7 @@ SELECT row_number() over()                          AS row_number
   ,       (age_in_years->>'value_numeric')::numeric AS age_in_years
   ,       gender->>'value_code'                     AS gender
 -- class
-  ,       has_retinopathy->>'value_code'            AS class
+  ,       has_retinopathy->>'value_bool'            AS class
 -- smoking
   ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
@@ -186,11 +186,9 @@ FROM crosstab($ct$
 
     ,       json_object(('{value_code, '      || COALESCE(value_code::text, 'NULL')     ||
                          ',value_numeric, '   || COALESCE(value_numeric::text, 'NULL')  ||
+                         ',value_bool, '      || COALESCE(value_bool::text, 'NULL')  ||
                          ',count, '           || COALESCE(count_value::text, 'NULL')    ||
-                         ',avg, '             || COALESCE(avg::text, 'NULL')            ||
-                         ',min, '             || COALESCE(min::text, 'NULL')            ||
                          ',max, '             || COALESCE(max::text, 'NULL')            ||
-                         ',stddev_pop, '      || COALESCE(stddev_pop::text, 'NULL')     ||
                          ',max_time_to_t0, '  || COALESCE(max_time_to_t0::text, 'NULL') ||
                          ',time_to_t0, '      || COALESCE(time_to_t0::text, 'NULL')     ||
                          '}')::text[])::text                          AS value
