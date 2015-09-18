@@ -65,7 +65,7 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 # fix removal of checkpoint_segments in 9.5 servers
 # does not work on newer Makefiles. Upstream pgtune should be fixed instead
 # checkpoint segments are removed after postgres 9.4
-	PATH=$(PGSERVER)/bin:${PATH} egrep -E '9.3|9.4' <<<"$(pg_config --version)" || sed -i '/checkpoint_segments/c\max_wal_size = 1GB' $(PGDATA)/postgresql.conf
+	PATH=$(PGSERVER)/bin:${PATH} echo $(pg_config --version) | egrep -E '9.3|9.4' || sed -i '/checkpoint_segments/c\max_wal_size = 1GB' $(PGDATA)/postgresql.conf
 
 # Start cluster
 start: $(PGDATA)
