@@ -18,10 +18,12 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 
 \set ON_ERROR_STOP off
 
+DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
+DELETE FROM base_values WHERE feature_id = 'age_in_years';   
+
 /** add new feature class var.
     the class var is defined as the first observation in the group of
     micro-vascular complications **/
-DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
 INSERT INTO base_values
 (unit_of_observation
 , feature_id
@@ -99,7 +101,6 @@ FROM (
 ;
 
 /* Add age in years. */
-DELETE FROM base_values WHERE feature_id = 'age_in_years';
 INSERT INTO base_values
 (unit_of_observation
 , feature_id

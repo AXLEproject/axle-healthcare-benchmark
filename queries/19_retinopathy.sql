@@ -18,4 +18,5 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 
 \set ON_ERROR_STOP off
 
-CREATE INDEX ON base_values (unit_of_observation, code);
+DROP INDEX IF EXISTS base_values_unit_of_observation_code_idx;
+CREATE INDEX base_values_unit_of_observation_code_idx ON base_values (unit_of_observation, code);
