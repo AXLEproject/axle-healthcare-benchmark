@@ -63,8 +63,9 @@ $(PGDATA): $(PGSERVER) $(PGTUNE)
 	PATH=$(PGSERVER)/bin:${PATH} initdb -D $(PGDATA)
 	$(PGTUNE)/pgtune -i $(PGDATA)/postgresql.conf -o $(PGDATA)/postgresql.conf -T $(PGTUNEDBTYPE) -P $(PGTUNESYSTEMTYPE) -c $(PGTUNEMAXCONN) || rm -rf $(PGDATA)
 # fix removal of checkpoint_segments in 9.5 servers
-	PATH=$(PGSERVER)/bin:${PATH} test "`pg_config --version`" != "PostgreSQL 9.5devel" || sed -i '/checkpoint_segments/c\max_wal_size = 1GB' $(PGDATA)/postgresql.conf
-
+# does not work on newer Makefiles. Upstream pgtune should be fixed instead
+#  PATH=$(PGSERVER)/bin:${PATH} pg_config --version | egrep -E '9.3|9.4' || sed -i '/checkpoint_segments/c\max_wal_size = 1GB' $(PGDATA)/postgresql.conf
+        
 # Start cluster
 start: $(PGDATA)
 	PATH=$(PGSERVER)/bin:${PATH} pg_isready -p $(PONDPORT) -h $(PONDHOST) -U $(PONDUSER) -d "dbname=postgres" || PATH=$(PGSERVER)/bin:${PATH} pg_ctl -w -D $(PGDATA) -l $(PGDATA)/logfile start
