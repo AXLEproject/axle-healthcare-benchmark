@@ -31,17 +31,10 @@ fail() {
     exit 1
 }
 
-# Restart and drop caches
-restart_drop_caches() {
-    echo "Restart postgres and drop caches."
-    ${SUDO} -u $PGUSER $PGBINDIR/pg_ctl stop -D $PGDATADIR
+# drop caches
+drop_caches() {
+    echo "Drop caches."
     sync && echo 3 | ${SUDO} tee /proc/sys/vm/drop_caches
-    ${SUDO} -u $PGUSER taskset -c 2 $PGBINDIR/postgres -D "$PGDATADIR" -p $PGPORT &
-    PGPID=$!
-    while ! ${SUDO} -u $PGUSER $PGBINDIR/pg_ctl status -D $PGDATADIR | grep "server is running" -q; do
-        echo "Waiting for the Postgres server to start"
-        sleep 3
-    done
 }
 
 BASEDIR=$(dirname "$0")
@@ -86,9 +79,12 @@ mkdir -p $dir
 cd "$dir"
 
 ### Get execution time cold
+drop_caches
 /usr/bin/time -f '%e\n%Uuser %Ssystem %Eelapsed %PCPU (%Xtext+%Ddata %Mmax)k'\
     -o exectime.txt \
     $PGBINDIR/psql -h /tmp -p $PGPORT -d $DB_NAME < $Q 2> exectime.txt
+
+sleep 5
 
 ## Warm execution time
 /usr/bin/time -f '%e\n%Uuser %Ssystem %Eelapsed %PCPU (%Xtext+%Ddata %Mmax)k'\

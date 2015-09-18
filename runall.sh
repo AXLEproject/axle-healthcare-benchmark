@@ -7,7 +7,7 @@
 #
 # Copyright (c) 2015, Portavita BV Netherlands
 #
-set -e
+##set -e
 
 PGDATADIR=${PGDATA}
 PGPORT=${LAKEPORT}
