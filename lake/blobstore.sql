@@ -79,3 +79,15 @@ AS $indexes$
 $indexes$
 LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION document_update(name text)
+RETURNS void
+AS $update$
+BEGIN
+  EXECUTE $sql$
+    UPDATE document_$sql$ || name || $sql$
+    SET patient_id = document#>>'{recordTarget,0,patientRole,id,0,extension}';
+    $sql$;
+END;
+$update$
+LANGUAGE plpgsql;
+
