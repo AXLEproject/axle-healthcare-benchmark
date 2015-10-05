@@ -9,11 +9,20 @@
  */
 
 \set ON_ERROR_STOP on
-\i retinopathy_checks.sql
+\echo
+\echo 'If the research_user does not exist, run \'create_research_schema.sql\' first.'
+\echo
+SET session_authorization TO research_user;
+SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
+
+\echo 'Check that post load document updates have been run.'
+SELECT 1/EXISTS(SELECT * FROM pg_class WHERE relname='document_1_patient_id_idx')::int;
 \set ON_ERROR_STOP off
 
 \set number_of_patients_in_sample 30
 \set patient_sample_seed 250502
+
+SET random_page_cost to 0.1;
 
 /** step one create base values **/
 DROP TABLE IF EXISTS base_values CASCADE;
@@ -25,18 +34,16 @@ DECLARE percentage float;
 BEGIN
   SELECT number_of_patients_in_sample * 100::float /*percent*/ /count(*)
   INTO percentage
-  from "Patient";
+  from pseudonyms;
 
   EXECUTE $create$
     CREATE OR REPLACE VIEW Patient_sample
     AS
-    SELECT ids.value AS patient_id
-    ,      _id       AS _id
-    FROM   "Patient"
+    SELECT patient_id
+    ,      _id
+    FROM   pseudonyms
                 TABLESAMPLE BERNOULLI ($create$ || percentage || $create$)
-                REPEATABLE ($create$ || seed || $create$),
-           jsonb_each_jsquery_text(id::"ANY"::jsonb, '#(root = "2.16.840.1.113883.2.4.3.31.3.3")') as ids
-    WHERE  ids.key = 'extension'
+                REPEATABLE ($create$ || seed || $create$)
   $create$;
 END $block$
 LANGUAGE plpgsql;
