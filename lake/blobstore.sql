@@ -52,6 +52,9 @@ IF action = 'create' THEN
 ELSIF ACTION = 'drop' THEN
   EXECUTE $sql$
           DROP INDEX document_$sql$ || name || $sql$_patient_id_idx$sql$;
+ELSIF ACTION = 'cluster' THEN
+  EXECUTE $sql$
+          CLUSTER document_$sql$ || name || $sql$ USING document_$sql$ || name || $sql$_patient_id_idx$sql$;
 END IF;
 END;
 $index$
