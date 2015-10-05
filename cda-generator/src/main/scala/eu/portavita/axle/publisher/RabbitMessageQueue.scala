@@ -71,7 +71,7 @@ object RabbitMessageQueue {
 	val organizationRoutingKey = "generator.fhir.organization"
 	val practitionerRoutingKey = "generator.fhir.practitioner"
 	val patientRoutingKey = "generator.fhir.patient"
-	val treatmentRoutingKey = "generator.hl7v3.treatment"
+	val treatmentRoutingKey = "generator.jsonb.treatment"
 	val examinationRoutingKey = "generator.jsonb.examination"
   val consentRoutingKey = "generator.jsonb.consent"
 }
