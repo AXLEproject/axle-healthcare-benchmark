@@ -19,58 +19,31 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 SELECT 1/EXISTS(SELECT * FROM pg_class WHERE relname='document_1_patient_id_idx')::int;
 \set ON_ERROR_STOP off
 
-DELETE FROM base_values WHERE feature_id = 'has_retinopathy';
-DELETE FROM base_values WHERE feature_id = 'age_in_years';   
+DELETE FROM base_values WHERE feature @@ 'id = "has_retinopathy" OR id="age_in_years"';
 
 /** add new feature class var.
     the class var is defined as the first observation in the group of
     micro-vascular complications **/
 INSERT INTO base_values
 (unit_of_observation
-, feature_id
-, source_id
-, class_code
-, mood_code
-, status_code
-, code
-, code_codesystem
-, code_displayname
-, value_code
-, value_codesystem
-, value_displayname
-, value_text
-, value_ivl_pq
-, value_numeric
+, feature
 , value_bool
-, value_qset_ts
-, negation_ind
 , time_lowvalue
 , time_highvalue
 , time_to_t0
 , time_availability)
       SELECT unit_of_observation                                AS unit_of_observation
-      ,      'has_retinopathy'::text                            AS feature_id
-      ,      null::text                                         AS source_id
-      ,      null::text                                         AS class_code
-      ,      null::text                                         AS mood_code
-      ,      null::text                                         AS status_code
-      ,      'has_retinopathy'::text                            AS code
-      ,      'FXP codesystem TBD'::text                         AS code_codesystem
-      ,      'Retinopathy class variable'::text                 AS code_displayname
-      ,      null::text                                         AS value_code
-      ,      null::text                                         AS value_codesystem
-      ,      null::text                                         AS value_displayname
-      ,      null::text                                         AS value_text
-      ,      null::text                                         AS value_ivl_pq
-      ,      null::numeric                                      AS value_numeric
-      ,      CASE WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
-                   AND code = 'Portavita308')
-                  THEN value_code IN ('Portavita309',
+      ,       json_build_object(
+               'id', 'has_retinopathy',
+               'comment', 'Feature contains only true positive or true negative values. Unknowns are not recorded. Therefore this feature cannot be used to count retinopathy observations.',
+               'display', 'Retinopathy Class Variable')::jsonb
+                                                                AS feature
+      ,      CASE WHEN feature->>'id' = 'Portavita308|OBS|EVN|completed'
+                  THEN value_code->>'code'  IN ('Portavita309',
                                  'Portavita310',
                                  'Portavita309,Portavita310')
-                  WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
-                   AND code = 'Portavita220')
-                   AND value_code IN ('RETINOPATHIE_LINKER_RECHTEROOG'
+                  WHEN feature->>'id' = 'Portavita220|OBS|EVN|completed'
+                   AND value_code->>'code' IN ('RETINOPATHIE_LINKER_RECHTEROOG'
                                    ,'RETINOPATHIE_LINKEROOG'
                                    ,'RETINOPATHIE_RECHTEROOG'
                                    ,'LEFT_UNKNOWN_RIGHT_TRUE'
@@ -81,14 +54,11 @@ INSERT INTO base_values
                                    ,'LEFT_FALSE_RIGHT_TRUE'
                                    ,'LEFT_UNCLEAR_RIGHT_TRUE')
                                    THEN true
-                  WHEN (code_codesystem = '2.16.840.1.113883.2.4.3.31.2.1'
-                   AND code = 'Portavita220')
-                   AND value_code IN ('GEEN_RETINOPATHIE'
+                  WHEN feature->>'id' = 'Portavita220|OBS|EVN|completed'
+                   AND value_code->>'code' IN ('GEEN_RETINOPATHIE'
                                    ,'LEFT_FALSE_RIGHT_FALSE')
                                    THEN false
-             END = NOT /*xor*/ (negation_ind::bool)             AS value_bool
-      ,      null::text                                         AS value_qset_ts
-      ,      false::boolean                                     AS negation_ind
+             END                                                AS value_bool
       ,      time_lowvalue                                      AS time_lowvalue
       ,      time_highvalue                                     AS time_highvalue
       ,      null::numeric                                      AS time_to_t0
@@ -96,60 +66,30 @@ INSERT INTO base_values
 FROM (
       SELECT  *
       FROM    base_values
-      WHERE   code IN ('Portavita308'
-                      ,'Portavita220')
-      ) a
+      WHERE   feature @@ 'id = "Portavita308|OBS|EVN|completed" OR id="Portavita220|OBS|EVN|completed"'
+     ) a
 ;
 
 /* Add age in years. */
 INSERT INTO base_values
 (unit_of_observation
-, feature_id
-, source_id
-, class_code
-, mood_code
-, status_code
-, code
-, code_codesystem
-, code_displayname
-, value_code
-, value_codesystem
-, value_displayname
-, value_text
-, value_ivl_pq
+, feature
 , value_numeric
-, value_bool
-, value_qset_ts
-, negation_ind
 , time_lowvalue
 , time_highvalue
 , time_to_t0
 , time_availability)
       SELECT unit_of_observation                                AS unit_of_observation
-      ,      'age_in_years'::text                               AS feature_id
-      ,      null::text                                         AS source_id
-      ,      null::text                                         AS class_code
-      ,      null::text                                         AS mood_code
-      ,      null::text                                         AS status_code
-      ,      'age_in_years'::text                               AS code
-      ,      'FXP codesystem TBD'::text                         AS code_codesystem
-      ,      'Age in years'::text                               AS code_displayname
-      ,      null::text                                         AS value_code
-      ,      null::text                                         AS value_codesystem
-      ,      null::text                                         AS value_displayname
-      ,      null::text                                         AS value_text
-      ,      null::text                                         AS value_ivl_pq
+      ,       json_build_object(
+               'id', 'age_in_years',
+               'display', 'Age in years')::jsonb
+                                                                AS feature
       ,      (extract(year from current_timestamp)
               - extract(year from time_lowvalue))::numeric      AS value_numeric
-      ,      null::boolean                                      AS value_bool
-      ,      null::text                                         AS value_qset_ts
-      ,      false::boolean                                     AS negation_ind
       ,      time_lowvalue                                      AS time_lowvalue
       ,      time_highvalue                                     AS time_highvalue
       ,      null::numeric                                      AS time_to_t0
       ,      time_availability                                  AS time_availability
       FROM    base_values
-      WHERE   code='184099003'
-      AND     code_codesystem = '2.16.840.1.113883.6.96'
-      AND     NOT (negation_ind::bool)
+      WHERE   feature @@ 'id = "184099003"'
 ;

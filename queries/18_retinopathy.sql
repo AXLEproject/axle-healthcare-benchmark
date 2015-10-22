@@ -5,7 +5,7 @@
  *
  * Step 1: create base values.
  *
- * Copyright (c) 2014, Portavita B.V.
+ * Copyright (c) 2015, Portavita B.V.
  */
 
 \set ON_ERROR_STOP on
@@ -17,7 +17,7 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 
 \echo 'Check that post load document updates have been run.'
 SELECT 1/EXISTS(SELECT * FROM pg_class WHERE relname='document_1_patient_id_idx')::int;
-\set ON_ERROR_STOP off
+--\set ON_ERROR_STOP off
 
 \set number_of_patients_in_sample 30
 \set patient_sample_seed 250502
@@ -61,9 +61,18 @@ AS
    'row_id', id,
    'document_id', document#>>'{id,extension}',
    'patient_id', document#>>'{recordTarget,0,patientRole,id,0,extension}',
-   'author_id', document#>>'{author,0,assignedAuthor,id,0,extension}',
-   'legalauthenticator_id', document#>>'{legalAuthenticator,assignedEntity,id,0,extension}',
-   'serviceevent_id', document#>>'{documentationOf,0,serviceEvent,id,0,extension}')::jsonb
+   'author', concat_ws(':',
+                       document#>>'{author,0,assignedAuthor,id,0,root}',
+                       document#>>'{author,0,assignedAuthor,id,0,extension}'),
+   'legalAuthenticator', concat_ws(':',
+                                   document#>>'{legalAuthenticator,assignedEntity,id,0,root}',
+                                   document#>>'{legalAuthenticator,assignedEntity,id,0,extension}'),
+   'custodian', json_build_object(
+       'id', concat_ws(':',
+                document#>>'{custodian, assignedCustodian, representedCustodianOrganization, id, 0, root}',
+                document#>>'{custodian, assignedCustodian, representedCustodianOrganization, id, 0, extension}'),
+       'name', document#>>'{custodian, assignedCustodian, representedCustodianOrganization, name, content}'),
+   'serviceEvent', document#>>'{documentationOf,0,serviceEvent,id,0,extension}')::jsonb
    AS row_name
   FROM document
   NATURAL JOIN Patient_sample
@@ -102,35 +111,63 @@ AS ct(row_name jsonb,
 
 CREATE TABLE base_values
 AS
-      SELECT  pseudonym                                          AS unit_of_observation
-      ,       null::text                                         AS location
-      ,       null::text[]                                       AS provider
-      ,       obse.row_name->>'legalauthenticator_id'            AS organisation
-      ,       'Portavita'::text                                  AS datasource_organisation
-      ,       'CDA R2, FHIR DSTU1'::text                         AS datasource_standard
-      ,       'Portavita Benchmark'::text                        AS datasource_software
-      ,       null::text                                         AS feature_id
-      ,       obse.id#>>'{0,extension}'                          AS source_id
-      ,       obse."classCode"::text                             AS class_code
-      ,       obse."moodCode"::text                              AS mood_code
-      ,       obse."statusCode"->>'code'                         AS status_code
-      ,       obse.code->>'code'                                 AS code
-      ,       obse.code->>'codeSystem'                           AS code_codesystem
-      ,       obse.code->>'displayName'                          AS code_displayname
-      ,       obse.value#>>'{0,code}'                            AS value_code
-      ,       obse.value#>>'{0,codeSystem}'                      AS value_codesystem
-      ,       obse.value#>>'{0,displayName}'                     AS value_displayname
+      SELECT  json_build_object(
+                'pseudonym', pseudonym,
+                'display', pseudonym)::jsonb                     AS unit_of_observation
+      ,       json_build_object(
+                'author', json_build_object(
+                    'display', 'Author ' || (obse.row_name->>'author')),
+                'organization', json_build_object(
+                    'display', 'Organization ' || (obse.row_name->>'legalAuthenticator')),
+                'carePlan', json_build_object(
+                    'display', 'CarePlan ' || (obse.row_name->>'serviceEvent'))
+                    )::jsonb                                     AS unit_of_analysis
+      ,       json_build_object(
+                'organization', json_build_object(
+                    'reference', 'Organization/' || (obse.row_name#>>'{custodian,id}'),
+                    'display', obse.row_name#>>'{custodian,name}'),
+                'standard', 'CDA R2',
+                'software', 'Portavita Benchmark',
+                'display', 'CDA R2 (Portavita Benchmark)',
+                'id', obse.id#>>'{0,extension}')::jsonb          AS source
+      ,       json_build_object(
+                'id', concat_ws('|',
+                             obse.code->>'code',
+                             trim(obse."classCode"::text, '"'),
+                             trim(obse."moodCode"::text, '"'),
+                             obse."statusCode"->>'code'),
+                'display', concat_ws(' ',
+                             obse.code->>'displayName',
+                             '(' || displayname(trim(obse."classCode"::text,'"')::cv('ActClass')),
+                             displayname(trim(obse."moodCode"::text,'"')::cv('ActMood')),
+                             obse."statusCode"->>'code' || ')'),
+                'classCode', obse."classCode",
+                'moodCode', obse."moodCode",
+                'statusCode', obse."statusCode",
+                'code', obse.code,
+                'negationInd', btrim("negationInd"::text,'"')
+               )::jsonb                                          AS feature
       ,       null::text                                         AS value_text
-      ,       null::text                                         AS value_ivl_pq
       ,       (obse.value#>>'{0,value}')::numeric                AS value_numeric
       ,       obse.value#>>'{0,unit}'                            AS value_unit
+      ,       CASE WHEN obse.value#>>'{0,unit}' IS NOT NULL THEN
+               concat_ws(' ', obse.value#>>'{0,value}', obse.value#>>'{0,unit}')::pq
+              ELSE NULL::pq END                                  AS value_pq
+      ,       null::ivl_pq                                       AS value_ivl_pq
+      ,       CASE WHEN obse.value#>>'{0, code}' IS NOT NULL THEN
+               json_build_object(
+                'system', obse.value#>>'{0,codeSystem}',
+                'code', obse.value#>>'{0,code}',
+                'display', obse.value#>>'{0,displayName}')::jsonb
+              ELSE NULL::jsonb END                               AS value_code
+      ,       null::cv                                           AS value_cv
       ,       null::boolean                                      AS value_bool
-      ,       null::text                                         AS value_qset_ts
-      ,       btrim("negationInd"::text,'"')::bool               AS negation_ind
+      ,       null::ts                                           AS value_ts
+      ,       null::ivl_ts                                       AS value_ivl_ts
+      ,       null::qset_ts                                      AS value_qset_ts
       ,       lowvalue(obse."effectiveTime"::"ANY"::"IVL_TS"::ivl_ts)::timestamptz AS time_lowvalue
       ,       highvalue(obse."effectiveTime"::"ANY"::"IVL_TS"::ivl_ts)::timestamptz AS time_highvalue
       ,       null::numeric                                      AS time_to_t0
---      ,       obse._lake_timestamp::timestamptz                  AS time_availability
       ,       null::timestamptz                                  AS time_availability
       FROM    Observations_of_patient_sample obse
       JOIN    pseudonyms p
@@ -139,31 +176,34 @@ AS
       UNION ALL
 
       /** person birth time **/
-      SELECT  pseudonym                                          AS unit_of_observation
-      ,       null::text                                         AS location
-      ,       null::text[]                                       AS provider
-      ,       null::text                                         AS organisation
-      ,       null::text                                         AS datasource_organisation
-      ,       null::text                                         AS datasource_standard
-      ,       null::text                                         AS datasource_software
-      ,       null::text                                         AS feature_id
-      ,       peso._id::text                                     AS source_id
-      ,       peso."classCode"->>'code'                          AS class_code
-      ,       null::text                                         AS mood_code
-      ,       null::text                                         AS status_code
-      ,       '184099003'::text                                  AS code
-      ,       '2.16.840.1.113883.6.96'::text                     AS code_codesystem
-      ,       'Date of birth'::text                              AS code_displayname
-      ,       null::text                                         AS value_code
-      ,       null::text                                         AS value_codesystem
-      ,       null::text                                         AS value_displayname
+      SELECT  json_build_object(
+                'pseudonym', pseudonym,
+                'display', pseudonym)::jsonb                     AS unit_of_observation
+      ,       null::jsonb                                        AS unit_of_analysis
+      ,       json_build_object(
+                'standard', 'HL7v3 RIM',
+                'software', 'Portavita Benchmark',
+                'display', 'Person Entity Table',
+                'comment', 'query on Person table'
+                )::jsonb                                         AS source
+      ,       json_build_object(
+               'id', '184099003',
+               'code', json_build_object(
+                'system', '2.16.840.1.113883.6.96',
+                'code', '184099003'),
+               'display', 'Date of birth')::jsonb
+                                                                 AS feature
       ,       null::text                                         AS value_text
-      ,       null::text                                         AS value_ivl_pq
       ,       null::numeric                                      AS value_numeric
       ,       null::text                                         AS value_unit
+      ,       null::pq                                           AS value_pq
+      ,       null::ivl_pq                                       AS value_ivl_pq
+      ,       null::jsonb                                        AS value_code
+      ,       null::cv                                           AS value_cv
       ,       null::boolean                                      AS value_bool
-      ,       null::text                                         AS value_qset_ts
-      ,       false::bool                                        AS negation_ind
+      ,       peso."birthTime"::ts                               AS value_ts
+      ,       null::ivl_ts                                       AS value_ivl_ts
+      ,       null::qset_ts                                      AS value_qset_ts
       ,       peso."birthTime"::timestamptz                      AS time_lowvalue
       ,       null::timestamptz                                  AS time_highvalue
       ,       null::numeric                                      AS time_to_t0
@@ -179,31 +219,38 @@ AS
       UNION ALL
 
       /** person gender **/
-      SELECT  pseudonym                                          AS unit_of_observation
-      ,       null::text                                         AS location
-      ,       null::text[]                                       AS provider
-      ,       null::text                                         AS organisation
-      ,       null::text                                         AS datasource_organisation
-      ,       null::text                                         AS datasource_standard
-      ,       null::text                                         AS datasource_software
-      ,       null::text                                         AS feature_id
-      ,       peso._id::text                                     AS source_id
-      ,       peso."classCode"->>'code'                          AS class_code
-      ,       null::text                                         AS mood_code
-      ,       null::text                                         AS status_code
-      ,       '263495000'::text                                  AS code
-      ,       '2.16.840.1.113883.6.96'::text                     AS code_codesystem
-      ,       'Gender'::text                                     AS code_displayname
-      ,       peso."administrativeGenderCode"->>'code'           AS value_code
-      ,       peso."administrativeGenderCode"->>'codeSystem'     AS value_codesystem
-      ,       peso."administrativeGenderCode"->>'displayName'    AS value_displayname
+      SELECT  json_build_object(
+                'pseudonym', pseudonym,
+                'display', pseudonym)::jsonb                     AS unit_of_observation
+      ,       null::jsonb                                        AS unit_of_analysis
+      ,       json_build_object(
+                'standard', 'HL7v3 RIM',
+                'software', 'Portavita Benchmark',
+                'display', 'Person Entity Table',
+                'comment', 'query on Person table'
+                )::jsonb                                         AS source
+      ,       json_build_object(
+               'id', '263495000',
+               'code', json_build_object(
+                'system', '2.16.840.1.113883.6.96',
+                'code', '184099003'),
+               'display', 'Gender')::jsonb
+                                                                 AS feature
       ,       null::text                                         AS value_text
-      ,       null::text                                         AS value_ivl_pq
       ,       null::numeric                                      AS value_numeric
       ,       null::text                                         AS value_unit
+      ,       null::pq                                           AS value_pq
+      ,       null::ivl_pq                                       AS value_ivl_pq
+      ,       json_build_object(
+                'system', peso."administrativeGenderCode"->>'codeSystem',
+                'code', peso."administrativeGenderCode"->>'code',
+                'display', peso."administrativeGenderCode"->>'displayName')::jsonb
+                                                                 AS value_code
+      ,       null::cv                                           AS value_cv
       ,       null::boolean                                      AS value_bool
-      ,       null::text                                         AS value_qset_ts
-      ,       false::bool                                        AS negation_ind
+      ,       null::ts                                           AS value_ts
+      ,       null::ivl_ts                                       AS value_ivl_ts
+      ,       null::qset_ts                                      AS value_qset_ts
       ,       peso."birthTime"::timestamptz                      AS time_lowvalue
       ,       null::timestamptz                                  AS time_highvalue
       ,       null::numeric                                      AS time_to_t0
@@ -216,3 +263,8 @@ AS
       JOIN    Patient_sample ps
       ON      ptnt._id = ps._id
 ;
+
+
+ALTER TABLE base_values ADD CONSTRAINT feature_id CHECK (feature ? 'id');
+ALTER TABLE base_values ADD CONSTRAINT feature_display CHECK (feature ? 'display');
+ALTER TABLE base_values ADD CONSTRAINT unit_of_observation_display CHECK (unit_of_observation ? 'display');

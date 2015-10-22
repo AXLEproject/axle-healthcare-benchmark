@@ -21,7 +21,6 @@ SET SEARCH_PATH TO research, public, rim2011, hdl, hl7, r1, "$user";
 SELECT 1/EXISTS(SELECT * FROM pg_class WHERE relname='document_1_patient_id_idx')::int;
 \set ON_ERROR_STOP off
 
-
 DROP VIEW IF EXISTS retinopathy_base_values CASCADE;
 DROP VIEW IF EXISTS retinopathy_base_summaries CASCADE;
 DROP TABLE IF EXISTS retinopathy_tabular_data CASCADE;
@@ -34,82 +33,73 @@ WITH base_values_with_class AS (
         FROM      base_values v
         LEFT JOIN base_values c
         ON        c.unit_of_observation = v.unit_of_observation
-        AND       c.code = 'has_retinopathy'
+        AND       c.feature @@ 'id = "has_retinopathy"'
         AND       c.value_bool
 )
 SELECT  unit_of_observation
-        ,      location
-        ,      provider
-        ,      organisation
-        ,      datasource_organisation
-        ,      datasource_standard
-        ,      datasource_software
-        ,      feature_id
-        ,      source_id
-        ,      class_code
-        ,      mood_code
-        ,      status_code
-        ,      code
-        ,      code_codesystem
-        ,      code_displayname
-        ,      value_code
-        ,      value_codesystem
-        ,      value_displayname
-        ,      value_text
-        ,      value_ivl_pq
-        ,      value_numeric
-        ,      value_unit
-        ,      value_bool
-        ,      value_qset_ts
-        ,      negation_ind
-        ,      time_lowvalue
-        ,      time_highvalue
-        ,      EXTRACT(days FROM t0 - time_lowvalue) AS time_to_t0
-        ,      time_availability
+        ,       unit_of_analysis
+        ,       source
+        ,       feature
+        ,       value_text
+        ,       value_numeric
+        ,       value_unit
+        ,       value_pq
+        ,       value_ivl_pq
+        ,       value_code
+        ,       value_cv
+        ,       value_bool
+        ,       value_ts
+        ,       value_ivl_ts
+        ,       value_qset_ts
+        ,       time_lowvalue
+        ,       time_highvalue
+        ,       EXTRACT(days FROM t0 - time_lowvalue) AS time_to_t0
+        ,       time_availability
 FROM    base_values_with_class
 WHERE   1=1 -- NOT negation_ind
 AND     time_lowvalue <= t0
-AND     code IN ('365980008' -- smoking
-              ,'266918002' -- smoking quantity
-              ,'219006' -- alcohol
-              ,'160573003' -- alcohol quantity
-              ,'228450008' -- exercise
-              ,'102739008' -- LDL cholesterol
-              ,'102737005' -- HDL cholestol
-              ,'166842003' -- total/hdl cholesterol
-              ,'103232008' -- HBA1c/GlycHb
-              ,'271000000' -- albumine in urine
-              ,'275795003' -- Albumin in sample
-              ,'250745003' -- albumine/kreatinine ratio
-              ,'275792000' -- kreatinine
-              ,'Portavita189' -- cockroft kreatinine derivate
-              ,'Portavita304' -- MDRD kreatinine derivate
-              ,'8480-6' -- systolic
-              ,'8462-4' -- diastolic
-              ,'5600001' -- Triglyceride
-              ,'275789004' -- Potassium
-              ,'52302001' -- Fasting blood glucose (venous)
-              ,'38082009' -- Hemoglobine (Hb)
-              ,'302866003' -- Hypoglycemia (y/n) There are other indicators related to this.
-              ,'38341003' -- Hypertension (y/n)
-              ,'228450008' -- exercise (A,B,C,D)
-              ,'365275006' -- well being, aka coenesthesia
-              ,'396552003' -- Waist circumference
-              ,'60621009' -- BMI
-              ,'Portavita1157' -- Nephropathy (y/n) Risk factor
-              ,'312975006'   -- Microalbuminuria (y/n) Risk factor
-              ,'Portavita1161' -- Retinopathie (y/n) Risk factor
-              ,'Portavita1232' -- diabetes diagnosis: the values are Type 1, 2, LADA, MODY, Generic diabetes mellitus
-              ,'Portavita1233' -- Date of Diagnosis diabetes
-              ,'Portavita70' -- Hypertensie bij 1e graads familieleden (y/n)
-              ,'Portavita68' -- Diabetes bij 1e of 2e graads familieleden (y/n)
-              ,'Portavita71' -- Cardiovascular disease with 1st degree family member. (y/n)
-              ,'Portavita220' -- retinopathy complication
-              ,'has_retinopathy' -- has retinopathy feature
-              ,'age_in_years'    -- age in years feature
-              ,'263495000' -- Gender
-)
-ORDER BY unit_of_observation, code, t0 desc;
+AND     feature @@ 'id = "365980008|OBS|EVN|completed" OR /* smoking */
+        id = "266918002|OBS|EVN|completed" OR /* smoking quantity */
+        id = "219006|OBS|EVN|completed" OR /* alcohol */
+        id = "160573003|OBS|EVN|completed" OR /* alcohol quantity */
+        id = "228450008|OBS|EVN|completed" OR /* exercise */
+        id = "102739008|OBS|EVN|completed" OR /* LDL cholesterol */
+        id = "102737005|OBS|EVN|completed" OR /* HDL cholestol */
+        id = "166842003|OBS|EVN|completed" OR /* total/hdl cholesterol */
+        id = "103232008|OBS|EVN|completed" OR /* HBA1c/GlycHb */
+        id = "271000000|OBS|EVN|completed" OR /* albumine in urine */
+        id = "275795003|OBS|EVN|completed" OR /* Albumin in sample */
+        id = "250745003|OBS|EVN|completed" OR /* albumine/kreatinine ratio */
+        id = "275792000|OBS|EVN|completed" OR /* kreatinine */
+        id = "Portavita189|OBS|EVN|completed" OR /* cockroft kreatinine derivate */
+        id = "Portavita304|OBS|EVN|completed" OR /* MDRD kreatinine derivate */
+        id = "8480-6|OBS|EVN|completed" OR /* systolic */
+        id = "8462-4|OBS|EVN|completed" OR /* diastolic */
+        id = "5600001|OBS|EVN|completed" OR /* Triglyceride */
+        id = "275789004|OBS|EVN|completed" OR /* Potassium */
+        id = "52302001|OBS|EVN|completed" OR /* Fasting blood glucose (venous) */
+        id = "38082009|OBS|EVN|completed" OR /* Hemoglobine (Hb) */
+        id = "302866003|OBS|EVN|completed" OR /* Hypoglycemia (y/n) There are other indicators related to this. */
+        id = "38341003|OBS|EVN|completed" OR /* Hypertension (y/n) */
+        id = "228450008|OBS|EVN|completed" OR /* exercise (A,B,C,D) */
+        id = "365275006|OBS|EVN|completed" OR /* well being, aka coenesthesia */
+        id = "396552003|OBS|EVN|completed" OR /* Waist circumference */
+        id = "60621009|OBS|EVN|completed" OR /* BMI */
+        id = "Portavita1157|OBS|EVN|completed" OR /* Nephropathy (y/n) Risk factor */
+        id = "312975006|OBS|EVN|completed" OR   /* Microalbuminuria (y/n) Risk factor */
+        id = "Portavita1161|OBS|EVN|completed" OR /* Retinopathie (y/n) Risk factor */
+        id = "Portavita1232|OBS|EVN|completed" OR /* diabetes diagnosis: the values are Type 1, 2, LADA, MODY, Generic diabetes mellitus */
+        id = "Portavita1233|OBS|EVN|completed" OR /* Date of Diagnosis diabetes */
+        id = "Portavita70|OBS|EVN|completed" OR /* Hypertensie bij 1e graads familieleden (y/n) */
+        id = "Portavita68|OBS|EVN|completed" OR /* Diabetes bij 1e of 2e graads familieleden (y/n) */
+        id = "Portavita71|OBS|EVN|completed" OR /* Cardiovascular disease with 1st degree family member. (y/n) */
+        id = "Portavita220|OBS|EVN|completed" OR /* retinopathy complication */
+        id = "has_retinopathy" OR /* has retinopathy feature */
+        id = "age_in_years" OR    /* age in years feature */
+        id = "263495000" /* Gender */
+'
+ORDER BY unit_of_observation, feature, t0 desc;
+
 
 /*
  * Calculate aggregates per person, observation code.
@@ -122,21 +112,16 @@ ORDER BY unit_of_observation, code, t0 desc;
  * observations occur only in one kind of examination, getting the last value
  * per observation kind will result in getting e.g. systolic and diastolic bp
  * from the same document, and thus data will be paired.
- *
- * The other aggregates are for illustration purposes only. See
- * http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE
- * for a list.
- *
  */
 CREATE VIEW retinopathy_base_summaries
 AS
 SELECT * FROM (
       SELECT   *
-      ,        RANK() OVER (PARTITION BY unit_of_observation, code  ORDER BY time_to_t0 ASC)  AS rocky
-      ,        count(1)                  OVER (PARTITION BY unit_of_observation, code)  AS count_value
-      ,        max(value_numeric)        OVER (PARTITION BY unit_of_observation, code)  AS max
-      ,        max(time_to_t0)           OVER (PARTITION BY unit_of_observation, code)  AS max_time_to_t0
-      ,        bool_or(value_bool)       OVER (PARTITION BY unit_of_observation, code)  AS bool_or
+      ,        RANK() OVER (PARTITION BY unit_of_observation, feature  ORDER BY time_to_t0 ASC)  AS rocky
+      ,        count(1)                  OVER (PARTITION BY unit_of_observation, feature)  AS count_value
+      ,        max(value_numeric)        OVER (PARTITION BY unit_of_observation, feature)  AS max
+      ,        max(time_to_t0)           OVER (PARTITION BY unit_of_observation, feature)  AS max_time_to_t0
+      ,        bool_or(value_bool)       OVER (PARTITION BY unit_of_observation, feature)  AS bool_or
       FROM retinopathy_base_values
 ) a
 WHERE rocky = 1;
@@ -145,27 +130,27 @@ WHERE rocky = 1;
 CREATE TABLE retinopathy_tabular_data
 AS
 SELECT row_number() over()                          AS row_number
-  ,       (record_id->>'unit_of_observation')       AS unit_of_observation
+  ,       pivot_diagonal->>'pseudonym'              AS unit_of_observation
   ,       (age_in_years->>'value_numeric')::numeric AS age_in_years
-  ,       gender->>'value_code'                     AS gender
+  ,       gender#>>'{value_code, code}'             AS gender
 -- class
   ,       has_retinopathy->>'value_bool'            AS class
 -- smoking
-  ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
-               WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
-               WHEN smoking->>'value_code' = '77176002'  THEN 2 -- yes
+  ,       CASE WHEN smoking#>>'{value_code, code}' = '266919005' THEN 0 -- never
+               WHEN smoking#>>'{value_code, code}' = '8517006'   THEN 1 -- used to
+               WHEN smoking#>>'{value_code, code}' = '77176002'  THEN 2 -- yes
                ELSE                          NULL
           END                                               AS smok_lv       -- last observed value of smoking observation
   ,       round((smoking_quantity->>'value_numeric')::numeric) AS smok_du_lv    -- smoking daily units last value
   ,       (smoking_quantity->>'count')::numeric                AS smok_du_count -- number of smoking observations before t0
 -- alcohol
-  ,       alcohol->>'value_code'                               AS alcohol_lv
+  ,       alcohol#>>'{value_code, code}'                       AS alcohol_lv
   ,       round((alcohol_quantity->>'value_numeric')::numeric) AS alc_wu_lv
 -- exercise days per week
-  ,       CASE WHEN exercise->>'value_code' = 'A' THEN 0
-               WHEN exercise->>'value_code' = 'B' THEN 2
-               WHEN exercise->>'value_code' = 'C' THEN 4
-               WHEN exercise->>'value_code' = 'D' THEN 5
+  ,       CASE WHEN exercise#>>'{value_code,code}' = 'A' THEN 0
+               WHEN exercise#>>'{value_code,code}' = 'B' THEN 2
+               WHEN exercise#>>'{value_code,code}' = 'C' THEN 4
+               WHEN exercise#>>'{value_code,code}' = 'D' THEN 5
                ELSE                          NULL
           END                                                AS exercise_dpw_lv
 -- hdl
@@ -187,41 +172,39 @@ SELECT row_number() over()                          AS row_number
 -- mdrd
   ,       (mdrd->>'value_numeric')::numeric                  AS mdrd_lv
 FROM crosstab($ct$
-    SELECT json_object(('{ unit_of_observation, '         || unit_of_observation  ||
-                        '}')::text[])::text                           AS record_id
-    ,       code                                                      AS category
-
-    ,       json_object(('{value_code, '      || COALESCE(value_code::text, 'NULL')     ||
-                         ',value_numeric, '   || COALESCE(value_numeric::text, 'NULL')  ||
-                         ',value_bool, '      || COALESCE(value_bool::text, 'NULL')  ||
-                         ',count, '           || COALESCE(count_value::text, 'NULL')    ||
-                         ',max, '             || COALESCE(max::text, 'NULL')            ||
-                         ',max_time_to_t0, '  || COALESCE(max_time_to_t0::text, 'NULL') ||
-                         ',time_to_t0, '      || COALESCE(time_to_t0::text, 'NULL')     ||
-                         '}')::text[])::text                          AS value
+    SELECT  unit_of_observation                                       AS pivot_diagonal
+    ,       feature->>'id'                                            AS category
+    ,       json_build_object(
+              'value_code', value_code,
+              'value_numeric', value_numeric,
+              'value_bool', value_bool,
+              'count', count_value,
+              'max', "max",
+              'max_time_to_t0', max_time_to_t0,
+              'time_to_t0', time_to_t0)                               AS value
     FROM  retinopathy_base_summaries
-    ORDER BY record_id, category
+    ORDER BY pivot_diagonal, category
   $ct$,
-  $ct$VALUES('365980008'::text) --smoking
-     ,      ('266918002') -- smoking quant
-     ,      ('219006') -- alcohol
-     ,      ('160573003') -- alcohol quantity
-     ,      ('228450008') -- exercise
-     ,      ('102737005') -- hdl cholesterol
-     ,      ('166842003') -- total/hdl cholesterol
-     ,      ('103232008') -- HBA1c/GlycHb
-     ,      ('250745003') -- albumine/kreatinine ratio
-     ,      ('275792000') -- kreatinine
-     ,      ('Portavita189') -- cockroft kreatinine derivate
-     ,      ('Portavita304') -- MDRD kreatinine derivate
-     ,      ('8480-6')
-     ,      ('8462-4')
+  $ct$VALUES('365980008|OBS|EVN|completed'::text) --smoking
+     ,      ('266918002|OBS|EVN|completed') -- smoking quant
+     ,      ('219006|OBS|EVN|completed') -- alcohol
+     ,      ('160573003|OBS|EVN|completed') -- alcohol quantity
+     ,      ('228450008|OBS|EVN|completed') -- exercise
+     ,      ('102737005|OBS|EVN|completed') -- hdl cholesterol
+     ,      ('166842003|OBS|EVN|completed') -- total/hdl cholesterol
+     ,      ('103232008|OBS|EVN|completed') -- HBA1c/GlycHb
+     ,      ('250745003|OBS|EVN|completed') -- albumine/kreatinine ratio
+     ,      ('275792000|OBS|EVN|completed') -- kreatinine
+     ,      ('Portavita189|OBS|EVN|completed') -- cockroft kreatinine derivate
+     ,      ('Portavita304|OBS|EVN|completed') -- MDRD kreatinine derivate
+     ,      ('8480-6|OBS|EVN|completed')
+     ,      ('8462-4|OBS|EVN|completed')
      ,      ('has_retinopathy')
      ,      ('age_in_years')
      ,      ('263495000')  -- gender
      $ct$
   )  -- select from crosstab
-  AS ct(record_id            jsonb
+  AS ct(pivot_diagonal       jsonb
        ,"smoking"            jsonb
        ,"smoking_quantity"   jsonb
        ,"alcohol"            jsonb
@@ -241,4 +224,3 @@ FROM crosstab($ct$
        ,"gender"             jsonb
   )
 ;
-

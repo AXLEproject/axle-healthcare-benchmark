@@ -20,6 +20,7 @@ SELECT 1/EXISTS(SELECT * FROM pg_class WHERE relname='document_1_patient_id_idx'
 \set ON_ERROR_STOP off
 
 DROP INDEX IF EXISTS base_values_unit_of_observation_code_idx;
-CREATE INDEX base_values_unit_of_observation_code_idx ON base_values (unit_of_observation, code);
+--CREATE INDEX base_values_unit_of_observation_code_idx ON base_values USING GIN (unit_of_observation, feature jsonb_path_ops);
+CREATE INDEX base_values_unit_of_observation_code_idx ON base_values USING GIN (unit_of_observation, feature jsonb_value_path_ops);
 
 ANALYZE base_values;
