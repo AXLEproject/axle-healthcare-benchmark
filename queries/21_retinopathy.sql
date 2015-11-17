@@ -168,6 +168,8 @@ SELECT row_number() over()                          AS row_number
                WHEN exercise->>'value_code' = 'D' THEN 5
                ELSE                          NULL
           END                                                AS exercise_dpw_lv
+-- wellbeing
+  ,       wellbeing->>'value_code'                     AS wellbeing_lv
 -- hdl
   ,       (hdl->>'value_numeric')::numeric                   AS hdl_lv
 -- total cholesterol / hdl cholesterol
@@ -207,6 +209,7 @@ FROM crosstab($ct$
      ,      ('219006') -- alcohol
      ,      ('160573003') -- alcohol quantity
      ,      ('228450008') -- exercise
+     ,      ('365275006') -- wellbeing
      ,      ('102737005') -- hdl cholesterol
      ,      ('166842003') -- total/hdl cholesterol
      ,      ('103232008') -- HBA1c/GlycHb
@@ -227,6 +230,7 @@ FROM crosstab($ct$
        ,"alcohol"            jsonb
        ,"alcohol_quantity"   jsonb
        ,"exercise"           jsonb
+       ,"wellbeing"          jsonb
        ,"hdl"                jsonb
        ,"total_hdl"          jsonb
        ,"hba1c"              jsonb
