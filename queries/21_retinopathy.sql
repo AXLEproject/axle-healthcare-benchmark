@@ -169,7 +169,13 @@ SELECT row_number() over()                          AS row_number
                ELSE                          NULL
           END                                                AS exercise_dpw_lv
 -- wellbeing
-  ,       wellbeing->>'value_code'                     AS wellbeing_lv
+  ,       CASE WHEN wellbeing->>'value_code' = 'Uitstekend' THEN 'A Very well'
+               WHEN wellbeing->>'value_code' = 'Goed' THEN 'B Good'
+               WHEN wellbeing->>'value_code' = 'Redelijk' THEN 'C Ok'
+               WHEN wellbeing->>'value_code' = 'Matig' THEN 'D Not so good'
+               WHEN wellbeing->>'value_code' = 'Slecht' THEN 'E Bad'
+               ELSE                          NULL
+          END                                                AS wellbeing_lv
 -- hdl
   ,       (hdl->>'value_numeric')::numeric                   AS hdl_lv
 -- total cholesterol / hdl cholesterol
