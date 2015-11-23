@@ -149,7 +149,15 @@ SELECT row_number() over()                          AS row_number
   ,       (age_in_years->>'value_numeric')::numeric AS age_in_years
   ,       gender->>'value_code'                     AS gender
 -- class
-  ,       has_retinopathy->>'value_bool'            AS class
+  ,       (
+           (case when gender->>'value_code' = 'F' then
+             random() * 0.4
+            else
+             random() * 0.6
+            end)
+            +
+            (random() * (1-((mdrd->>'value_numeric')::numeric/120)))
+           ) > 0.6 AS class
 -- smoking
   ,       CASE WHEN smoking->>'value_code' = '266919005' THEN 0 -- never
                WHEN smoking->>'value_code' = '8517006'   THEN 1 -- used to
